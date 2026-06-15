@@ -1,66 +1,120 @@
-import Image from "next/image";
-import styles from "./page.module.css";
+'use client';
 
-export default function Home() {
+import React from 'react';
+import Hero from '../components/landingpage/Hero';
+import Pathway from '../components/landingpage/Pathway';
+import Curriculum from '../components/landingpage/Curriculum';
+import Pricing from '../components/landingpage/Pricing';
+import Team from '../components/landingpage/Team';
+import Footer from '../components/landingpage/Footer';
+
+export default function LandingPage() {
+  const scrollToSection = (id: string) => {
+    const el = document.getElementById(id);
+    if (el) el.scrollIntoView({ behavior: 'smooth' });
+  };
+
   return (
-    <div className={styles.page}>
-      <main className={styles.main}>
-        <Image
-          className={styles.logo}
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
+    <>
+      {/* Navigation Bar */}
+      <nav style={styles.navbar}>
+        <div style={styles.navInner}>
+          <span style={styles.navLogo}>⚡ Nalara</span>
+          <div style={styles.navLinks}>
+            <a href="#syllabus" style={styles.navLink}>Silabus</a>
+            <a href="#pricing" style={styles.navLink}>Pendaftaran</a>
+            <a href="#team" style={styles.navLink}>Tim</a>
+            <button
+              className="nalara-btn nalara-btn-cta"
+              style={styles.navCta}
+              onClick={() => scrollToSection('pricing')}
+            >
+              Daftar Sekarang
+            </button>
+          </div>
+        </div>
+      </nav>
+
+      <main>
+        {/* Section 1: Hero */}
+        <Hero
+          onRegisterClick={() => scrollToSection('pricing')}
+          onSyllabusClick={() => scrollToSection('syllabus')}
         />
-        <div className={styles.intro}>
-          <h1>To get started, edit the page.tsx file.</h1>
-          <p>
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className={styles.ctas}>
-          <a
-            className={styles.primary}
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className={styles.logo}
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className={styles.secondary}
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
+
+        {/* Divider */}
+        <div style={styles.sectionDivider} />
+
+        {/* Section 2: Level Pathway */}
+        <Pathway />
+
+        <div style={styles.sectionDivider} />
+
+        {/* Section 3: Curriculum & Timeline */}
+        <Curriculum />
+
+        <div style={styles.sectionDivider} />
+
+        {/* Section 4: Registration Waves & Referral */}
+        <Pricing />
+
+        <div style={styles.sectionDivider} />
+
+        {/* Section 5: Meet The Team */}
+        <Team />
       </main>
-    </div>
+
+      {/* Section 6: Footer */}
+      <Footer />
+    </>
   );
 }
+
+const styles: Record<string, React.CSSProperties> = {
+  navbar: {
+    position: 'sticky',
+    top: 0,
+    zIndex: 100,
+    borderBottom: '1px solid var(--border-color)',
+    background: 'rgba(33, 33, 33, 0.85)',
+    backdropFilter: 'blur(16px)',
+    WebkitBackdropFilter: 'blur(16px)',
+  },
+  navInner: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    maxWidth: '1100px',
+    margin: '0 auto',
+    padding: '0.85rem 1.5rem',
+  },
+  navLogo: {
+    fontSize: '1.3rem',
+    fontWeight: 800,
+    color: 'var(--white)',
+    fontFamily: 'var(--font-display)',
+  },
+  navLinks: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '1.5rem',
+  },
+  navLink: {
+    fontSize: '0.9rem',
+    fontWeight: 500,
+    color: 'var(--grey-blue)',
+    textDecoration: 'none',
+    transition: 'color 0.2s ease',
+  },
+  navCta: {
+    padding: '0.55rem 1.15rem',
+    fontSize: '0.85rem',
+  },
+  sectionDivider: {
+    maxWidth: '1100px',
+    margin: '0 auto',
+    height: '1px',
+    background:
+      'linear-gradient(90deg, transparent, var(--border-color) 30%, var(--border-color) 70%, transparent)',
+  },
+};
