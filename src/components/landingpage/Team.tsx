@@ -78,13 +78,6 @@ const programManagers: Member[] = [
     // focus: "Timekeeper All Levels",
     initials: "AFT",
   },
-  {
-    name: "[Hiring / Vacant]",
-    title: "Session Engagement Manager",
-    // focus: "Moderator Level Lanjut",
-    initials: "HV",
-    vacant: true,
-  },
 ];
 
 const techManagers: Member[] = [
@@ -95,13 +88,13 @@ const techManagers: Member[] = [
     initials: "G",
   },
   {
-    name: "Sayyid",
+    name: "Sayyid Hasher",
     title: "Creative Design Manager",
     // focus: "UI/UX, Visual Design & Brand Identity Assets",
     initials: "S",
   },
   {
-    name: "Rifky",
+    name: "Rifky Cahya Setyaji",
     title: "LMS Development Manager",
     // focus: "LMS Platform & Fullstack Development",
     initials: "R",

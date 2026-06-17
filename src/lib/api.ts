@@ -1,0 +1,107 @@
+/**
+ * Base HTTP Client untuk Nalara API
+ *
+ * Semua service yang consume API backend harus menggunakan helper ini
+ * agar base URL dan error handling konsisten di seluruh aplikasi.
+ */
+
+const API_BASE_URL =
+  process.env.NEXT_PUBLIC_API_BASE_URL || 'http://103.127.139.237:1000';
+
+/** Opsi tambahan untuk setiap request */
+interface RequestOptions {
+  /** Bearer token untuk endpoint yang memerlukan autentikasi */
+  token?: string;
+  /** Override headers tambahan */
+  headers?: Record<string, string>;
+}
+
+/**
+ * Kirim POST request ke backend API.
+ *
+ * @param path    - Path endpoint, contoh: '/api/auth/login'
+ * @param body    - Payload JSON yang akan dikirim
+ * @param options - Opsi tambahan (token, headers)
+ * @returns       Parsed JSON response
+ * @throws        Error dengan pesan dari server jika response tidak OK
+ */
+export async function apiPost<TResponse>(
+  path: string,
+  body: unknown,
+  options: RequestOptions = {}
+): Promise<TResponse> {
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    ...options.headers,
+  };
+
+  if (options.token) {
+    headers['Authorization'] = `Bearer ${options.token}`;
+  }
+
+  const response = await fetch(`${API_BASE_URL}${path}`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify(body),
+  });
+
+  // Coba parse JSON — jika gagal (misal: server error HTML), lempar error generik
+  let data: TResponse;
+  try {
+    data = (await response.json()) as TResponse;
+  } catch {
+    throw new Error(`Server mengembalikan response yang tidak valid (HTTP ${response.status})`);
+  }
+
+  if (!response.ok) {
+    // Ambil pesan dari body jika ada, fallback ke status HTTP
+    const errorMessage =
+      (data as { message?: string }).message ||
+      `Request gagal dengan status ${response.status}`;
+    throw new Error(errorMessage);
+  }
+
+  return data;
+}
+
+/**
+ * Kirim GET request ke backend API.
+ *
+ * @param path    - Path endpoint, contoh: '/api/users'
+ * @param options - Opsi tambahan (token, headers)
+ * @returns       Parsed JSON response
+ */
+export async function apiGet<TResponse>(
+  path: string,
+  options: RequestOptions = {}
+): Promise<TResponse> {
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    ...options.headers,
+  };
+
+  if (options.token) {
+    headers['Authorization'] = `Bearer ${options.token}`;
+  }
+
+  const response = await fetch(`${API_BASE_URL}${path}`, {
+    method: 'GET',
+    headers,
+  });
+
+  let data: TResponse;
+  try {
+    data = (await response.json()) as TResponse;
+  } catch {
+    throw new Error(`Server mengembalikan response yang tidak valid (HTTP ${response.status})`);
+  }
+
+  if (!response.ok) {
+    const errorMessage =
+      (data as { message?: string }).message ||
+      `Request gagal dengan status ${response.status}`;
+    throw new Error(errorMessage);
+  }
+
+  return data;
+}

@@ -51,34 +51,34 @@ export default function ComingSoonPage() {
   return (
     <div style={styles.container}>
       {/* Background Gradients */}
-      <div style={styles.glow1} />
-      <div style={styles.glow2} />
+      <div style={{ ...styles.glow1, animation: 'glowPulse 12s infinite ease-in-out' }} />
+      <div style={{ ...styles.glow2, animation: 'glowPulse 15s infinite ease-in-out 3s' }} />
 
       {/* Floating Sparkles / Particles for Tech Feel */}
       <div style={styles.particleContainer}>
-        <div style={{ ...styles.particle, top: '15%', left: '25%', animationDelay: '0s' }} />
-        <div style={{ ...styles.particle, top: '45%', left: '75%', animationDelay: '2s' }} />
-        <div style={{ ...styles.particle, top: '75%', left: '15%', animationDelay: '4s' }} />
+        <div style={{ ...styles.particle, top: '15%', left: '25%', animation: 'pulse 4s infinite ease-in-out, floatParticle1 8s infinite ease-in-out' }} />
+        <div style={{ ...styles.particle, top: '45%', left: '75%', animation: 'pulse 5s infinite ease-in-out, floatParticle2 10s infinite ease-in-out' }} />
+        <div style={{ ...styles.particle, top: '75%', left: '15%', animation: 'pulse 6s infinite ease-in-out, floatParticle3 9s infinite ease-in-out' }} />
       </div>
 
-      <div style={styles.contentCard}>
+      <div style={{ ...styles.contentCard, animation: 'scaleUp 1s cubic-bezier(0.16, 1, 0.3, 1) forwards, floatGentle 8s infinite ease-in-out 1s' }}>
         {/* Badge */}
-        <span className="badge-tech badge-tech-accent" style={{ alignSelf: 'center', marginBottom: '1.5rem' }}>
+        <span className="badge-tech badge-tech-accent stagger-in animate-delay-1" style={{ alignSelf: 'center', marginBottom: '1.5rem' }}>
           nalara.academy
         </span>
 
         {/* Heading */}
-        <h1 style={styles.heading}>
+        <h1 style={styles.heading} className="stagger-in animate-delay-2">
           <span style={styles.gradientText}>COMING SOON</span>
         </h1>
 
         {/* Description */}
-        <p style={styles.description}>
+        <p style={styles.description} className="stagger-in animate-delay-3">
           Sistem manajemen pembelajaran interaktif berbasis AI, bank soal evaluasi otomatis, serta visualisasi progres pembelajaran sedang dalam proses pengembangan akhir oleh Divisi PIT (Platform, Information &amp; Technology).
         </p>
 
         {/* Countdown */}
-        <div style={styles.countdownContainer}>
+        <div style={styles.countdownContainer} className="stagger-in animate-delay-4">
           <div style={styles.countdownItem}>
             <span style={styles.countdownNumber}>{String(timeLeft.days).padStart(2, '0')}</span>
             <span style={styles.countdownLabel}>Hari</span>
@@ -100,7 +100,7 @@ export default function ComingSoonPage() {
           </div>
         </div>
 
-        {/* Subscription Form */}
+        {/* Subscription Form
         <div style={styles.formContainer}>
           {!subscribed ? (
             <form onSubmit={handleSubscribe} style={styles.form}>
@@ -122,9 +122,9 @@ export default function ComingSoonPage() {
               <span>Terima kasih! Kami akan mengirimkan notifikasi saat platform diluncurkan.</span>
             </div>
           )}
-        </div>
+        </div> */}
 
-        {/* Actions / Social / Links */}
+        {/* Actions / Social / Links
         <div style={styles.actions}>
           <a href="/" style={styles.backLink}>
             ← Kembali ke Landing Page
@@ -133,7 +133,7 @@ export default function ComingSoonPage() {
           <a href="/quiz" style={styles.backLink}>
             Coba Demo Quiz Engine →
           </a>
-        </div>
+        </div> */}
       </div>
     </div>
   );
