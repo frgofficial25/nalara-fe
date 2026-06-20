@@ -2,30 +2,21 @@
 
 import React, { useState, useEffect } from 'react';
 import { 
-  Users, BookOpen, FileText, Activity, 
-  RefreshCw, ShieldAlert, ChevronRight, FileCheck, CheckCircle
+  Users, BookOpen, Activity, RefreshCw, ShieldAlert, ChevronRight, Layers 
 } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import { apiGet } from '@/lib/api';
 import { getStoredToken } from '@/services/auth';
-
-interface TaskToGrade {
-  id: number;
-  task_name: string;
-  course_name: string;
-  module_name: string;
-  ungraded_count: number;
-  total_submissions: number;
-}
 
 interface LecturerData {
   online_students: number;
   active_courses: number;
   total_students: number;
-  pending_submissions: number;
-  tasks_to_grade: TaskToGrade[];
+  pending_submissions?: number;
 }
 
 export default function LecturerDashboard() {
+  const router = useRouter();
   const [data, setData] = useState<LecturerData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -71,7 +62,7 @@ export default function LecturerDashboard() {
       }
     } catch (err) {
       console.error(err);
-      setError(err instanceof Error ? err.message : 'Gagal memuat data dashboard lecturer');
+      setError(err instanceof Error ? err.message : 'Gagal memuat data dashboard');
     } finally {
       setLoading(false);
       setIsRefreshing(false);
@@ -87,7 +78,6 @@ export default function LecturerDashboard() {
     fetchData();
   };
 
-  // Calculate dynamic attendance rate (online_students / total_students)
   const attendanceRate = data && data.total_students > 0
     ? Math.round((data.online_students / data.total_students) * 100)
     : 0;
@@ -116,14 +106,6 @@ export default function LecturerDashboard() {
       icon: Users,
       color: "#9C27B0", // Purple
       bg: "rgba(156, 39, 176, 0.1)"
-    },
-    {
-      title: "Pending Submissions",
-      value: data?.pending_submissions ?? 0,
-      desc: "Ungraded student works",
-      icon: FileText,
-      color: "#FFA826", // Orange
-      bg: "rgba(255, 168, 38, 0.1)"
     }
   ];
 
@@ -132,8 +114,11 @@ export default function LecturerDashboard() {
       {/* Top action header */}
       <div style={s.topHeader}>
         <div>
-          <h1 style={s.title}>Lecturer Command Panel</h1>
-          <p style={s.subtitle}>Monitor class activities and student submissions</p>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <h1 style={s.title}>Lecturer Command Panel</h1>
+            <span style={s.apiBadge}>Consuming API</span>
+          </div>
+          <p style={s.subtitle}>Monitor class activities, courses, and platform statistics</p>
         </div>
         <button 
           onClick={handleRefresh}
@@ -165,19 +150,22 @@ export default function LecturerDashboard() {
         </div>
       )}
 
-      {/* Main Greeting Banner (FinAdapt style) */}
+      {/* Main Greeting Banner */}
       <div style={s.bannerCard}>
         <div style={s.bannerLeft}>
           <h2 style={s.bannerGreeting}>Welcome back, Prof. {userName}.</h2>
           <p style={s.bannerSubtitle}>
-            Your classes are currently operating at a healthy attendance. There are <strong style={{ color: 'var(--lemon)' }}>{data?.pending_submissions || 0} tasks</strong> requiring evaluation.
+            Your classes are currently operating at a healthy attendance. Manage your courses and learning modules directly.
           </p>
           <div style={s.bannerBtnRow}>
-            <button style={s.bannerBtnPrimary}>
-              <FileCheck size={14} color="#fff" style={{ marginRight: 6 }} />
-              Grade Submissions
+            <button onClick={() => router.push('/lecturer/courses')} style={s.bannerBtnPrimary}>
+              <BookOpen size={14} color="#fff" style={{ marginRight: 6 }} />
+              Manage Courses
             </button>
-            <button style={s.bannerBtnSecondary}>Manage Class Material</button>
+            <button onClick={() => router.push('/lecturer/modules')} style={s.bannerBtnSecondary}>
+              <Layers size={14} color="#fff" style={{ marginRight: 6 }} />
+              Manage Modules
+            </button>
           </div>
         </div>
         <div style={s.bannerRight}>
@@ -222,51 +210,6 @@ export default function LecturerDashboard() {
         })}
       </div>
 
-      {/* Tasks to Grade Section */}
-      <div style={s.taskSection}>
-        <div style={s.sectionHeader}>
-          <h3 style={s.sectionTitle}>Evaluations Waiting for Grading</h3>
-          <span style={s.sectionSubtitle}>Submissions that require score entry and feedback</span>
-        </div>
-
-        <div style={s.taskList}>
-          {loading ? (
-            <div style={{ padding: '20px', textAlign: 'center', color: 'var(--grey)' }}>Loading submissions...</div>
-          ) : data?.tasks_to_grade && data.tasks_to_grade.length > 0 ? (
-            data.tasks_to_grade.map((task) => (
-              <div key={task.id} style={s.taskRow}>
-                <div style={s.taskIconBox}>
-                  <FileText size={16} color="var(--azure)" />
-                </div>
-                <div style={s.taskInfo}>
-                  <strong style={s.taskName}>{task.task_name}</strong>
-                  <span style={s.taskMeta}>
-                    {task.course_name} • {task.module_name}
-                  </span>
-                </div>
-                <div style={s.taskStatusCol}>
-                  <span style={s.statusLabel}>Evaluation Status</span>
-                  <span style={s.statusValue}>
-                    {task.total_submissions - task.ungraded_count} / {task.total_submissions} Graded
-                  </span>
-                </div>
-                <div style={s.taskSubmissionCol}>
-                  <span style={s.ungradedTag}>
-                    {task.ungraded_count} Ungraded
-                  </span>
-                </div>
-                <button style={s.startTaskBtn}>
-                  <span>Evaluate</span>
-                  <ChevronRight size={14} />
-                </button>
-              </div>
-            ))
-          ) : (
-            <div style={s.emptyState}>No pending tasks to grade. All caught up!</div>
-          )}
-        </div>
-      </div>
-
       <style>{`
         @keyframes spin {
           from { transform: rotate(0deg); }
@@ -302,6 +245,15 @@ const s: Record<string, React.CSSProperties> = {
     color: 'var(--grey-blue)',
     marginTop: '4px',
     margin: 0,
+  },
+  apiBadge: {
+    fontSize: '0.72rem',
+    fontWeight: 700,
+    background: 'rgba(0, 200, 83, 0.12)',
+    color: '#00C853',
+    padding: '4px 10px',
+    borderRadius: '99px',
+    border: '1px solid rgba(0, 200, 83, 0.25)',
   },
   refreshBtn: {
     display: 'flex',
@@ -409,6 +361,8 @@ const s: Record<string, React.CSSProperties> = {
     fontSize: '0.85rem',
     fontWeight: 600,
     cursor: 'pointer',
+    display: 'flex',
+    alignItems: 'center',
     transition: 'background 0.2s ease',
   },
   bannerRight: {
@@ -483,6 +437,7 @@ const s: Record<string, React.CSSProperties> = {
     width: '32px',
     height: '32px',
     borderRadius: '8px',
+    background: 'rgba(65, 150, 240, 0.1)',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
@@ -504,120 +459,6 @@ const s: Record<string, React.CSSProperties> = {
     fontSize: '0.75rem',
     color: 'var(--grey)',
     marginTop: '4px',
-  },
-  taskSection: {
-    background: 'rgba(30, 30, 30, 0.45)',
-    border: '1px solid var(--border-color)',
-    borderRadius: '16px',
-    padding: '24px',
-  },
-  sectionHeader: {
-    marginBottom: '20px',
-    borderBottom: '1px solid rgba(255, 255, 255, 0.06)',
-    paddingBottom: '16px',
-  },
-  sectionTitle: {
-    fontSize: '1rem',
-    fontWeight: 700,
-    color: '#ffffff',
-    fontFamily: 'var(--font-display)',
-    margin: 0,
-  },
-  sectionSubtitle: {
-    fontSize: '0.78rem',
-    color: 'var(--grey-blue)',
-    display: 'block',
-    marginTop: '2px',
-  },
-  taskList: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '12px',
-  },
-  taskRow: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '16px',
-    padding: '14px 16px',
-    background: 'rgba(255, 255, 255, 0.02)',
-    border: '1px solid rgba(255, 255, 255, 0.04)',
-    borderRadius: '10px',
-    flexWrap: 'wrap',
-  },
-  taskIconBox: {
-    width: '36px',
-    height: '36px',
-    borderRadius: '8px',
-    background: 'rgba(65, 150, 240, 0.08)',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexShrink: 0,
-  },
-  taskInfo: {
-    flex: 1,
-    minWidth: '180px',
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '2px',
-  },
-  taskName: {
-    fontSize: '0.88rem',
-    color: '#ffffff',
-    fontWeight: 600,
-  },
-  taskMeta: {
-    fontSize: '0.78rem',
-    color: 'var(--grey-blue)',
-  },
-  taskStatusCol: {
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'flex-start',
-    gap: '2px',
-    minWidth: '100px',
-  },
-  statusLabel: {
-    fontSize: '0.72rem',
-    color: 'var(--grey)',
-  },
-  statusValue: {
-    fontSize: '0.82rem',
-    color: '#ffffff',
-    fontWeight: 500,
-  },
-  taskSubmissionCol: {
-    minWidth: '100px',
-  },
-  ungradedTag: {
-    background: 'rgba(255, 168, 38, 0.15)',
-    color: '#FFA826',
-    border: '1px solid rgba(255, 168, 38, 0.25)',
-    padding: '4px 10px',
-    borderRadius: '6px',
-    fontSize: '0.78rem',
-    fontWeight: 600,
-    display: 'inline-block',
-  },
-  startTaskBtn: {
-    background: 'transparent',
-    border: '1px solid var(--border-color)',
-    color: 'var(--silver)',
-    padding: '6px 14px',
-    borderRadius: '6px',
-    fontSize: '0.78rem',
-    fontWeight: 600,
-    cursor: 'pointer',
-    display: 'flex',
-    alignItems: 'center',
-    gap: '4px',
-    transition: 'all 0.2s ease',
-  },
-  emptyState: {
-    padding: '24px',
-    textAlign: 'center',
-    color: 'var(--grey)',
-    fontSize: '0.85rem',
   },
   skeletonWrapper: {
     display: 'flex',

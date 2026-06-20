@@ -8,7 +8,12 @@ import {
   ChevronLeft,
   ChevronRight,
   Shield,
-  LogOut
+  LogOut,
+  BookOpen,
+  Brain,
+  GraduationCap,
+  TrendingUp,
+  Inbox
 } from 'lucide-react';
 import { logoutApi } from '@/services/auth';
 
@@ -30,6 +35,9 @@ export const getMenuForRole = (role?: string) => {
         group: 'OVERVIEW',
         items: [
           { label: 'Dashboard', href: '/lecturer/dashboard', icon: LayoutDashboard },
+          { label: 'Courses', href: '/lecturer/courses', icon: BookOpen },
+          { label: 'Modules', href: '/lecturer/modules', icon: GraduationCap },
+          { label: 'Quiz Bank', href: '/lecturer/quizzes', icon: Brain },
         ],
       },
     ];

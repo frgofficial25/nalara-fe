@@ -4,6 +4,8 @@ import React, { useState, useEffect } from 'react';
 import Sidebar from './Sidebar';
 import Header from './Header';
 
+import { useRouter, usePathname } from 'next/navigation';
+
 interface DashboardLayoutProps {
   children: React.ReactNode;
 }
@@ -11,26 +13,54 @@ interface DashboardLayoutProps {
 export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [userInfo, setUserInfo] = useState<{ name: string; email: string; role: string } | null>(null);
-
-  useEffect(() => {
-    const data = localStorage.getItem('nalara_user_info') || sessionStorage.getItem('nalara_user_info');
-    if (data) {
-      try {
-        setUserInfo(JSON.parse(data));
-      } catch (e) {
-        console.error('Failed to parse user info:', e);
-      }
-    }
-  }, []);
+  const router = useRouter();
+  const pathname = usePathname();
 
   const getRoleName = (role?: string) => {
     if (!role) return "System Owner";
     const cleanRole = role.toLowerCase();
     if (cleanRole === 'superadmin') return "SuperAdmin";
-    if (cleanRole === 'lecture') return "Lecturer";
+    if (cleanRole === 'lecture' || cleanRole === 'lecturer') return "Lecturer";
     if (cleanRole === 'mentor' || cleanRole === 'tentor') return "Tentor";
     return "Student";
   };
+
+  const redirectToCorrectDashboard = (role: string) => {
+    if (role === 'superadmin') {
+      router.push('/superadmin/dashboard');
+    } else if (role === 'lecture' || role === 'lecturer') {
+      router.push('/lecturer/dashboard');
+    } else if (role === 'mentor' || role === 'tentor') {
+      router.push('/tentor/dashboard');
+    } else {
+      router.push('/student/dashboard');
+    }
+  };
+
+  useEffect(() => {
+    const data = localStorage.getItem('nalara_user_info') || sessionStorage.getItem('nalara_user_info');
+    if (!data) {
+      router.push('/login');
+      return;
+    }
+    try {
+      const user = JSON.parse(data);
+      setUserInfo(user);
+      
+      const role = user.role?.toLowerCase() || '';
+      // Middleware guard check
+      if (pathname.startsWith('/superadmin') && role !== 'superadmin') {
+        redirectToCorrectDashboard(role);
+      } else if (pathname.startsWith('/lecturer') && role !== 'lecture' && role !== 'lecturer') {
+        redirectToCorrectDashboard(role);
+      } else if (pathname.startsWith('/tentor') && role !== 'mentor' && role !== 'tentor') {
+        redirectToCorrectDashboard(role);
+      }
+    } catch (e) {
+      console.error('Failed to parse user info:', e);
+      router.push('/login');
+    }
+  }, [pathname, router]);
 
   return (
     <div style={s.wrapper}>
