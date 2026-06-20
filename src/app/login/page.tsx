@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { loginApi } from '@/services/auth';
 import type { LoginData } from '@/types/auth.types';
 
@@ -9,12 +10,35 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const router = useRouter();
   
   // State for handling API consumption
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
   const [session, setSession] = useState<LoginData | null>(null);
+
+  // Auto-redirect if already logged in
+  useEffect(() => {
+    const data = localStorage.getItem('nalara_user_info') || sessionStorage.getItem('nalara_user_info');
+    if (data) {
+      try {
+        const userObj = JSON.parse(data);
+        const role = userObj.role?.toLowerCase();
+        if (role === 'superadmin') {
+          router.push('/superadmin/dashboard');
+        } else if (role === 'lecture') {
+          router.push('/lecturer/dashboard');
+        } else if (role === 'mentor' || role === 'tentor') {
+          router.push('/tentor/dashboard');
+        } else {
+          router.push('/student/dashboard');
+        }
+      } catch (e) {
+        console.error('Failed to auto-redirect:', e);
+      }
+    }
+  }, [router]);
 
   // Carousel State for Left Panel
   const [activeSlide, setActiveSlide] = useState(0);
@@ -52,6 +76,22 @@ export default function LoginPage() {
       if (response.success && response.data) {
         setSuccessMsg(response.message);
         setSession(response.data);
+        
+        // Simpan data user ke storage untuk layout/header info
+        const storage = rememberMe ? localStorage : sessionStorage;
+        storage.setItem('nalara_user_info', JSON.stringify(response.data.user));
+        
+        // Redirect based on role
+        const role = response.data.user.role.toLowerCase();
+        if (role === 'superadmin') {
+          router.push('/superadmin/dashboard');
+        } else if (role === 'lecture') {
+          router.push('/lecturer/dashboard');
+        } else if (role === 'mentor' || role === 'tentor') {
+          router.push('/tentor/dashboard');
+        } else {
+          router.push('/student/dashboard');
+        }
       } else {
         setErrorMsg(response.message || 'Terjadi kesalahan saat masuk.');
       }
@@ -292,12 +332,9 @@ export default function LoginPage() {
               <h1 style={styles.successTitle}>Login Berhasil!</h1>
               <p style={styles.successSub}>
                 Selamat datang kembali, <strong>{session.user.name}</strong> ({session.user.email}). Anda masuk sebagai role <strong>{session.user.role}</strong>.
+                <br /><br />
+                Mengarahkan ke dashboard...
               </p>
-
-              <div style={styles.tokenBox}>
-                <div style={styles.tokenLabel}>JWT Session Token:</div>
-                <div style={styles.tokenText}>{session.token}</div>
-              </div>
 
               <div style={styles.successActions}>
                 <a href="/" className="nalara-btn nalara-btn-cta" style={{ textDecoration: 'none', flex: 1, textAlign: 'center' }}>

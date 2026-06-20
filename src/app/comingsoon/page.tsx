@@ -49,58 +49,208 @@ export default function ComingSoonPage() {
   };
 
   return (
-    <div style={styles.container}>
-      {/* Background Gradients */}
-      <div style={{ ...styles.glow1, animation: 'glowPulse 12s infinite ease-in-out' }} />
-      <div style={{ ...styles.glow2, animation: 'glowPulse 15s infinite ease-in-out 3s' }} />
+    <>
+      <style>{`
+        .content-card-custom {
+          max-width: 1000px !important;
+          min-height: 75vh !important;
+          padding: 3.5rem 3rem !important;
+          display: flex !important;
+          flex-direction: row !important;
+          align-items: center !important;
+          gap: 4.5rem !important;
+          text-align: left !important;
+        }
+        .card-left {
+          flex: 1.1;
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
+        }
+        .card-right {
+          flex: 0.9;
+          display: flex;
+          justify-content: center;
+          align-items: center;
+        }
+        .logo-img {
+          max-width: 220px;
+          margin-bottom: 2rem;
+        }
+        .poster-img {
+          width: 100%;
+          max-width: 450px;
+          border-radius: 16px;
+          box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+          object-fit: contain;
+          transition: transform 0.3s ease;
+        }
+        .poster-img:hover {
+          transform: translateY(-3px) scale(1.02);
+        }
+        .countdown-container-custom {
+          justify-content: flex-start !important;
+        }
+        .mobile-hint {
+          display: none;
+        }
+        @media (max-width: 900px) {
+          .content-card-custom {
+            flex-direction: column !important;
+            padding: 2.5rem 1.5rem !important;
+            gap: 2.5rem !important;
+            text-align: center !important;
+          }
+          .card-left {
+            align-items: center;
+            text-align: center;
+            order: 1;
+            display: flex;
+            flex-direction: column;
+          }
+          .card-right {
+            order: 2;
+          }
+          .poster-img {
+            max-width: 320px;
+          }
+          .cta-container-inner {
+            order: -1 !important;
+            align-items: center !important;
+            width: 100% !important;
+            background: rgba(255, 168, 38, 0.05);
+            padding: 1.5rem;
+            border-radius: 16px;
+            border: 1px solid rgba(255, 168, 38, 0.2);
+            margin-bottom: 2rem !important;
+          }
+          .mobile-hint {
+            display: inline-block !important;
+            font-size: 0.75rem !important;
+            font-weight: 600 !important;
+            color: var(--sky) !important;
+            background: rgba(6, 99, 199, 0.4) !important;
+            padding: 0.35rem 0.85rem !important;
+            border-radius: 20px !important;
+            margin-bottom: 1rem !important;
+            border: 1px solid rgba(65, 150, 240, 0.3) !important;
+            letter-spacing: 0.05em !important;
+            order: 1 !important;
+          }
+          .nalara-btn-cta {
+            order: 2 !important;
+            width: 100%;
+            max-width: 300px;
+          }
+          .cta-heading-inner {
+            order: 3 !important;
+            font-size: 0.85rem !important;
+            font-weight: 600 !important;
+            margin-top: 1rem !important;
+            margin-bottom: 0 !important;
+            text-align: center !important;
+            width: 100% !important;
+          }
+          .countdown-container-custom {
+            justify-content: center !important;
+            flex-wrap: nowrap !important;
+            gap: 0.5rem !important;
+          }
+          .countdown-container-custom > div {
+            min-width: 45px !important;
+          }
+          .countdown-container-custom > div:nth-child(even) {
+            min-width: auto !important;
+            font-size: 1.5rem !important;
+            padding-bottom: 0.5rem !important;
+          }
+          .countdown-container-custom > div:nth-child(odd) > span:first-child {
+            font-size: 1.8rem !important;
+          }
+          .countdown-container-custom > div:nth-child(odd) > span:last-child {
+            font-size: 0.7rem !important;
+          }
+        }
+      `}</style>
+      <div style={styles.container}>
+        {/* Background Gradients */}
+        <div style={{ ...styles.glow1, animation: 'glowPulse 12s infinite ease-in-out' }} />
+        <div style={{ ...styles.glow2, animation: 'glowPulse 15s infinite ease-in-out 3s' }} />
 
-      {/* Floating Sparkles / Particles for Tech Feel */}
-      <div style={styles.particleContainer}>
-        <div style={{ ...styles.particle, top: '15%', left: '25%', animation: 'pulse 4s infinite ease-in-out, floatParticle1 8s infinite ease-in-out' }} />
-        <div style={{ ...styles.particle, top: '45%', left: '75%', animation: 'pulse 5s infinite ease-in-out, floatParticle2 10s infinite ease-in-out' }} />
-        <div style={{ ...styles.particle, top: '75%', left: '15%', animation: 'pulse 6s infinite ease-in-out, floatParticle3 9s infinite ease-in-out' }} />
-      </div>
-
-      <div style={{ ...styles.contentCard, animation: 'scaleUp 1s cubic-bezier(0.16, 1, 0.3, 1) forwards, floatGentle 8s infinite ease-in-out 1s' }}>
-        {/* Badge */}
-        <span className="badge-tech badge-tech-accent stagger-in animate-delay-1" style={{ alignSelf: 'center', marginBottom: '1.5rem' }}>
-          nalara.academy
-        </span>
-
-        {/* Heading */}
-        <h1 style={styles.heading} className="stagger-in animate-delay-2">
-          <span style={styles.gradientText}>COMING SOON</span>
-        </h1>
-
-        {/* Description */}
-        <p style={styles.description} className="stagger-in animate-delay-3">
-          Sistem manajemen pembelajaran interaktif berbasis AI, bank soal evaluasi otomatis, serta visualisasi progres pembelajaran sedang dalam proses pengembangan akhir oleh Divisi PIT (Platform, Information &amp; Technology).
-        </p>
-
-        {/* Countdown */}
-        <div style={styles.countdownContainer} className="stagger-in animate-delay-4">
-          <div style={styles.countdownItem}>
-            <span style={styles.countdownNumber}>{String(timeLeft.days).padStart(2, '0')}</span>
-            <span style={styles.countdownLabel}>Hari</span>
-          </div>
-          <div style={styles.countdownSeparator}>:</div>
-          <div style={styles.countdownItem}>
-            <span style={styles.countdownNumber}>{String(timeLeft.hours).padStart(2, '0')}</span>
-            <span style={styles.countdownLabel}>Jam</span>
-          </div>
-          <div style={styles.countdownSeparator}>:</div>
-          <div style={styles.countdownItem}>
-            <span style={styles.countdownNumber}>{String(timeLeft.minutes).padStart(2, '0')}</span>
-            <span style={styles.countdownLabel}>Menit</span>
-          </div>
-          <div style={styles.countdownSeparator}>:</div>
-          <div style={styles.countdownItem}>
-            <span style={{ ...styles.countdownNumber, color: 'var(--lemon)' }}>{String(timeLeft.seconds).padStart(2, '0')}</span>
-            <span style={styles.countdownLabel}>Detik</span>
-          </div>
+        {/* Floating Sparkles / Particles for Tech Feel */}
+        <div style={styles.particleContainer}>
+          <div style={{ ...styles.particle, width: '6px', height: '6px', top: '12%', left: '8%', animation: 'pulse 4s infinite ease-in-out, floatParticle1 8s infinite ease-in-out' }} />
+          <div style={{ ...styles.particle, width: '9px', height: '9px', top: '20%', left: '88%', animation: 'pulse 5s infinite ease-in-out, floatParticle2 10s infinite ease-in-out' }} />
+          <div style={{ ...styles.particle, width: '7px', height: '7px', top: '82%', left: '10%', animation: 'pulse 6s infinite ease-in-out, floatParticle3 9s infinite ease-in-out' }} />
+          <div style={{ ...styles.particle, width: '5px', height: '5px', top: '85%', left: '85%', animation: 'pulse 4.5s infinite ease-in-out, floatParticle2 12s infinite ease-in-out reverse' }} />
+          <div style={{ ...styles.particle, width: '8px', height: '8px', top: '50%', left: '5%', animation: 'pulse 5.5s infinite ease-in-out, floatParticle1 11s infinite ease-in-out reverse' }} />
         </div>
 
-        {/* Subscription Form
+        <div className="content-card-custom" style={{ ...styles.contentCard, animation: 'scaleUp 1s cubic-bezier(0.16, 1, 0.3, 1) forwards, floatGentle 8s infinite ease-in-out 1s' }}>
+
+          <div className="card-left">
+            {/* Logo */}
+            <img src="/image/logonalara2.png" alt="Logo Nalara" className="logo-img stagger-in" />
+
+            {/* Heading */}
+            <h1 style={{ ...styles.heading, fontSize: '3rem', marginBottom: '0.8rem', textAlign: 'inherit' }} className="stagger-in animate-delay-2">
+              <span style={styles.gradientText}>COMING SOON</span>
+            </h1>
+
+            {/* Description */}
+            <p style={{ ...styles.description, fontSize: '1.1rem', margin: '0 0 2rem 0', maxWidth: 'none', textAlign: 'inherit' }} className="stagger-in animate-delay-3">
+              Tim PIT Nalara sedang memasak sesuatu yang besar untuk para Future Nalarians
+            </p>
+
+            {/* CTA Button */}
+            <div className="stagger-in animate-delay-4 cta-container-inner" style={{ ...styles.ctaContainer, flexDirection: 'column', alignItems: 'flex-start', marginBottom: '2.5rem' }}>
+              <div className="mobile-hint">
+                KLIK DAFTAR SEKARANG
+              </div>
+              <h3 className="cta-heading-inner" style={{ fontSize: '1.05rem', fontWeight: 700, color: 'var(--lemon)', marginBottom: '1rem', marginTop: 0, letterSpacing: '0.05em', textTransform: 'uppercase', lineHeight: 1.4, textAlign: 'left' }}>
+                LIMITED SEATS! ONLY 150! JOINN NOW! 100% OFF! T&C Applied!
+              </h3>
+              <a
+                href="https://forms.gle/mRVMULpuokZpVLJZ9"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="nalara-btn-cta"
+                style={{ ...styles.ctaButton, padding: '1rem 2rem', fontSize: '1.1rem' }}
+              >
+                DAFTAR SEKARANG!
+              </a>
+            </div>
+
+            {/* Countdown */}
+            <div className="countdown-container-custom stagger-in animate-delay-5" style={{ ...styles.countdownContainer, marginBottom: '0', gap: '1rem' }}>
+              <div style={{ ...styles.countdownItem, minWidth: '65px' }}>
+                <span style={{ ...styles.countdownNumber, fontSize: '2.5rem' }}>{String(timeLeft.days).padStart(2, '0')}</span>
+                <span style={{ ...styles.countdownLabel, fontSize: '0.85rem', marginTop: '0.5rem' }}>Hari</span>
+              </div>
+              <div style={{ ...styles.countdownSeparator, fontSize: '2rem', paddingBottom: '0.8rem' }}>:</div>
+              <div style={{ ...styles.countdownItem, minWidth: '65px' }}>
+                <span style={{ ...styles.countdownNumber, fontSize: '2.5rem' }}>{String(timeLeft.hours).padStart(2, '0')}</span>
+                <span style={{ ...styles.countdownLabel, fontSize: '0.85rem', marginTop: '0.5rem' }}>Jam</span>
+              </div>
+              <div style={{ ...styles.countdownSeparator, fontSize: '2rem', paddingBottom: '0.8rem' }}>:</div>
+              <div style={{ ...styles.countdownItem, minWidth: '65px' }}>
+                <span style={{ ...styles.countdownNumber, fontSize: '2.5rem' }}>{String(timeLeft.minutes).padStart(2, '0')}</span>
+                <span style={{ ...styles.countdownLabel, fontSize: '0.85rem', marginTop: '0.5rem' }}>Menit</span>
+              </div>
+              <div style={{ ...styles.countdownSeparator, fontSize: '2rem', paddingBottom: '0.8rem' }}>:</div>
+              <div style={{ ...styles.countdownItem, minWidth: '65px' }}>
+                <span style={{ ...styles.countdownNumber, fontSize: '2.5rem', color: 'var(--lemon)' }}>{String(timeLeft.seconds).padStart(2, '0')}</span>
+                <span style={{ ...styles.countdownLabel, fontSize: '0.85rem', marginTop: '0.5rem' }}>Detik</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="card-right">
+            {/* Poster */}
+            <img src="/image/PosterNalara.png" alt="Poster" className="poster-img stagger-in animate-delay-1" />
+          </div>
+
+          {/* Subscription Form
         <div style={styles.formContainer}>
           {!subscribed ? (
             <form onSubmit={handleSubscribe} style={styles.form}>
@@ -124,7 +274,7 @@ export default function ComingSoonPage() {
           )}
         </div> */}
 
-        {/* Actions / Social / Links
+          {/* Actions / Social / Links
         <div style={styles.actions}>
           <a href="/" style={styles.backLink}>
             ← Kembali ke Landing Page
@@ -134,8 +284,9 @@ export default function ComingSoonPage() {
             Coba Demo Quiz Engine →
           </a>
         </div> */}
+        </div>
       </div>
-    </div>
+    </>
   );
 }
 
@@ -143,8 +294,6 @@ const styles: Record<string, React.CSSProperties> = {
   container: {
     minHeight: '100vh',
     display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
     background: 'var(--bg-dark)',
     position: 'relative',
     overflow: 'hidden',
@@ -188,6 +337,7 @@ const styles: Record<string, React.CSSProperties> = {
     animation: 'pulse 3s infinite ease-in-out',
   },
   contentCard: {
+    margin: 'auto',
     maxWidth: '750px',
     width: '100%',
     background: 'rgba(255, 255, 255, 0.01)',
@@ -325,5 +475,21 @@ const styles: Record<string, React.CSSProperties> = {
     width: '1px',
     height: '15px',
     background: 'var(--border-color)',
+  },
+  ctaContainer: {
+    display: 'flex',
+    justifyContent: 'center',
+    marginBottom: '3rem',
+  },
+  ctaButton: {
+    padding: '1rem 2rem',
+    fontSize: '1.1rem',
+    fontWeight: 700,
+    textTransform: 'uppercase',
+    letterSpacing: '0.05em',
+    borderRadius: '12px',
+    boxShadow: '0 0 20px rgba(255, 168, 38, 0.4)',
+    textDecoration: 'none',
+    transition: 'all 0.3s ease',
   },
 };

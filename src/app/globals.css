@@ -1,10 +1,12 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap');
+
+@import "tailwindcss";
+
 /* 
   =========================================
   NALARA — ACCELERATION BOOTCAMP DESIGN SYSTEM
   =========================================
 */
-
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap');
 
 :root {
   /* Color Palette (Nalara Tech Theme) */
@@ -60,7 +62,6 @@
 }
 
 html, body {
-  height: 100%;
   width: 100%;
   color: var(--silver);
   background-color: var(--bg-dark);
@@ -318,6 +319,60 @@ p {
     flex: 1 1 100% !important;
     width: 100% !important;
     padding: 3rem 1.5rem !important;
+  }
+}
+
+/* Responsive Navbar */
+.nav-links-desktop {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.hamburger-btn {
+  display: none;
+  background: none;
+  border: none;
+  color: var(--white);
+  font-size: 1.5rem;
+  cursor: pointer;
+}
+
+.mobile-menu {
+  display: none;
+  flex-direction: column;
+  background: rgba(33, 33, 33, 0.95);
+  backdrop-filter: blur(16px);
+  position: absolute;
+  top: 100%;
+  left: 0;
+  width: 100%;
+  padding: 1.5rem;
+  border-bottom: 1px solid var(--border-color);
+  gap: 1rem;
+}
+
+.mobile-menu a {
+  color: var(--grey-blue);
+  text-decoration: none;
+  font-weight: 500;
+  padding: 0.5rem 0;
+  transition: color 0.2s ease;
+}
+
+.mobile-menu a:hover {
+  color: var(--white);
+}
+
+@media (max-width: 768px) {
+  .nav-links-desktop {
+    display: none;
+  }
+  .hamburger-btn {
+    display: block;
+  }
+  .mobile-menu.open {
+    display: flex;
   }
 }
 

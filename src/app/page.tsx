@@ -9,9 +9,12 @@ import Team from '../components/landingpage/Team';
 import Footer from '../components/landingpage/Footer';
 
 export default function LandingPage() {
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
+
   const scrollToSection = (id: string) => {
     const el = document.getElementById(id);
     if (el) el.scrollIntoView({ behavior: 'smooth' });
+    setIsMobileMenuOpen(false);
   };
 
   return (
@@ -20,7 +23,8 @@ export default function LandingPage() {
       <nav style={styles.navbar}>
         <div style={styles.navInner}>
           <span style={styles.navLogo}>⚡ Nalara</span>
-          <div style={styles.navLinks}>
+          
+          <div className="nav-links-desktop">
             <a href="#syllabus" style={styles.navLink}>Silabus</a>
             <a href="#pricing" style={styles.navLink}>Pendaftaran</a>
             <a href="#team" style={styles.navLink}>Tim</a>
@@ -32,6 +36,25 @@ export default function LandingPage() {
               Daftar Sekarang
             </button>
           </div>
+
+          <button 
+            className="hamburger-btn" 
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+          >
+            {isMobileMenuOpen ? '✕' : '☰'}
+          </button>
+        </div>
+
+        <div className={`mobile-menu ${isMobileMenuOpen ? 'open' : ''}`}>
+          <a href="#syllabus" onClick={() => scrollToSection('syllabus')}>Silabus</a>
+          <a href="#pricing" onClick={() => scrollToSection('pricing')}>Pendaftaran</a>
+          <a href="#team" onClick={() => scrollToSection('team')}>Tim</a>
+          <button
+            className="nalara-btn nalara-btn-cta"
+            onClick={() => scrollToSection('pricing')}
+          >
+            Daftar Sekarang
+          </button>
         </div>
       </nav>
 
