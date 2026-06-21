@@ -297,7 +297,6 @@ export default function TugasPage() {
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <h1 style={s.title}>Assignment Management</h1>
-            <span style={s.apiBadge}>Consuming API</span>
           </div>
           <p style={s.subtitle}>Create and manage lessons, videos, case studies, and practice assignments</p>
         </div>
@@ -318,9 +317,9 @@ export default function TugasPage() {
           }}
           style={s.filterSelect}
         >
-          <option value="">All Courses</option>
+          <option value="" style={{ background: '#191919', color: '#fff' }}>All Courses</option>
           {courses.map(c => (
-            <option key={c.id} value={c.id}>{c.title}</option>
+            <option key={c.id} value={c.id} style={{ background: '#191919', color: '#fff' }}>{c.title}</option>
           ))}
         </select>
         <select
@@ -328,9 +327,9 @@ export default function TugasPage() {
           onChange={(e) => setFilterModuleId(e.target.value)}
           style={s.filterSelect}
         >
-          <option value="">All Modules</option>
+          <option value="" style={{ background: '#191919', color: '#fff' }}>All Modules</option>
           {(filterCourseId ? modules.filter(m => m.uuid_pembelajaran === filterCourseId) : modules).map(m => (
-            <option key={m.id} value={m.id}>{m.title}</option>
+            <option key={m.id} value={m.id} style={{ background: '#191919', color: '#fff' }}>{m.title}</option>
           ))}
         </select>
       </div>
@@ -456,9 +455,9 @@ export default function TugasPage() {
                   onChange={(e) => setForm({ ...form, uuid_pembelajaran: e.target.value, uuid_modul: '' })}
                   style={s.select}
                 >
-                  <option value="">Select course...</option>
+                  <option value="" style={{ background: '#191919', color: '#fff' }}>Select course...</option>
                   {courses.map(c => (
-                    <option key={c.id} value={c.id}>{c.title}</option>
+                    <option key={c.id} value={c.id} style={{ background: '#191919', color: '#fff' }}>{c.title}</option>
                   ))}
                 </select>
               </div>
@@ -470,9 +469,9 @@ export default function TugasPage() {
                   onChange={(e) => setForm({ ...form, uuid_modul: e.target.value })}
                   style={s.select}
                 >
-                  <option value="">Select module...</option>
+                  <option value="" style={{ background: '#191919', color: '#fff' }}>Select module...</option>
                   {getFormModules().map(m => (
-                    <option key={m.id} value={m.id}>{m.title}</option>
+                    <option key={m.id} value={m.id} style={{ background: '#191919', color: '#fff' }}>{m.title}</option>
                   ))}
                 </select>
               </div>

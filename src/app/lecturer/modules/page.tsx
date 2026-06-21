@@ -218,7 +218,6 @@ export default function ModulesPage() {
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <h1 style={s.title}>Module Management</h1>
-            <span style={s.apiBadge}>Consuming API</span>
           </div>
           <p style={s.subtitle}>Organize and manage learning modules for your courses</p>
         </div>
@@ -238,9 +237,9 @@ export default function ModulesPage() {
           onChange={(e) => setSelectedCourseId(e.target.value)}
           style={s.courseSelect}
         >
-          <option value="">Choose a course...</option>
+          <option value="" style={{ background: '#191919', color: '#fff' }}>Choose a course...</option>
           {courses.map(c => (
-            <option key={c.id} value={c.id}>{c.title}</option>
+            <option key={c.id} value={c.id} style={{ background: '#191919', color: '#fff' }}>{c.title}</option>
           ))}
         </select>
       </div>

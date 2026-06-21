@@ -224,7 +224,6 @@ export default function GradeCenterPage() {
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <h1 style={s.title}>Grade Center</h1>
-            <span style={s.apiBadge}>Connected to API</span>
           </div>
           <p style={s.subtitle}>Analyze student grades, quiz recap performance, and track passing rates</p>
         </div>

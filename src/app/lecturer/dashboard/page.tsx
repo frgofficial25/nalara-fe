@@ -163,7 +163,6 @@ export default function LecturerDashboard() {
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <h1 style={s.title}>Lecturer Command Panel</h1>
-            <span style={s.apiBadge}>Consuming API</span>
           </div>
           <p style={s.subtitle}>Monitor class activities, courses, and platform statistics</p>
         </div>

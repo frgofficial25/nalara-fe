@@ -194,7 +194,6 @@ export default function ProfilePage() {
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <h1 style={s.title}>My Profile</h1>
-            <span style={s.apiBadge}>Consuming API</span>
           </div>
           <p style={s.subtitle}>Manage your account information, password, and avatar</p>
         </div>

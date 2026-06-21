@@ -504,17 +504,6 @@ export default function QuizzesPage() {
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <h1 style={s.title}>Quiz Bank</h1>
-            <span style={{
-              fontSize: '0.72rem',
-              fontWeight: 700,
-              background: 'rgba(0, 200, 83, 0.12)',
-              color: '#00C853',
-              padding: '4px 10px',
-              borderRadius: '99px',
-              border: '1px solid rgba(0, 200, 83, 0.25)',
-            }}>
-              Consuming API
-            </span>
           </div>
           <p style={s.subtitle}>Create and manage interactive student assessments manually or using AI generation tools</p>
         </div>
@@ -795,9 +784,9 @@ export default function QuizzesPage() {
                     onChange={(e) => { setManualCourse(e.target.value); setManualModule(''); }}
                     style={s.select}
                   >
-                    <option value="">Select course...</option>
+                    <option value="" style={{ background: '#191919', color: '#fff' }}>Select course...</option>
                     {courses.map(c => (
-                      <option key={c.uuid_pembelajaran} value={c.uuid_pembelajaran}>{c.title}</option>
+                      <option key={c.uuid_pembelajaran} value={c.uuid_pembelajaran} style={{ background: '#191919', color: '#fff' }}>{c.title}</option>
                     ))}
                   </select>
                 </div>
@@ -811,9 +800,9 @@ export default function QuizzesPage() {
                     onChange={(e) => setManualModule(e.target.value)}
                     style={s.select}
                   >
-                    <option value="">Select module...</option>
+                    <option value="" style={{ background: '#191919', color: '#fff' }}>Select module...</option>
                     {(manualCourse ? modules.filter(m => m.uuid_pembelajaran === manualCourse) : modules).map(m => (
-                      <option key={m.uuid_modul} value={m.uuid_modul}>{m.title}</option>
+                      <option key={m.uuid_modul} value={m.uuid_modul} style={{ background: '#191919', color: '#fff' }}>{m.title}</option>
                     ))}
                   </select>
                 </div>
@@ -824,9 +813,9 @@ export default function QuizzesPage() {
                     onChange={(e) => setManualDifficulty(e.target.value as any)}
                     style={s.select}
                   >
-                    <option value="Beginner">Beginner</option>
-                    <option value="Intermediate">Intermediate</option>
-                    <option value="Advanced">Advanced</option>
+                    <option value="Beginner" style={{ background: '#191919', color: '#fff' }}>Beginner</option>
+                    <option value="Intermediate" style={{ background: '#191919', color: '#fff' }}>Intermediate</option>
+                    <option value="Advanced" style={{ background: '#191919', color: '#fff' }}>Advanced</option>
                   </select>
                 </div>
                 <div style={s.formGroup}>
@@ -910,9 +899,9 @@ export default function QuizzesPage() {
                               onChange={(e) => handleQuestionChange(qIdx, 'type', e.target.value)}
                               style={s.select}
                             >
-                              <option value="MultipleChoice">Multiple Choice</option>
-                              <option value="TrueFalse">True / False</option>
-                              <option value="Essay">Essay</option>
+                              <option value="MultipleChoice" style={{ background: '#191919', color: '#fff' }}>Multiple Choice</option>
+                              <option value="TrueFalse" style={{ background: '#191919', color: '#fff' }}>True / False</option>
+                              <option value="Essay" style={{ background: '#191919', color: '#fff' }}>Essay</option>
                             </select>
                           </div>
                           <div style={s.formGroup}>
@@ -922,9 +911,9 @@ export default function QuizzesPage() {
                               onChange={(e) => handleQuestionChange(qIdx, 'difficulty', e.target.value)}
                               style={s.select}
                             >
-                              <option value="Beginner">Beginner</option>
-                              <option value="Intermediate">Intermediate</option>
-                              <option value="Advanced">Advanced</option>
+                              <option value="Beginner" style={{ background: '#191919', color: '#fff' }}>Beginner</option>
+                              <option value="Intermediate" style={{ background: '#191919', color: '#fff' }}>Intermediate</option>
+                              <option value="Advanced" style={{ background: '#191919', color: '#fff' }}>Advanced</option>
                             </select>
                           </div>
                           <div style={s.formGroup}>

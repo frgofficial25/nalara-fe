@@ -316,7 +316,6 @@ export default function CoursesPage() {
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <h1 style={s.title}>Course Management</h1>
-            <span style={s.apiBadge}>Consuming API</span>
           </div>
           <p style={s.subtitle}>Create and manage courses, and generate smart lesson materials via AI</p>
         </div>
