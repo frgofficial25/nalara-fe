@@ -8,8 +8,9 @@ const waves = [
     period: '20 – 24 Juni',
     highlight: 'Potongan harga khusus 20% dari tarif normal',
     isFeatured: true,
-    badge: '🔥 Terbatas',
+    badge: 'RECOMMENDED',
     icon: '🐣',
+    borderColor: '#ffa826',
   },
   {
     name: 'Wave 1',
@@ -18,6 +19,7 @@ const waves = [
     isFeatured: false,
     badge: null,
     icon: '🌊',
+    borderColor: 'rgba(255,255,255,0.08)',
   },
   {
     name: 'Wave 2',
@@ -26,14 +28,16 @@ const waves = [
     isFeatured: false,
     badge: null,
     icon: '🌊',
+    borderColor: 'rgba(255,255,255,0.08)',
   },
   {
     name: 'Last Wave',
     period: '14 – 22 Juli',
     highlight: 'Penutupan pendaftaran menjelang Technical Meeting',
     isFeatured: false,
-    badge: '⏳ Terakhir',
-    icon: '🚪',
+    badge: 'LATE REGISTRATION',
+    icon: '❗',
+    borderColor: '#ef4444',
   },
 ];
 
@@ -41,7 +45,6 @@ export default function Pricing() {
   return (
     <section style={styles.section} id="pricing">
       <div style={styles.sectionHeader}>
-        <span className="badge-tech badge-tech-accent">Pendaftaran</span>
         <h2 style={styles.sectionTitle}>Gelombang Pendaftaran</h2>
         <p style={styles.sectionDesc}>
           Pilih gelombang yang sesuai. Semakin awal mendaftar, semakin besar keuntungan yang Anda dapatkan.
@@ -55,14 +58,19 @@ export default function Pricing() {
             key={idx}
             style={{
               ...styles.waveCard,
-              ...(wave.isFeatured ? styles.waveCardFeatured : {}),
+              border: `1px solid ${wave.borderColor}`,
+              boxShadow: wave.isFeatured ? '0 0 30px rgba(255,168,38,0.1)' : 'none',
+              background: wave.isFeatured 
+                ? 'linear-gradient(180deg, rgba(255,168,38,0.03) 0%, rgba(11,11,12,0.8) 100%)'
+                : 'rgba(255,255,255,0.01)',
             }}
           >
             {wave.badge && (
               <span
                 style={{
                   ...styles.cardBadge,
-                  ...(wave.isFeatured ? styles.cardBadgeFeatured : {}),
+                  background: wave.isFeatured ? '#ffa826' : 'rgba(255,255,255,0.08)',
+                  color: wave.isFeatured ? '#000000' : '#94a3b8',
                 }}
               >
                 {wave.badge}
@@ -73,8 +81,8 @@ export default function Pricing() {
             <span style={styles.wavePeriod}>{wave.period}</span>
             <p style={styles.waveHighlight}>{wave.highlight}</p>
             {wave.isFeatured && (
-              <button className="nalara-btn nalara-btn-cta" style={styles.waveBtn}>
-                Daftar Early Bird
+              <button className="nalara-btn" style={styles.waveBtn}>
+                Daftar Sekarang
               </button>
             )}
           </div>
@@ -91,12 +99,12 @@ export default function Pricing() {
             </h3>
             <p style={styles.referralDesc}>
               Dapatkan potongan harga tambahan:{' '}
-              <strong style={{ color: 'var(--lemon)' }}>
+              <strong style={{ color: '#ffa826' }}>
                 Hingga 100% bagi Mahasiswa Aktif (via KTM)
               </strong>{' '}
               &amp;{' '}
-              <strong style={{ color: 'var(--azure)' }}>
-                50–70% bagi peserta Umum
+              <strong style={{ color: '#38bdf8' }}>
+                50–75% bagi peserta Umum
               </strong>
               .
             </p>
@@ -122,31 +130,35 @@ export default function Pricing() {
 
 const styles: Record<string, React.CSSProperties> = {
   section: {
-    padding: '4rem 1.5rem',
+    padding: '5rem 1.5rem',
     maxWidth: '1100px',
     margin: '0 auto',
     width: '100%',
   },
   sectionHeader: {
     textAlign: 'center',
-    marginBottom: '3rem',
+    marginBottom: '3.5rem',
   },
   sectionTitle: {
-    fontSize: '2.2rem',
+    fontSize: '2.5rem',
     marginTop: '0.75rem',
     marginBottom: '1rem',
     fontWeight: 800,
+    color: '#FFFFFF',
+    letterSpacing: '-0.02em',
   },
   sectionDesc: {
-    fontSize: '1.05rem',
+    fontSize: '1.1rem',
     maxWidth: '600px',
     margin: '0 auto',
+    color: '#94a3b8',
+    lineHeight: '1.6',
   },
   wavesGrid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
     gap: '1.5rem',
-    marginBottom: '3rem',
+    marginBottom: '4rem',
   },
   waveCard: {
     position: 'relative',
@@ -156,68 +168,61 @@ const styles: Record<string, React.CSSProperties> = {
     textAlign: 'center',
     padding: '2.5rem 1.5rem 2rem',
     borderRadius: '16px',
-    border: '1px solid var(--border-color)',
-    background: 'rgba(255,255,255,0.02)',
     transition: 'all 0.3s ease',
-  },
-  waveCardFeatured: {
-    border: '2px solid var(--lemon)',
-    background:
-      'linear-gradient(180deg, rgba(255,168,38,0.06) 0%, rgba(33,33,33,0.7) 100%)',
-    boxShadow: '0 0 30px rgba(255,168,38,0.08)',
+    backdropFilter: 'blur(16px)',
   },
   cardBadge: {
     position: 'absolute',
-    top: '-12px',
-    right: '16px',
-    fontSize: '0.75rem',
-    fontWeight: 700,
-    padding: '0.3rem 0.75rem',
+    top: '-10px',
+    fontSize: '0.7rem',
+    fontWeight: 800,
+    padding: '0.3rem 0.8rem',
     borderRadius: '9999px',
-    background: 'var(--d-grey)',
-    color: 'var(--silver)',
-    border: '1px solid var(--border-color)',
-  },
-  cardBadgeFeatured: {
-    background: 'var(--d-yellow)',
-    color: 'var(--bg-dark)',
-    border: 'none',
+    border: '1px solid rgba(255, 255, 255, 0.08)',
+    letterSpacing: '0.05em',
   },
   waveIcon: {
-    fontSize: '2rem',
+    fontSize: '2.2rem',
     marginBottom: '0.75rem',
   },
   waveName: {
-    fontSize: '1.25rem',
+    fontSize: '1.3rem',
     fontWeight: 700,
-    color: 'var(--white)',
+    color: '#FFFFFF',
     marginBottom: '0.35rem',
   },
   wavePeriod: {
-    fontSize: '0.9rem',
-    color: 'var(--azure)',
+    fontSize: '0.95rem',
+    color: '#38bdf8',
     fontWeight: 600,
     marginBottom: '1rem',
   },
   waveHighlight: {
     fontSize: '0.9rem',
-    color: 'var(--grey-blue)',
+    color: '#94a3b8',
     lineHeight: 1.5,
-    marginBottom: '1.25rem',
+    marginBottom: '1.5rem',
     flex: 1,
   },
   waveBtn: {
     marginTop: 'auto',
-    padding: '0.75rem 1.5rem',
-    fontSize: '0.95rem',
+    width: '100%',
+    padding: '0.7rem 1.25rem',
+    fontSize: '0.9rem',
+    fontWeight: 700,
+    color: '#000000',
+    background: '#ffa826',
+    border: 'none',
+    borderRadius: '8px',
+    cursor: 'pointer',
+    boxShadow: '0 4px 12px rgba(255, 168, 38, 0.2)',
   },
 
   /* Referral Banner */
   referralBanner: {
     borderRadius: '16px',
-    border: '1px solid rgba(6,113,224,0.25)',
-    background:
-      'linear-gradient(135deg, rgba(6,99,199,0.08) 0%, rgba(255,178,64,0.05) 100%)',
+    border: '1px solid rgba(255, 255, 255, 0.08)',
+    background: 'rgba(255,255,255,0.01)',
     padding: '2.5rem',
   },
   referralContent: {
@@ -235,14 +240,14 @@ const styles: Record<string, React.CSSProperties> = {
     minWidth: '280px',
   },
   referralTitle: {
-    fontSize: '1.35rem',
+    fontSize: '1.4rem',
     fontWeight: 700,
-    color: 'var(--white)',
+    color: '#FFFFFF',
     marginBottom: '0.75rem',
   },
   referralDesc: {
     fontSize: '1rem',
-    color: 'var(--grey-blue)',
+    color: '#94a3b8',
     lineHeight: 1.6,
     marginBottom: '1.25rem',
   },
@@ -250,31 +255,31 @@ const styles: Record<string, React.CSSProperties> = {
     display: 'flex',
     flexDirection: 'column',
     gap: '0.65rem',
-    marginBottom: '1rem',
+    marginBottom: '1.25rem',
   },
   stepChip: {
     display: 'flex',
     alignItems: 'center',
     gap: '0.75rem',
     fontSize: '0.9rem',
-    color: 'var(--silver)',
+    color: '#f8fafc',
   },
   stepNum: {
     display: 'inline-flex',
     alignItems: 'center',
     justifyContent: 'center',
-    width: '26px',
-    height: '26px',
+    width: '24px',
+    height: '24px',
     borderRadius: '50%',
-    background: 'var(--navy)',
-    color: 'var(--white)',
+    background: '#0252a3',
+    color: '#FFFFFF',
     fontWeight: 700,
     fontSize: '0.8rem',
     flexShrink: 0,
   },
   referralNote: {
     fontSize: '0.8rem',
-    color: 'var(--l-grey)',
+    color: '#64748b',
     fontStyle: 'italic',
   },
 };

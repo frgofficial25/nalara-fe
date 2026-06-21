@@ -22,18 +22,22 @@ export default function LandingPage() {
       {/* Navigation Bar */}
       <nav style={styles.navbar}>
         <div style={styles.navInner}>
-          <span style={styles.navLogo}>⚡ Nalara</span>
+          <div style={styles.logoContainer}>
+            <img src="/image/logonalara2.png" alt="Nalara Academy" style={styles.logoImg} />
+          </div>
           
-          <div className="nav-links-desktop">
-            <a href="#syllabus" style={styles.navLink}>Silabus</a>
-            <a href="#pricing" style={styles.navLink}>Pendaftaran</a>
-            <a href="#team" style={styles.navLink}>Tim</a>
+          <div className="nav-links-desktop" style={styles.navLinks}>
+            <a href="#syllabus" style={styles.navLink}>ECOSYSTEM</a>
+            <a href="#syllabus" style={styles.navLink}>LEARNING PATH</a>
+            <a href="#syllabus" style={styles.navLink}>CURRICULUM</a>
+            <a href="#pricing" style={styles.navLink}>COMMUNITY</a>
+            <a href="#pricing" style={styles.navLink}>ABOUT US</a>
             <button
-              className="nalara-btn nalara-btn-cta"
+              className="nalara-btn"
               style={styles.navCta}
               onClick={() => scrollToSection('pricing')}
             >
-              Daftar Sekarang
+              SIGN IN
             </button>
           </div>
 
@@ -45,15 +49,18 @@ export default function LandingPage() {
           </button>
         </div>
 
-        <div className={`mobile-menu ${isMobileMenuOpen ? 'open' : ''}`}>
-          <a href="#syllabus" onClick={() => scrollToSection('syllabus')}>Silabus</a>
-          <a href="#pricing" onClick={() => scrollToSection('pricing')}>Pendaftaran</a>
-          <a href="#team" onClick={() => scrollToSection('team')}>Tim</a>
+        <div className={`mobile-menu ${isMobileMenuOpen ? 'open' : ''}`} style={styles.mobileMenu}>
+          <a href="#syllabus" onClick={() => scrollToSection('syllabus')}>ECOSYSTEM</a>
+          <a href="#syllabus" onClick={() => scrollToSection('syllabus')}>LEARNING PATH</a>
+          <a href="#syllabus" onClick={() => scrollToSection('syllabus')}>CURRICULUM</a>
+          <a href="#pricing" onClick={() => scrollToSection('pricing')}>COMMUNITY</a>
+          <a href="#pricing" onClick={() => scrollToSection('pricing')}>ABOUT US</a>
           <button
-            className="nalara-btn nalara-btn-cta"
+            className="nalara-btn"
+            style={{ ...styles.navCta, width: '100%' }}
             onClick={() => scrollToSection('pricing')}
           >
-            Daftar Sekarang
+            SIGN IN
           </button>
         </div>
       </nav>
@@ -95,27 +102,49 @@ export default function LandingPage() {
 
 const styles: Record<string, React.CSSProperties> = {
   navbar: {
-    position: 'sticky',
-    top: 0,
+    position: 'fixed',
+    top: '1.25rem',
+    left: '50%',
+    transform: 'translateX(-50%)',
     zIndex: 100,
-    borderBottom: '1px solid var(--border-color)',
-    background: 'rgba(33, 33, 33, 0.85)',
-    backdropFilter: 'blur(16px)',
-    WebkitBackdropFilter: 'blur(16px)',
+    background: 'rgba(11, 11, 12, 0.45)',
+    backdropFilter: 'blur(20px)',
+    WebkitBackdropFilter: 'blur(20px)',
+    border: '1px solid rgba(255, 255, 255, 0.1)',
+    borderRadius: '50px',
+    maxWidth: '1100px',
+    width: 'calc(100% - 2rem)',
   },
   navInner: {
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
-    maxWidth: '1100px',
-    margin: '0 auto',
-    padding: '0.85rem 1.5rem',
+    padding: '0.6rem 1.5rem',
   },
-  navLogo: {
-    fontSize: '1.3rem',
+  logoContainer: {
+    display: 'flex',
+    alignItems: 'center',
+  },
+  logoImg: {
+    height: '32px',
+    width: 'auto',
+  },
+  logoTextGroup: {
+    display: 'flex',
+    flexDirection: 'column',
+    lineHeight: 1.1,
+  },
+  logoTitle: {
+    fontSize: '0.95rem',
     fontWeight: 800,
-    color: 'var(--white)',
-    fontFamily: 'var(--font-display)',
+    color: '#38bdf8',
+    letterSpacing: '0.15em',
+  },
+  logoSubtitle: {
+    fontSize: '0.75rem',
+    fontWeight: 700,
+    color: '#ffa826',
+    letterSpacing: '0.08em',
   },
   navLinks: {
     display: 'flex',
@@ -123,15 +152,23 @@ const styles: Record<string, React.CSSProperties> = {
     gap: '1.5rem',
   },
   navLink: {
-    fontSize: '0.9rem',
-    fontWeight: 500,
-    color: 'var(--grey-blue)',
+    fontSize: '0.8rem',
+    fontWeight: 700,
+    color: '#94a3b8',
     textDecoration: 'none',
+    letterSpacing: '0.05em',
     transition: 'color 0.2s ease',
   },
   navCta: {
-    padding: '0.55rem 1.15rem',
+    padding: '0.5rem 1.5rem',
     fontSize: '0.85rem',
+    fontWeight: 700,
+    color: '#FFFFFF',
+    background: 'linear-gradient(135deg, #2563eb, #1d4ed8)',
+    border: 'none',
+    borderRadius: '20px',
+    cursor: 'pointer',
+    boxShadow: '0 4px 12px rgba(37, 99, 235, 0.3)',
   },
   sectionDivider: {
     maxWidth: '1100px',
@@ -139,5 +176,15 @@ const styles: Record<string, React.CSSProperties> = {
     height: '1px',
     background:
       'linear-gradient(90deg, transparent, var(--border-color) 30%, var(--border-color) 70%, transparent)',
+  },
+  mobileMenu: {
+    display: 'none',
+    flexDirection: 'column',
+    background: 'rgba(11, 11, 12, 0.95)',
+    borderRadius: '20px',
+    marginTop: '0.5rem',
+    padding: '1.5rem',
+    border: '1px solid rgba(255, 255, 255, 0.08)',
+    gap: '1rem',
   },
 };

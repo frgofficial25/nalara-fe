@@ -105,3 +105,134 @@ export async function apiGet<TResponse>(
 
   return data;
 }
+
+/**
+ * Kirim PUT request ke backend API.
+ *
+ * @param path    - Path endpoint, contoh: '/api/pembelajaran/uuid'
+ * @param body    - Payload JSON yang akan dikirim
+ * @param options - Opsi tambahan (token, headers)
+ * @returns       Parsed JSON response
+ */
+export async function apiPut<TResponse>(
+  path: string,
+  body: unknown,
+  options: RequestOptions = {}
+): Promise<TResponse> {
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    ...options.headers,
+  };
+
+  if (options.token) {
+    headers['Authorization'] = `Bearer ${options.token}`;
+  }
+
+  const response = await fetch(`${API_BASE_URL}${path}`, {
+    method: 'PUT',
+    headers,
+    body: JSON.stringify(body),
+  });
+
+  let data: TResponse;
+  try {
+    data = (await response.json()) as TResponse;
+  } catch {
+    throw new Error(`Server mengembalikan response yang tidak valid (HTTP ${response.status})`);
+  }
+
+  if (!response.ok) {
+    const errorMessage =
+      (data as { message?: string }).message ||
+      `Request gagal dengan status ${response.status}`;
+    throw new Error(errorMessage);
+  }
+
+  return data;
+}
+
+/**
+ * Kirim DELETE request ke backend API.
+ *
+ * @param path    - Path endpoint, contoh: '/api/modul/uuid'
+ * @param options - Opsi tambahan (token, headers)
+ * @returns       Parsed JSON response
+ */
+export async function apiDelete<TResponse>(
+  path: string,
+  options: RequestOptions = {}
+): Promise<TResponse> {
+  const headers: Record<string, string> = {
+    ...options.headers,
+  };
+
+  if (options.token) {
+    headers['Authorization'] = `Bearer ${options.token}`;
+  }
+
+  const response = await fetch(`${API_BASE_URL}${path}`, {
+    method: 'DELETE',
+    headers,
+  });
+
+  let data: TResponse;
+  try {
+    data = (await response.json()) as TResponse;
+  } catch {
+    throw new Error(`Server mengembalikan response yang tidak valid (HTTP ${response.status})`);
+  }
+
+  if (!response.ok) {
+    const errorMessage =
+      (data as { message?: string }).message ||
+      `Request gagal dengan status ${response.status}`;
+    throw new Error(errorMessage);
+  }
+
+  return data;
+}
+
+/**
+ * Kirim upload file (multipart/form-data) ke backend API.
+ *
+ * @param path    - Path endpoint, contoh: '/api/profile/avatar'
+ * @param formData - FormData yang berisi file
+ * @param options  - Opsi tambahan (token, headers)
+ * @returns        Parsed JSON response
+ */
+export async function apiUpload<TResponse>(
+  path: string,
+  formData: FormData,
+  options: RequestOptions = {}
+): Promise<TResponse> {
+  // Jangan set Content-Type — browser akan auto-set boundary untuk multipart
+  const headers: Record<string, string> = {
+    ...options.headers,
+  };
+
+  if (options.token) {
+    headers['Authorization'] = `Bearer ${options.token}`;
+  }
+
+  const response = await fetch(`${API_BASE_URL}${path}`, {
+    method: 'PUT',
+    headers,
+    body: formData,
+  });
+
+  let data: TResponse;
+  try {
+    data = (await response.json()) as TResponse;
+  } catch {
+    throw new Error(`Server mengembalikan response yang tidak valid (HTTP ${response.status})`);
+  }
+
+  if (!response.ok) {
+    const errorMessage =
+      (data as { message?: string }).message ||
+      `Request gagal dengan status ${response.status}`;
+    throw new Error(errorMessage);
+  }
+
+  return data;
+}

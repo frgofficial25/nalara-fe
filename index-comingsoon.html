@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Nalara Academy - Coming Soon</title>
+  <title>Nalara Academy — National AI & Deep Learning Acceleration Bootcamp</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link
@@ -22,12 +22,12 @@
       --lemon: #FFA826;
       --m-yellow: #FFB240;
       --straw: #FFC670;
-      --bg-dark: #212121;
-      --bg-darker: #191919;
+      --bg-dark: #0b0b0c;
+      --bg-darker: #070708;
       --d-grey: #4D4D4D;
       --grey: #717171;
       --l-grey: #89939E;
-      --grey-blue: #ABBED1;
+      --grey-blue: #94a3b8;
       --silver: #F5F7FA;
       --white: #FFFFFF;
       --border-color: rgba(255, 255, 255, 0.08);
@@ -48,9 +48,9 @@
       color: var(--silver);
       background-color: var(--bg-dark);
       background-image:
-        radial-gradient(circle at top left, rgba(6, 99, 199, 0.12), transparent 45%),
-        radial-gradient(circle at center right, rgba(255, 178, 64, 0.05), transparent 40%),
-        radial-gradient(circle at bottom left, rgba(0, 83, 173, 0.08), transparent 45%);
+        radial-gradient(circle at top left, rgba(228, 137, 0, 0.06), transparent 40%),
+        radial-gradient(circle at center right, rgba(65, 150, 240, 0.08), transparent 45%),
+        radial-gradient(circle at bottom left, rgba(2, 82, 163, 0.05), transparent 45%);
       background-attachment: fixed;
       font-family: var(--font-sans);
       -webkit-font-smoothing: antialiased;
@@ -69,99 +69,9 @@
         opacity: 0;
         transform: translateY(20px);
       }
-
       to {
         opacity: 1;
         transform: translateY(0);
-      }
-    }
-
-    @keyframes scaleUp {
-      from {
-        opacity: 0;
-        transform: scale(0.95);
-      }
-
-      to {
-        opacity: 1;
-        transform: scale(1);
-      }
-    }
-
-    @keyframes floatGentle {
-
-      0%,
-      100% {
-        transform: translateY(0px);
-      }
-
-      50% {
-        transform: translateY(-12px);
-      }
-    }
-
-    @keyframes glowPulse {
-
-      0%,
-      100% {
-        opacity: 0.15;
-        transform: scale(1) translate(0, 0);
-      }
-
-      50% {
-        opacity: 0.25;
-        transform: scale(1.08) translate(15px, -15px);
-      }
-    }
-
-    @keyframes pulse {
-
-      0%,
-      100% {
-        transform: scale(1);
-        opacity: 0.4;
-      }
-
-      50% {
-        transform: scale(1.5);
-        opacity: 1;
-        box-shadow: 0 0 15px var(--azure);
-      }
-    }
-
-    @keyframes floatParticle1 {
-
-      0%,
-      100% {
-        transform: translate(0, 0) scale(1);
-      }
-
-      50% {
-        transform: translate(30px, -40px) scale(1.3);
-      }
-    }
-
-    @keyframes floatParticle2 {
-
-      0%,
-      100% {
-        transform: translate(0, 0) scale(1);
-      }
-
-      50% {
-        transform: translate(-40px, -20px) scale(1.2);
-      }
-    }
-
-    @keyframes floatParticle3 {
-
-      0%,
-      100% {
-        transform: translate(0, 0) scale(1);
-      }
-
-      50% {
-        transform: translate(25px, 30px) scale(1.4);
       }
     }
 
@@ -170,399 +80,832 @@
       animation: fadeInUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
     }
 
-    .animate-delay-1 {
-      animation-delay: 100ms;
-    }
+    .animate-delay-1 { animation-delay: 100ms; }
+    .animate-delay-2 { animation-delay: 200ms; }
+    .animate-delay-3 { animation-delay: 350ms; }
+    .animate-delay-4 { animation-delay: 500ms; }
 
-    .animate-delay-2 {
-      animation-delay: 200ms;
-    }
-
-    .animate-delay-3 {
-      animation-delay: 350ms;
-    }
-
-    .animate-delay-4 {
-      animation-delay: 500ms;
-    }
-
-    .animate-delay-5 {
-      animation-delay: 650ms;
-    }
-
-    /* UI Components */
-    .container {
-      min-height: 100vh;
-      display: flex;
-      position: relative;
-      overflow: hidden;
-      padding: 2rem 1.5rem;
-    }
-
-    .glow1 {
-      position: absolute;
-      width: 400px;
-      height: 400px;
-      border-radius: 50%;
-      background: radial-gradient(circle, rgba(6, 99, 199, 0.15) 0%, transparent 70%);
-      top: -100px;
-      left: -100px;
-      pointer-events: none;
-      animation: glowPulse 12s infinite ease-in-out;
-    }
-
-    .glow2 {
-      position: absolute;
-      width: 500px;
-      height: 500px;
-      border-radius: 50%;
-      background: radial-gradient(circle, rgba(255, 168, 38, 0.08) 0%, transparent 70%);
-      bottom: -150px;
-      right: -100px;
-      pointer-events: none;
-      animation: glowPulse 15s infinite ease-in-out 3s;
-    }
-
-    .particle-container {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      pointer-events: none;
-    }
-
-    .particle {
-      position: absolute;
-      width: 6px;
-      height: 6px;
-      background: var(--azure);
-      border-radius: 50%;
-      box-shadow: 0 0 10px var(--azure);
-    }
-
-    .p1 {
-      top: 12%;
-      left: 8%;
-      width: 6px;
-      height: 6px;
-      animation: pulse 4s infinite ease-in-out, floatParticle1 8s infinite ease-in-out;
-    }
-
-    .p2 {
-      top: 20%;
-      left: 88%;
-      width: 9px;
-      height: 9px;
-      animation: pulse 5s infinite ease-in-out, floatParticle2 10s infinite ease-in-out;
-    }
-
-    .p3 {
-      top: 82%;
-      left: 10%;
-      width: 7px;
-      height: 7px;
-      animation: pulse 6s infinite ease-in-out, floatParticle3 9s infinite ease-in-out;
-    }
-
-    .p4 {
-      top: 85%;
-      left: 85%;
-      width: 5px;
-      height: 5px;
-      animation: pulse 4.5s infinite ease-in-out, floatParticle2 12s infinite ease-in-out reverse;
-    }
-
-    .p5 {
-      top: 50%;
-      left: 5%;
-      width: 8px;
-      height: 8px;
-      animation: pulse 5.5s infinite ease-in-out, floatParticle1 11s infinite ease-in-out reverse;
-    }
-
-    .content-card {
-      margin: auto;
-      max-width: 1000px;
-      width: 100%;
-      background: rgba(255, 255, 255, 0.02);
-      border: 1px solid var(--border-color);
-      border-radius: 24px;
-      padding: 3.5rem 3rem;
-      display: flex;
-      flex-direction: row;
-      align-items: center;
-      gap: 4.5rem;
+    /* Capsule Navigation Bar */
+    nav {
+      position: fixed;
+      top: 1.25rem;
+      left: 50%;
+      transform: translateX(-50%);
+      width: calc(100% - 2rem);
+      max-width: 1100px;
+      z-index: 100;
+      background: rgba(11, 11, 12, 0.65);
       backdrop-filter: blur(20px);
       -webkit-backdrop-filter: blur(20px);
-      box-shadow: 0 15px 50px rgba(0, 0, 0, 0.4);
-      z-index: 10;
-      animation: scaleUp 1s cubic-bezier(0.16, 1, 0.3, 1) forwards, floatGentle 8s infinite ease-in-out 1s;
-      min-height: 75vh;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 50px;
+      transition: all 0.3s ease;
     }
 
-    .card-left {
-      flex: 1.1;
+    .nav-inner {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.6rem 1.5rem;
+    }
+
+    .logo-container {
+      display: flex;
+      align-items: center;
+      gap: 0.65rem;
+      text-decoration: none;
+    }
+
+    .logo-text-group {
       display: flex;
       flex-direction: column;
-      justify-content: center;
-      text-align: left;
+      line-height: 1.1;
     }
 
-    .card-right {
-      flex: 0.9;
+    .logo-title {
+      font-size: 0.95rem;
+      font-weight: 800;
+      color: #38bdf8;
+      letter-spacing: 0.15em;
+    }
+
+    .logo-subtitle {
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: #ffa826;
+      letter-spacing: 0.08em;
+    }
+
+    .nav-links-desktop {
       display: flex;
-      justify-content: center;
       align-items: center;
+      gap: 1.5rem;
     }
 
-    .logo {
-      max-width: 220px;
+    .nav-link {
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: #94a3b8;
+      text-decoration: none;
+      letter-spacing: 0.05em;
+      transition: color 0.2s ease;
+    }
+
+    .nav-link:hover {
+      color: var(--white);
+    }
+
+    .nav-cta {
+      padding: 0.5rem 1.5rem;
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: #FFFFFF;
+      background: linear-gradient(135deg, #2563eb, #1d4ed8);
+      border: none;
+      border-radius: 20px;
+      cursor: pointer;
+      text-decoration: none;
+      box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+      transition: all 0.2s ease;
+    }
+
+    .nav-cta:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 16px rgba(37, 99, 235, 0.5);
+    }
+
+    /* Hero Section */
+    .hero-section {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      padding: 9rem 1.5rem 6rem 1.5rem;
+      max-width: 950px;
+      margin: 0 auto;
+      z-index: 1;
+    }
+
+    .badge-container {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 0.75rem;
       margin-bottom: 2rem;
     }
 
-    .poster-img {
-      width: 100%;
-      max-width: 450px;
-      border-radius: 16px;
-      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
-      object-fit: contain;
-      transition: transform 0.3s ease;
-    }
-
-    .poster-img:hover {
-      transform: translateY(-3px) scale(1.02);
-    }
-
-    .badge-tech-accent {
+    .badge-item {
       display: inline-flex;
       align-items: center;
       font-family: var(--font-display);
       font-weight: 600;
-      font-size: 0.75rem;
-      padding: 0.35rem 0.85rem;
+      font-size: 0.8rem;
+      padding: 0.4rem 0.95rem;
       border-radius: 9999px;
-      letter-spacing: 0.02em;
-      background: rgba(255, 168, 38, 0.12);
-      color: var(--m-yellow);
-      border: 1px solid rgba(255, 168, 38, 0.25);
-      align-self: flex-start;
-      margin-bottom: 1.5rem;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      color: var(--silver);
     }
 
-    .heading {
-      font-size: 3rem;
+    .main-title {
+      font-size: 3.6rem;
       font-weight: 800;
-      line-height: 1.1;
-      margin-bottom: 0.8rem;
-      letter-spacing: -0.02em;
+      line-height: 1.15;
+      margin-bottom: 1.5rem;
+      letter-spacing: -0.03em;
+      color: #FFFFFF;
       font-family: var(--font-display);
     }
 
     .gradient-text {
-      background: linear-gradient(90deg, var(--azure) 0%, var(--lemon) 100%);
+      background: linear-gradient(135deg, #38bdf8, #0369a1);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
+      display: inline-block;
     }
 
-    .description {
-      font-size: 1.1rem;
+    .subtitle {
+      font-size: 1.2rem;
       color: var(--grey-blue);
-      line-height: 1.6;
-      margin-bottom: 2rem;
+      max-width: 720px;
+      line-height: 1.7;
+      margin-bottom: 3rem;
     }
 
-    .cta-container {
+    .cta-group {
       display: flex;
       flex-direction: column;
-      align-items: flex-start;
-      margin-bottom: 2.5rem;
-    }
-
-    .mobile-hint {
-      display: none;
-    }
-
-    .cta-heading {
-      font-size: 1.05rem;
-      font-weight: 700;
-      color: var(--lemon);
-      margin-bottom: 1rem;
-      margin-top: 0;
-      letter-spacing: 0.05em;
-      text-transform: uppercase;
-      line-height: 1.4;
-      text-align: left;
-    }
-
-    .nalara-btn-cta {
-      display: inline-flex;
       align-items: center;
-      justify-content: center;
-      font-family: var(--font-display);
-      padding: 1rem 2rem;
-      font-size: 1.1rem;
+      gap: 0.85rem;
+      width: 100%;
+      max-width: 420px;
+    }
+
+    .cta-primary {
+      width: 100%;
+      padding: 0.95rem 2rem;
+      font-size: 1rem;
       font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;http://103.127.139.237:1000/api-docs/
-      border-radius: 12px;
+      color: #000000;
+      background: var(--lemon);
       border: none;
+      border-radius: 8px;
+      box-shadow: 0 4px 20px rgba(255, 168, 38, 0.3);
       cursor: pointer;
-      gap: 0.5rem;
-      background: linear-gradient(135deg, var(--lemon), var(--d-yellow));
-      color: var(--bg-dark);
-      box-shadow: 0 0 20px rgba(255, 168, 38, 0.4);
       text-decoration: none;
-      transition: all 0.3s ease;
+      text-align: center;
+      transition: all 0.2s ease;
     }
 
-    .nalara-btn-cta:hover {
+    .cta-primary:hover {
       transform: translateY(-2px);
-      box-shadow: 0 6px 20px 0 rgba(255, 168, 38, 0.6);
-      background: linear-gradient(135deg, var(--m-yellow), var(--lemon));
+      box-shadow: 0 6px 24px rgba(255, 168, 38, 0.5);
     }
 
-    .countdown-container {
-      display: flex;
-      justify-content: flex-start;
-      align-items: center;
-      gap: 1rem;
-      flex-wrap: wrap;
-      margin-bottom: 0;
+    .cta-secondary {
+      width: 100%;
+      padding: 0.95rem 2rem;
+      font-size: 1rem;
+      font-weight: 600;
+      color: #FFFFFF;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 8px;
+      cursor: pointer;
+      text-decoration: none;
+      text-align: center;
+      transition: all 0.2s ease;
     }
 
-    .countdown-item {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      min-width: 65px;
+    .cta-secondary:hover {
+      background: rgba(255, 255, 255, 0.06);
     }
 
-    .countdown-number {
+    /* Pathway Section */
+    .pathway-section {
+      padding: 5rem 1.5rem;
+      max-width: 1100px;
+      margin: 0 auto;
+      width: 100%;
+    }
+
+    .section-header {
+      text-align: center;
+      margin-bottom: 3.5rem;
+    }
+
+    .section-title {
       font-size: 2.5rem;
       font-weight: 800;
+      color: #FFFFFF;
+      letter-spacing: -0.02em;
+      margin-bottom: 1rem;
       font-family: var(--font-display);
-      color: var(--white);
-      line-height: 1;
     }
 
-    .countdown-label {
-      font-size: 0.85rem;
-      color: var(--l-grey);
+    .section-desc {
+      font-size: 1.1rem;
+      max-width: 650px;
+      margin: 0 auto;
+      color: var(--grey-blue);
+      line-height: 1.6;
+    }
+
+    .cards-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 2rem;
+    }
+
+    .card {
+      padding: 2.2rem;
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      background: rgba(255, 255, 255, 0.01);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 16px;
+      backdrop-filter: blur(16px);
+      transition: transform 0.3s ease, border-color 0.3s ease;
+    }
+
+    .card:hover {
+      transform: translateY(-4px);
+    }
+
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.5rem;
+    }
+
+    .level-num {
+      font-size: 2rem;
+      font-weight: 800;
+      color: #3b82f6;
+      font-family: var(--font-display);
+    }
+
+    .badge-green {
+      font-size: 0.75rem;
+      font-weight: 700;
+      padding: 0.3rem 0.8rem;
+      border-radius: 9999px;
+      background: rgba(16, 185, 129, 0.1);
+      color: #10b981;
+      border: 1px solid rgba(16, 185, 129, 0.25);
+    }
+
+    .badge-orange {
+      font-size: 0.75rem;
+      font-weight: 700;
+      padding: 0.3rem 0.8rem;
+      border-radius: 9999px;
+      background: rgba(245, 158, 11, 0.1);
+      color: #f59e0b;
+      border: 1px solid rgba(245, 158, 11, 0.25);
+    }
+
+    .badge-red {
+      font-size: 0.75rem;
+      font-weight: 700;
+      padding: 0.3rem 0.8rem;
+      border-radius: 9999px;
+      background: rgba(239, 68, 68, 0.1);
+      color: #ef4444;
+      border: 1px solid rgba(239, 68, 68, 0.25);
+    }
+
+    .card-title {
+      font-size: 1.4rem;
+      font-weight: 700;
+      margin-bottom: 1rem;
+      color: #FFFFFF;
+      font-family: var(--font-display);
+    }
+
+    .card-desc {
+      font-size: 0.95rem;
+      flex: 1;
+      margin-bottom: 1.5rem;
+      line-height: 1.6;
+      color: var(--grey-blue);
+    }
+
+    .prereq-box {
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+      padding-top: 1.25rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+    }
+
+    .prereq-label {
+      font-size: 0.8rem;
+      color: #64748b;
       text-transform: uppercase;
-      letter-spacing: 0.08em;
+      letter-spacing: 0.05em;
+    }
+
+    .prereq-value {
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: #f8fafc;
+    }
+
+    /* Curriculum Section */
+    .curriculum-section {
+      padding: 5rem 1.5rem;
+      max-width: 1000px;
+      margin: 0 auto;
+      width: 100%;
+    }
+
+    .academic-card {
+      background: rgba(255, 255, 255, 0.01);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 16px;
+      padding: 2rem;
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+      gap: 2rem;
+      flex-wrap: wrap;
+      margin-bottom: 3rem;
+    }
+
+    .stat-box {
+      text-align: center;
+      flex: 1 1 200px;
+    }
+
+    .stat-number {
+      font-size: 2.5rem;
+      font-weight: 800;
+      color: #38bdf8;
+      display: block;
+      font-family: var(--font-display);
+    }
+
+    .stat-label {
+      font-size: 0.9rem;
+      color: var(--grey-blue);
+      margin-top: 0.5rem;
+      display: block;
+    }
+
+    .stat-divider {
+      width: 1px;
+      height: 60px;
+      background: rgba(255, 255, 255, 0.08);
+    }
+
+    .tabs-container {
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-bottom: 2.5rem;
+      padding: 0.35rem;
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      max-width: 720px;
+      margin: 0 auto 2.5rem auto;
+    }
+
+    .tab-btn {
+      flex: 1 1 auto;
+      padding: 0.85rem 1.25rem;
+      border-radius: 8px;
+      border: none;
+      background: transparent;
+      color: var(--grey-blue);
+      font-family: var(--font-display);
+      font-weight: 600;
+      font-size: 0.95rem;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .tab-btn.active {
+      background: #0252a3;
+      color: #FFFFFF;
+      box-shadow: 0 4px 12px rgba(2, 82, 163, 0.25);
+    }
+
+    .tab-content {
+      display: flex;
+      flex-direction: column;
+      gap: 2rem;
+    }
+
+    .level-meta-card {
+      background: rgba(255, 255, 255, 0.01);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 16px;
+      padding: 2rem;
+      display: flex;
+      flex-direction: column;
+      gap: 2rem;
+    }
+
+    .level-title {
+      font-size: 1.6rem;
+      font-weight: 700;
+      color: #FFFFFF;
+      margin-bottom: 0.5rem;
+      font-family: var(--font-display);
+    }
+
+    .level-dates {
+      font-size: 0.95rem;
+      color: #38bdf8;
+      font-weight: 500;
+    }
+
+    .components-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 1.5rem;
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+      padding-top: 1.5rem;
+    }
+
+    .comp-item {
+      display: flex;
+      align-items: center;
+      gap: 0.85rem;
+    }
+
+    .comp-icon {
+      font-size: 1.75rem;
+    }
+
+    .comp-title {
+      font-size: 0.95rem;
+      color: #FFFFFF;
+      display: block;
+    }
+
+    .comp-sub {
+      font-size: 0.8rem;
+      color: #64748b;
+      display: block;
+    }
+
+    .timeline-list {
+      display: flex;
+      flex-direction: column;
+      padding-left: 1rem;
+    }
+
+    .timeline-item {
+      display: flex;
+      gap: 1.5rem;
+      position: relative;
+    }
+
+    .timeline-dot-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .timeline-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: #38bdf8;
+      box-shadow: 0 0 10px #38bdf8;
       margin-top: 0.5rem;
     }
 
-    .countdown-separator {
-      font-size: 2rem;
+    .timeline-line {
+      width: 2px;
+      flex: 1;
+      background: rgba(255, 255, 255, 0.08);
+      min-height: 60px;
+    }
+
+    .timeline-content {
+      padding-bottom: 2.5rem;
+      flex: 1;
+    }
+
+    .timeline-day {
+      font-size: 0.85rem;
+      color: #ffa826;
+      font-weight: 700;
+      font-family: var(--font-display);
+      display: block;
+      margin-bottom: 0.35rem;
+      text-transform: uppercase;
+    }
+
+    .timeline-topic {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: #FFFFFF;
+      margin-bottom: 0.5rem;
+      font-family: var(--font-display);
+    }
+
+    .timeline-desc {
+      font-size: 0.95rem;
+      color: var(--grey-blue);
+      line-height: 1.6;
+    }
+
+    /* Pricing Section */
+    .pricing-section {
+      padding: 5rem 1.5rem;
+      max-width: 1100px;
+      margin: 0 auto;
+      width: 100%;
+    }
+
+    .waves-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 1.5rem;
+      margin-bottom: 4rem;
+    }
+
+    .wave-card {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      padding: 2.5rem 1.5rem 2rem;
+      border-radius: 16px;
+      transition: all 0.3s ease;
+      backdrop-filter: blur(16px);
+    }
+
+    .card-badge {
+      position: absolute;
+      top: -10px;
+      font-size: 0.7rem;
       font-weight: 800;
-      color: var(--border-color);
-      padding-bottom: 0.8rem;
+      padding: 0.3rem 0.8rem;
+      border-radius: 9999px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      letter-spacing: 0.05em;
     }
 
-    .text-lemon {
-      color: var(--lemon) !important;
+    .wave-icon {
+      font-size: 2.2rem;
+      margin-bottom: 0.75rem;
     }
 
-    @media (max-width: 900px) {
-      .content-card {
-        flex-direction: column;
-        padding: 2.5rem 1.5rem;
-        gap: 2.5rem;
-        text-align: center;
+    .wave-name {
+      font-size: 1.3rem;
+      font-weight: 700;
+      color: #FFFFFF;
+      margin-bottom: 0.35rem;
+      font-family: var(--font-display);
+    }
+
+    .wave-period {
+      font-size: 0.95rem;
+      color: #38bdf8;
+      font-weight: 600;
+      margin-bottom: 1rem;
+    }
+
+    .wave-highlight {
+      font-size: 0.9rem;
+      color: var(--grey-blue);
+      line-height: 1.5;
+      margin-bottom: 1.5rem;
+      flex: 1;
+    }
+
+    .wave-btn {
+      margin-top: auto;
+      width: 100%;
+      padding: 0.7rem 1.25rem;
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: #000000;
+      background: #ffa826;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(255, 168, 38, 0.2);
+      transition: all 0.2s ease;
+      text-decoration: none;
+    }
+
+    .wave-btn:hover {
+      transform: translateY(-1px);
+    }
+
+    /* Referral Booster */
+    .referral-banner {
+      border-radius: 16px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      background: rgba(255, 255, 255, 0.01);
+      padding: 2.5rem;
+    }
+
+    .referral-content {
+      display: flex;
+      gap: 2rem;
+      align-items: flex-start;
+      flex-wrap: wrap;
+    }
+
+    .referral-icon {
+      font-size: 3rem;
+      line-height: 1;
+    }
+
+    .referral-text {
+      flex: 1;
+      min-width: 280px;
+    }
+
+    .referral-title {
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: #FFFFFF;
+      margin-bottom: 0.75rem;
+      font-family: var(--font-display);
+    }
+
+    .referral-desc {
+      font-size: 1rem;
+      color: var(--grey-blue);
+      line-height: 1.6;
+      margin-bottom: 1.25rem;
+    }
+
+    .referral-steps {
+      display: flex;
+      flex-direction: column;
+      gap: 0.65rem;
+      margin-bottom: 1.25rem;
+    }
+
+    .step-chip {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      font-size: 0.9rem;
+      color: #f8fafc;
+    }
+
+    .step-num {
+      display: inline-flex;
+      align-items: center;
+      justifyContent: center;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: #0252a3;
+      color: #FFFFFF;
+      font-weight: 700;
+      font-size: 0.8rem;
+      flex-shrink: 0;
+    }
+
+    .referral-note {
+      font-size: 0.8rem;
+      color: #64748b;
+      font-style: italic;
+    }
+
+    /* Footer Redesign */
+    footer {
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+      padding: 4rem 1.5rem 2rem 1.5rem;
+      background: #070708;
+      width: 100%;
+    }
+
+    .footer-inner {
+      max-width: 1100px;
+      margin: 0 auto;
+      display: flex;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 3rem;
+      padding-bottom: 3rem;
+    }
+
+    .footer-left {
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+      flex: 1 1 350px;
+      maxWidth: 450px;
+      max-width: 450px;
+    }
+
+    .footer-description {
+      font-size: 0.9rem;
+      color: #94a3b8;
+      line-height: 1.6;
+    }
+
+    .footer-right-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 3rem;
+      flex: 2 1 450px;
+      justify-content: space-between;
+    }
+
+    .footer-col {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      min-width: 120px;
+    }
+
+    .footer-col-title {
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: #FFFFFF;
+      margin-bottom: 0.25rem;
+    }
+
+    .footer-link {
+      font-size: 0.9rem;
+      color: #94a3b8;
+      text-decoration: none;
+      transition: color 0.2s ease;
+    }
+
+    .footer-link:hover {
+      color: #FFFFFF;
+    }
+
+    .footer-bottom-bar {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding-top: 1.5rem;
+      border-top: 1px solid rgba(255, 255, 255, 0.05);
+      display: flex;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 1rem;
+      font-size: 0.85rem;
+      color: #64748b;
+    }
+
+    /* Mobile Responsive Hamburger Menu */
+    .hamburger-btn {
+      display: none;
+      background: none;
+      border: none;
+      color: var(--white);
+      font-size: 1.5rem;
+      cursor: pointer;
+    }
+
+    .mobile-menu {
+      display: none;
+      flex-direction: column;
+      background: rgba(11, 11, 12, 0.95);
+      backdrop-filter: blur(16px);
+      position: absolute;
+      top: 100%;
+      left: 0;
+      width: 100%;
+      padding: 1.5rem;
+      border: 1px solid var(--border-color);
+      border-radius: 20px;
+      margin-top: 0.5rem;
+      gap: 1rem;
+    }
+
+    .mobile-menu a {
+      color: var(--grey-blue);
+      text-decoration: none;
+      font-weight: 500;
+      padding: 0.5rem 0;
+      transition: color 0.2s ease;
+    }
+
+    .mobile-menu a:hover {
+      color: var(--white);
+    }
+
+    @media (max-width: 768px) {
+      .nav-links-desktop {
+        display: none;
       }
-
-      .card-left {
-        align-items: center;
-        text-align: center;
-        order: 1;
+      .hamburger-btn {
+        display: block;
+      }
+      .mobile-menu.open {
         display: flex;
-        flex-direction: column;
-      }
-
-      .card-right {
-        order: 2;
-      }
-
-      .badge-tech-accent {
-        align-self: center;
-      }
-
-      .cta-container {
-        order: -1;
-        align-items: center;
-        width: 100%;
-        background: rgba(255, 168, 38, 0.05);
-        padding: 1.5rem;
-        border-radius: 16px;
-        border: 1px solid rgba(255, 168, 38, 0.2);
-        margin-bottom: 2rem;
-      }
-      
-      .mobile-hint {
-        display: inline-block;
-        font-size: 0.75rem;
-        font-weight: 600;
-        color: var(--sky);
-        background: rgba(6, 99, 199, 0.4);
-        padding: 0.35rem 0.85rem;
-        border-radius: 20px;
-        margin-bottom: 1rem;
-        border: 1px solid rgba(65, 150, 240, 0.3);
-        letter-spacing: 0.05em;
-        order: 1;
-      }
-
-      .nalara-btn-cta {
-        order: 2;
-        width: 100%;
-        max-width: 300px;
-      }
-
-      .cta-heading {
-        order: 3;
-        font-size: 0.85rem;
-        font-weight: 600;
-        margin-top: 1rem;
-        margin-bottom: 0;
-        text-align: center;
-        width: 100%;
-      }
-
-      .countdown-container {
-        justify-content: center;
-        flex-wrap: nowrap;
-        gap: 0.5rem;
-      }
-
-      .countdown-item {
-        min-width: 50px;
-      }
-
-      .countdown-number {
-        font-size: 1.8rem;
-      }
-
-      .countdown-label {
-        font-size: 0.7rem;
-      }
-
-      .countdown-separator {
-        font-size: 1.5rem;
-        padding-bottom: 0.5rem;
-      }
-
-      .heading {
-        font-size: 2.8rem;
-      }
-
-      .poster-img {
-        max-width: 320px;
-      }
-
-      .logo {
-        margin-bottom: 1.5rem;
       }
     }
   </style>
@@ -570,99 +913,405 @@
 
 <body>
 
-  <div class="container">
-    <div class="glow1"></div>
-    <div class="glow2"></div>
+  <!-- Navigation Bar -->
+  <nav>
+    <div class="nav-inner">
+      <div class="logo-container">
+        <img src="./public/image/logonalara2.png" alt="Nalara Academy" style="height: 32px; width: auto;" />
+      </div>
+      
+      <div class="nav-links-desktop">
+        <a href="#syllabus" class="nav-link">ECOSYSTEM</a>
+        <a href="#syllabus" class="nav-link">LEARNING PATH</a>
+        <a href="#syllabus" class="nav-link">CURRICULUM</a>
+        <a href="#pricing" class="nav-link">COMMUNITY</a>
+        <a href="#pricing" class="nav-link">ABOUT US</a>
+        <a href="#pricing" class="nav-cta">SIGN IN</a>
+      </div>
 
-    <div class="particle-container">
-      <div class="particle p1"></div>
-      <div class="particle p2"></div>
-      <div class="particle p3"></div>
-      <div class="particle p4"></div>
-      <div class="particle p5"></div>
+      <button class="hamburger-btn" onclick="toggleMobileMenu()">☰</button>
     </div>
 
-    <div class="content-card">
+    <div class="mobile-menu" id="mobileMenu">
+      <a href="#syllabus" onclick="closeMobileMenu()">ECOSYSTEM</a>
+      <a href="#syllabus" onclick="closeMobileMenu()">LEARNING PATH</a>
+      <a href="#syllabus" onclick="closeMobileMenu()">CURRICULUM</a>
+      <a href="#pricing" onclick="closeMobileMenu()">COMMUNITY</a>
+      <a href="#pricing" onclick="closeMobileMenu()">ABOUT US</a>
+      <a href="#pricing" class="nav-cta" onclick="closeMobileMenu()" style="text-align: center; display: block;">SIGN IN</a>
+    </div>
+  </nav>
 
-      <div class="card-left">
-        <img src="./public/image/logonalara2.png" alt="Logo Nalara" class="logo stagger-in">
+  <!-- Hero Section -->
+  <header class="hero-section stagger-in">
+    <div class="badge-container">
+      <span class="badge-item">📅 Total 12 Hari Belajar</span>
+      <span class="badge-item">🌐 Official Domain: nalara.academy</span>
+    </div>
 
-        <h1 class="heading stagger-in animate-delay-2">
-          <span class="gradient-text">COMING SOON</span>
-        </h1>
+    <h1 class="main-title">
+      National AI & Deep Learning<br>
+      <span class="gradient-text">Acceleration Bootcamp</span>
+    </h1>
 
-        <p class="description stagger-in animate-delay-3">
-          Tim PIT Nalara sedang memasak sesuatu yang besar untuk para Future Nalarians
+    <p class="subtitle stagger-in animate-delay-1">
+      Pintu gerbang untuk mendalami kecerdasan buatan, dari dasar hingga tingkat lanjut. 
+      Pelajari bersama para ahli dan bersiaplah untuk masa depan teknologi.
+    </p>
+
+    <div class="cta-group stagger-in animate-delay-2">
+      <a href="#pricing" class="cta-primary">Register Now - Subsidized 100%</a>
+      <a href="#syllabus" class="cta-secondary">Explore Curriculum</a>
+    </div>
+  </header>
+
+  <!-- Pathway Section -->
+  <section class="pathway-section">
+    <div class="section-header">
+      <h2 class="section-title">Kurikulum Berjenjang & Sistem Prasyarat</h2>
+      <p class="section-desc">
+        Berikut jenjang kelas yang akan kamu lalui untuk mendiseminasikan kompetensi yang siap industri.
+      </p>
+    </div>
+
+    <div class="cards-grid">
+      <!-- Level Dasar -->
+      <div class="card" style="border-top: 3px solid #10b981;">
+        <div class="card-header">
+          <span class="level-num">01</span>
+          <span class="badge-green">OPEN REGISTRATION</span>
+        </div>
+        <h3 class="card-title">Level Dasar (Preparatory)</h3>
+        <p class="card-desc">
+          Memulai dasar pemrograman python, pemrosesan citra, matematika dasar dan eksplorasi data analisis untuk AI.
         </p>
-
-        <div class="cta-container stagger-in animate-delay-4">
-          <div class="mobile-hint">KLIK DAFTAR SEKARANG</div>
-          <h3 class="cta-heading">LIMITED SEATS! ONLY 150! JOINN NOW! 100% OFF! T&C Applied!</h3>
-          <a href="https://forms.gle/mRVMULpuokZpVLJZ9" target="_blank" rel="noopener noreferrer"
-            class="nalara-btn-cta">
-            DAFTAR SEKARANG!
-          </a>
-        </div>
-
-        <div class="countdown-container stagger-in animate-delay-5">
-          <div class="countdown-item">
-            <span class="countdown-number" id="days">00</span>
-            <span class="countdown-label">Hari</span>
-          </div>
-          <div class="countdown-separator">:</div>
-          <div class="countdown-item">
-            <span class="countdown-number" id="hours">00</span>
-            <span class="countdown-label">Jam</span>
-          </div>
-          <div class="countdown-separator">:</div>
-          <div class="countdown-item">
-            <span class="countdown-number" id="minutes">00</span>
-            <span class="countdown-label">Menit</span>
-          </div>
-          <div class="countdown-separator">:</div>
-          <div class="countdown-item">
-            <span class="countdown-number text-lemon" id="seconds">00</span>
-            <span class="countdown-label">Detik</span>
-          </div>
+        <div class="prereq-box">
+          <span class="prereq-label">Penerimaan:</span>
+          <span class="prereq-value">Angkatan 1 & Angkatan 2</span>
         </div>
       </div>
 
-      <div class="card-right">
-        <img src="./public/image/PosterNalara.png" alt="Poster" class="poster-img stagger-in animate-delay-1">
+      <!-- Level Menengah -->
+      <div class="card" style="border-top: 3px solid #f59e0b;">
+        <div class="card-header">
+          <span class="level-num">02</span>
+          <span class="badge-orange">PLACEMENT TEST</span>
+        </div>
+        <h3 class="card-title">Level Menengah (Intermediate)</h3>
+        <p class="card-desc">
+          Membangun model machine learning, deep learning, computer vision, natural language processing...
+        </p>
+        <div class="prereq-box">
+          <span class="prereq-label">Syarat Masuk:</span>
+          <span class="prereq-value">Lolos Level Dasar ATAU Jalur Test Mandiri</span>
+        </div>
       </div>
 
+      <!-- Level Advanced -->
+      <div class="card" style="border-top: 3px solid #ef4444;">
+        <div class="card-header">
+          <span class="level-num">03</span>
+          <span class="badge-red">LIMITED SEATS</span>
+        </div>
+        <h3 class="card-title">Level Lanjut (Advanced)</h3>
+        <p class="card-desc">
+          Mempelajari AI Agent, LLM, deployment model ke production, hingga optimasi performa model.
+        </p>
+        <div class="prereq-box">
+          <span class="prereq-label">Syarat Masuk:</span>
+          <span class="prereq-value">Lulusan Level Menengah & Portofolio Ketat</span>
+        </div>
+      </div>
     </div>
-  </div>
+  </section>
+
+  <!-- Curriculum Section -->
+  <section class="curriculum-section" id="syllabus">
+    <div class="section-header">
+      <h2 class="section-title">Kurikulum Terdistribusi Mingguan</h2>
+      <p class="section-desc">
+        Jadwal disusun secara berkala tiap akhir pekan (Rabu–Minggu) untuk memberikan waktu istirahat dan pemahaman konsep yang lebih matang, bukan kompresi satu minggu penuh yang melelahkan.
+      </p>
+    </div>
+
+    <!-- Stats Banner -->
+    <div class="academic-card">
+      <div class="stat-box">
+        <span class="stat-number">96 JP</span>
+        <span class="stat-label">Porsi Praktikum & Proyek Lebih Dominan</span>
+      </div>
+      <div class="stat-divider"></div>
+      <div class="stat-box">
+        <span class="stat-number" style="color: #ffa826;">3-5 SKS</span>
+        <span class="stat-label">Konversi SKS dengan Pihak Kampus</span>
+      </div>
+    </div>
+
+    <!-- Interactive Tabs -->
+    <div class="tabs-container">
+      <button class="tab-btn active" onclick="switchTab('dasar')">Level Dasar (Preparatory)</button>
+      <button class="tab-btn" onclick="switchTab('menengah')">Level Menengah (Intermediate)</button>
+      <button class="tab-btn" onclick="switchTab('advanced')">Level Lanjut (Advanced)</button>
+    </div>
+
+    <!-- Main Tab Content -->
+    <div class="tab-content" id="tabContentBox">
+      <!-- Tabs will be rendered here dynamically via JS -->
+    </div>
+  </section>
+
+  <!-- Pricing Section -->
+  <section class="pricing-section" id="pricing">
+    <div class="section-header">
+      <h2 class="section-title">Gelombang Pendaftaran</h2>
+      <p class="section-desc">
+        Pilih gelombang yang sesuai. Semakin awal mendaftar, semakin besar keuntungan yang Anda dapatkan.
+      </p>
+    </div>
+
+    <!-- Waves Grid -->
+    <div class="waves-grid">
+      <!-- Early Bird -->
+      <div class="wave-card" style="border: 1px solid #ffa826; background: linear-gradient(180deg, rgba(255,168,38,0.03) 0%, rgba(11,11,12,0.8) 100%); box-shadow: 0 0 30px rgba(255,168,38,0.1);">
+        <span class="card-badge" style="background: #ffa826; color: #000000;">RECOMMENDED</span>
+        <span class="wave-icon">🐣</span>
+        <h3 class="wave-name">Early Bird</h3>
+        <span class="wave-period">20 – 24 Juni</span>
+        <p class="wave-highlight">Potongan harga khusus 20% dari tarif normal</p>
+        <a href="https://forms.gle/mRVMULpuokZpVLJZ9" target="_blank" rel="noopener noreferrer" class="wave-btn">Daftar Sekarang</a>
+      </div>
+
+      <!-- Wave 1 -->
+      <div class="wave-card" style="border: 1px solid rgba(255,255,255,0.08); background: rgba(255,255,255,0.01);">
+        <span class="wave-icon">🌊</span>
+        <h3 class="wave-name">Wave 1</h3>
+        <span class="wave-period">25 Juni – 08 Juli</span>
+        <p class="wave-highlight">Tarif normal tahap awal</p>
+      </div>
+
+      <!-- Wave 2 -->
+      <div class="wave-card" style="border: 1px solid rgba(255,255,255,0.08); background: rgba(255,255,255,0.01);">
+        <span class="wave-icon">🌊</span>
+        <h3 class="wave-name">Wave 2</h3>
+        <span class="wave-period">09 – 13 Juli</span>
+        <p class="wave-highlight">Tarif normal tahap kedua</p>
+      </div>
+
+      <!-- Last Wave -->
+      <div class="wave-card" style="border: 1px solid #ef4444; background: rgba(255,255,255,0.01);">
+        <span class="card-badge" style="background: rgba(255,255,255,0.08); color: #ef4444;">LATE REGISTRATION</span>
+        <span class="wave-icon">❗</span>
+        <h3 class="wave-name">Last Wave</h3>
+        <span class="wave-period">14 – 22 Juli</span>
+        <p class="wave-highlight">Penutupan pendaftaran menjelang Technical Meeting</p>
+      </div>
+    </div>
+
+    <!-- Referral Booster Banner -->
+    <div class="referral-banner">
+      <div class="referral-content">
+        <div class="referral-icon">🎁</div>
+        <div class="referral-text">
+          <h3 class="referral-title">
+            Referral Booster — Subsidi Hingga 100%!
+          </h3>
+          <p class="referral-desc">
+            Dapatkan potongan harga tambahan:
+            <strong style="color: #ffa826;">Hingga 100% bagi Mahasiswa Aktif (via KTM)</strong>
+            &amp;
+            <strong style="color: #38bdf8;">50–75% bagi peserta Umum</strong>.
+          </p>
+          <div class="referral-steps">
+            <div class="step-chip">
+              <span class="step-num">1</span>
+              Share poster ke min. 5 grup WhatsApp (≥100 anggota)
+            </div>
+            <div class="step-chip">
+              <span class="step-num">2</span>
+              Post official Twibbon di Instagram Feed / Story
+            </div>
+          </div>
+          <span class="referral-note">
+            * Syarat &amp; ketentuan berlaku, sedang dalam konfirmasi dengan Dosen Pembina.
+          </span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer>
+    <div class="footer-inner">
+      <!-- Left Column -->
+      <div class="footer-left">
+        <div class="logo-container">
+          <img src="./public/image/logonalara2.png" alt="Nalara Academy" style="height: 32px; width: auto;" />
+        </div>
+        <p class="footer-description">
+          Struktur tata kelola dan tim pelaksana operasional bootcamp Nalara Academy yang terorganisir untuk memastikan standar akademik & keberhasilan program.
+        </p>
+      </div>
+
+      <!-- Right Columns -->
+      <div class="footer-right-group">
+        <!-- Nalara Col -->
+        <div class="footer-col">
+          <span class="footer-col-title">Nalara</span>
+          <a href="#syllabus" class="footer-link">Ecosystem</a>
+          <a href="#syllabus" class="footer-link">Learning Path</a>
+          <a href="#syllabus" class="footer-link">Curriculum</a>
+          <a href="#team" class="footer-link">Team</a>
+        </div>
+
+        <!-- Resources Col -->
+        <div class="footer-col">
+          <span class="footer-col-title">Resources</span>
+          <a href="#" class="footer-link">Documentation</a>
+          <a href="#" class="footer-link">Help Center</a>
+          <a href="#" class="footer-link">Community</a>
+          <a href="#" class="footer-link">Blog</a>
+        </div>
+
+        <!-- Social Media Col -->
+        <div class="footer-col">
+          <span class="footer-col-title">Social Media</span>
+          <a href="#" class="footer-link">Instagram</a>
+          <a href="#" class="footer-link">LinkedIn</a>
+          <a href="#" class="footer-link">Github</a>
+          <a href="#" class="footer-link">Email</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bottom Bar -->
+    <div class="footer-bottom-bar">
+      <span>&copy; 2026 Nalara Academy. All rights reserved.</span>
+      <span>Guided by FRG University of Brawijaya</span>
+    </div>
+  </footer>
 
   <script>
-    // Target date for the launch: Wednesday, 22 Juli 2026 13:00 (Technical Meeting)
-    const targetDate = new Date('2026-07-20T13:00:00').getTime();
-
-    function calculateTime() {
-      const now = new Date().getTime();
-      const difference = targetDate - now;
-
-      if (difference <= 0) {
-        document.getElementById('days').innerText = '00';
-        document.getElementById('hours').innerText = '00';
-        document.getElementById('minutes').innerText = '00';
-        document.getElementById('seconds').innerText = '00';
-        return;
+    // Tab switching logic
+    const tabData = {
+      dasar: {
+        title: 'Level Dasar (Preparatory)',
+        duration: '32 Jam Instruksional',
+        dates: '23, 24, 25, 26 Juli',
+        schedule: [
+          { day: 'Rabu, 22 Juli 2026', topic: 'Technical Meeting (100 Menit)', desc: 'Onboarding LMS Nalara.academy, instalasi tools, setup environment, & pengumuman case pitching. Dipandu oleh Muhammad Hafiizh Anindya.' },
+          { day: 'Kamis, 23 Juli 2026', topic: 'Python Programming & Image Processing', desc: 'Sintaks Python lanjutan, NumPy, manipulasi citra menggunakan OpenCV, filter spasial, dan konversi ruang warna.' },
+          { day: 'Jumat, 24 Juli 2026', topic: 'Exploring Data Analysis (EDA) & NumPy/Pandas', desc: 'Pemetaan data citra, augmentasi dataset, penanganan data tidak seimbang, dan pipeline pemrosesan awal.' },
+          { day: 'Sabtu, 25 Juli 2026', topic: 'Exploring Data Analysis (EDA) & NumPy/Pandas', desc: 'Konvolusi dasar, pooling layer, perbandingan build model dengan TensorFlow vs PyTorch, dan transfer learning fundamental.' },
+          { day: 'Minggu, 26 Juli 2026', topic: 'Data Splitting & Overfitting Workshop', desc: 'Strategi k-fold cross-validation, regularisasi (dropout, batch normalization), deteksi overfitting via grafik loss/accuracy, & Modul Ujian Dasar.' }
+        ]
+      },
+      menengah: {
+        title: 'Level Menengah (Intermediate)',
+        duration: '32 Jam Instruksional',
+        dates: '30, 31 Juli, 1, 2 Agustus',
+        schedule: [
+          { day: 'Rabu, 29 Juli 2026', topic: 'Review Evaluasi Level Dasar', desc: 'Analisis hasil ujian level dasar, pembahasan feedback coding portofolio, dan sinkronisasi tools model menengah.' },
+          { day: 'Kamis, 30 Juli 2026', topic: 'Image Segmentation (Semantic & Instance)', desc: 'FCN, U-Net architecture, perbedaan segmentasi semantik dan instansi, penyusunan dataset mask annotation.' },
+          { day: 'Jumat, 31 Juli 2026', topic: 'Modern Backbone & Vision Transformers', desc: 'ResNet, MobileNet untuk komputasi ringan, konsep Vision Transformers (ViT) dalam klasifikasi & segmentasi.' },
+          { day: 'Sabtu, 1 Agustus 2026', topic: 'Transfer Learning & Custom Datasets', desc: 'Fine-tuning weights model pre-trained COCO dataset, penyesuaian learning rate scheduler untuk konvergensi optimal.' },
+          { day: 'Minggu, 2 Agustus 2026', topic: 'Evaluation Metrics Workshop & Case Study', desc: 'Perhitungan IoU (Intersection over Union), Dice Coefficient, analisis kebingungan matriks presisi-recall, & Modul Ujian Menengah.' }
+        ]
+      },
+      advanced: {
+        title: 'Level Advanced (MLOps)',
+        duration: '32 Jam Instruksional',
+        dates: '6, 7, 8, 9 Agustus',
+        schedule: [
+          { day: 'Rabu, 5 Agustus 2026', topic: 'Briefing Project Akhir & Hybrid Pipeline', desc: 'Pembagian tim proyek, pengumuman studi kasus hybrid pipeline, dan konsultasi arsitektur deployment.' },
+          { day: 'Kamis, 6 Agustus 2026', topic: 'MLOps Automation Lifecycle', desc: 'Version control untuk model (DVC), tracking eksperimen menggunakan MLflow, dan pembuatan docker image untuk environment model.' },
+          { day: 'Jumat, 7 Agustus 2026', topic: 'Production API & Cloud Deployment', desc: 'Membangun REST API performa tinggi dengan FastAPI, deployment model ke Kubernetes/Cloud Engine, dan monitoring model drift.' },
+          { day: 'Sabtu, 8 Agustus 2026', topic: 'Pitching Project Evaluated by Industry Reviewers', desc: 'Presentasi hasil proyek akhir di depan Dosen Pembina & reviewer industri terkemuka untuk validasi kelayakan produk.' },
+          { day: 'Minggu, 9 Agustus 2026', topic: 'Graduation Ceremony & Career Networking', desc: 'Penyerahan sertifikat kelulusan resmi FRG FILKOM UB, sesi networking alumni, dan tips integrasi portofolio ke rekrutmen.' }
+        ]
       }
+    };
 
-      const days = Math.floor(difference / (1000 * 60 * 60 * 24));
-      const hours = Math.floor((difference % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-      const minutes = Math.floor((difference % (1000 * 60 * 60)) / (1000 * 60));
-      const seconds = Math.floor((difference % (1000 * 60)) / 1000);
+    function switchTab(level) {
+      // Toggle button states
+      const buttons = document.querySelectorAll('.tab-btn');
+      buttons.forEach(btn => btn.classList.remove('active'));
+      
+      const activeBtnIndex = level === 'dasar' ? 0 : level === 'menengah' ? 1 : 2;
+      buttons[activeBtnIndex].classList.add('active');
 
-      document.getElementById('days').innerText = String(days).padStart(2, '0');
-      document.getElementById('hours').innerText = String(hours).padStart(2, '0');
-      document.getElementById('minutes').innerText = String(minutes).padStart(2, '0');
-      document.getElementById('seconds').innerText = String(seconds).padStart(2, '0');
+      const data = tabData[level];
+      const box = document.getElementById('tabContentBox');
+
+      // Build schedule list
+      let scheduleHtml = '';
+      data.schedule.forEach((item, idx) => {
+        const isLast = idx === data.schedule.length - 1;
+        scheduleHtml += `
+          <div class="timeline-item">
+            <div class="timeline-dot-container">
+              <div class="timeline-dot"></div>
+              ${!isLast ? '<div class="timeline-line"></div>' : ''}
+            </div>
+            <div class="timeline-content">
+              <span class="timeline-day">${item.day}</span>
+              <h4 class="timeline-topic">${item.topic}</h4>
+              <p class="timeline-desc">${item.desc}</p>
+            </div>
+          </div>
+        `;
+      });
+
+      box.innerHTML = `
+        <div class="level-meta-card">
+          <div>
+            <h3 class="level-title">${data.title}</h3>
+            <span class="level-dates">📅 ${data.dates} | ⏱️ ${data.duration}</span>
+          </div>
+          
+          <div class="components-row">
+            <div class="comp-item">
+              <span class="comp-icon">📄</span>
+              <div>
+                <strong class="comp-title">Materi Utama</strong>
+                <span class="comp-sub">Slides & Handouts (.docx/.pptx)</span>
+              </div>
+            </div>
+            <div class="comp-item">
+              <span class="comp-icon">💻</span>
+              <div>
+                <strong class="comp-title">Modul Praktikum</strong>
+                <span class="comp-sub">Code Repository & Notebooks</span>
+              </div>
+            </div>
+            <div class="comp-item">
+              <span class="comp-icon">✍️</span>
+              <div>
+                <strong class="comp-title">Modul Ujian</strong>
+                <span class="comp-sub">Studi Kasus & Penilaian Riil</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="timeline-list">
+          ${scheduleHtml}
+        </div>
+      `;
     }
 
-    calculateTime();
-    setInterval(calculateTime, 1000);
+    // Initialize with level dasar
+    switchTab('dasar');
+
+    // Mobile Navbar Menu Toggle
+    function toggleMobileMenu() {
+      const menu = document.getElementById('mobileMenu');
+      menu.classList.toggle('open');
+    }
+
+    function closeMobileMenu() {
+      const menu = document.getElementById('mobileMenu');
+      menu.classList.remove('open');
+    }
   </script>
 </body>
 

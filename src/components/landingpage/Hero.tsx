@@ -9,10 +9,10 @@ export default function Hero({ onRegisterClick, onSyllabusClick }: HeroProps) {
   return (
     <section style={styles.heroSection} className="animate-fade-in-up">
       <div style={styles.badgeContainer}>
-        <span className="badge-tech">
+        <span className="badge-tech" style={styles.badgeItem}>
           📅 Total 12 Hari Belajar Instruksional
         </span>
-        <span className="badge-tech">
+        <span className="badge-tech" style={styles.badgeItem}>
           🌐 Official Domain: nalara.academy
         </span>
       </div>
@@ -23,31 +23,32 @@ export default function Hero({ onRegisterClick, onSyllabusClick }: HeroProps) {
       </h1>
 
       <p style={styles.subtitle}>
-        Program bootcamp intensif di bawah naungan FILKOM Research Group (FRG) Universitas Brawijaya. 
-        Dirancang masif dengan beban 32 jam instruksional penuh per level untuk mencetak talenta AI, 
-        Deep Learning, hingga MLOps tingkat industri.
+        Pintu gerbang untuk mendalami kecerdasan buatan, dari dasar hingga tingkat lanjut. 
+        Pelajari bersama para ahli dan bersiaplah untuk masa depan teknologi.
       </p>
 
       <div style={styles.ctaGroup}>
         <button 
           id="hero-cta-register"
           onClick={onRegisterClick}
-          className="nalara-btn nalara-btn-cta"
+          className="nalara-btn"
           style={styles.ctaPrimary}
         >
-          Daftar Sekarang (Early Bird -20%)
+          Register Now - Subsidized 100%
         </button>
         <button 
           id="hero-cta-syllabus"
           onClick={onSyllabusClick}
-          className="nalara-btn nalara-btn-secondary"
+          className="nalara-btn"
           style={styles.ctaSecondary}
         >
-          Lihat Silabus
+          Explore Curriculum
         </button>
       </div>
       
-      <div style={styles.glowBg} />
+      {/* Premium ambient glows */}
+      <div style={styles.glowLeft} />
+      <div style={styles.glowRight} />
     </section>
   );
 }
@@ -59,8 +60,8 @@ const styles: Record<string, React.CSSProperties> = {
     flexDirection: 'column',
     alignItems: 'center',
     textAlign: 'center',
-    padding: '6rem 1.5rem 5rem 1.5rem',
-    maxWidth: '900px',
+    padding: '7rem 1.5rem 6rem 1.5rem',
+    maxWidth: '950px',
     margin: '0 auto',
     zIndex: 1,
   },
@@ -71,53 +72,87 @@ const styles: Record<string, React.CSSProperties> = {
     gap: '0.75rem',
     marginBottom: '2rem',
   },
+  badgeItem: {
+    background: 'rgba(255, 255, 255, 0.03)',
+    border: '1px solid rgba(255, 255, 255, 0.08)',
+    color: 'var(--silver)',
+    fontSize: '0.8rem',
+    padding: '0.4rem 0.95rem',
+  },
   mainTitle: {
-    fontSize: '3.2rem',
+    fontSize: '3.6rem',
     fontWeight: '800',
     lineHeight: '1.15',
     marginBottom: '1.5rem',
     letterSpacing: '-0.03em',
+    color: '#FFFFFF',
   },
   gradientText: {
-    background: 'linear-gradient(135deg, var(--azure), var(--navy))',
+    background: 'linear-gradient(135deg, #38bdf8, #0369a1)',
     WebkitBackgroundClip: 'text',
     WebkitTextFillColor: 'transparent',
     display: 'inline-block',
   },
   subtitle: {
-    fontSize: '1.15rem',
-    color: 'var(--grey-blue)',
+    fontSize: '1.2rem',
+    color: '#94a3b8',
     maxWidth: '720px',
     lineHeight: '1.7',
     marginBottom: '3rem',
   },
   ctaGroup: {
     display: 'flex',
-    flexWrap: 'wrap',
-    justifyContent: 'center',
-    gap: '1rem',
+    flexDirection: 'column',
+    alignItems: 'center',
+    gap: '0.85rem',
     width: '100%',
-    maxWidth: '500px',
+    maxWidth: '420px',
   },
   ctaPrimary: {
-    padding: '1rem 2rem',
-    fontSize: '1.05rem',
-    flex: '1 1 auto',
+    width: '100%',
+    padding: '0.95rem 2rem',
+    fontSize: '1rem',
+    fontWeight: '700',
+    color: '#000000',
+    background: '#ffa826',
+    border: 'none',
+    borderRadius: '8px',
+    boxShadow: '0 4px 20px rgba(255, 168, 38, 0.3)',
+    cursor: 'pointer',
+    transition: 'all 0.2s ease',
   },
   ctaSecondary: {
-    padding: '1rem 2rem',
-    fontSize: '1.05rem',
-    flex: '1 1 auto',
+    width: '100%',
+    padding: '0.95rem 2rem',
+    fontSize: '1rem',
+    fontWeight: '600',
+    color: '#FFFFFF',
+    background: 'rgba(255, 255, 255, 0.03)',
+    border: '1px solid rgba(255, 255, 255, 0.15)',
+    borderRadius: '8px',
+    cursor: 'pointer',
+    transition: 'all 0.2s ease',
   },
-  glowBg: {
+  glowLeft: {
     position: 'absolute',
-    top: '20%',
-    left: '50%',
-    transform: 'translate(-50%, -50%)',
-    width: '400px',
-    height: '400px',
-    background: 'radial-gradient(circle, rgba(6, 113, 224, 0.12) 0%, transparent 70%)',
+    top: '30%',
+    left: '-20%',
+    width: '500px',
+    height: '500px',
+    background: 'radial-gradient(circle, rgba(228, 137, 0, 0.08) 0%, transparent 70%)',
     pointerEvents: 'none',
     zIndex: -1,
+    filter: 'blur(40px)',
+  },
+  glowRight: {
+    position: 'absolute',
+    top: '20%',
+    right: '-20%',
+    width: '500px',
+    height: '500px',
+    background: 'radial-gradient(circle, rgba(65, 150, 240, 0.12) 0%, transparent 70%)',
+    pointerEvents: 'none',
+    zIndex: -1,
+    filter: 'blur(40px)',
   },
 };

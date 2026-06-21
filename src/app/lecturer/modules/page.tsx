@@ -121,7 +121,7 @@ export default function ModulesPage() {
         title: form.title,
         description: form.description,
         difficulty: form.difficulty,
-        uuid_user: userUuid
+        uuid_pembelajaran: selectedCourseId,
       }, {
         token: auth.token,
         headers: auth.headers
@@ -143,7 +143,7 @@ export default function ModulesPage() {
       setError(null);
       const auth = getAuthHeaders();
       const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://103.127.139.237:1000';
-      const headers = {
+      const headers: Record<string, string> = {
         'Content-Type': 'application/json',
         ...auth.headers
       };

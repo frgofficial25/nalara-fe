@@ -5,23 +5,22 @@ export default function Pathway() {
   return (
     <section style={styles.pathwaySection}>
       <div style={styles.sectionHeader}>
-        <span className="badge-tech badge-tech-accent">Level Pathway</span>
         <h2 style={styles.sectionTitle}>Kurikulum Berjenjang & Sistem Prasyarat</h2>
         <p style={styles.sectionDesc}>
-          Bootcamp dirancang berjenjang untuk memastikan transisi pemahaman dari konsep dasar hingga siap produksi di industri.
+          Berikut jenjang kelas yang akan kamu lalui untuk mendiseminasikan kompetensi yang siap industri.
         </p>
       </div>
 
       <div style={styles.cardsGrid}>
         {/* Level Dasar */}
-        <Card glow style={styles.card}>
+        <Card glow style={{ ...styles.card, borderTop: '3px solid #10b981' }}>
           <div style={styles.cardHeader}>
             <span style={styles.levelNum}>01</span>
-            <span className="badge-tech" style={styles.openBadge}>Terbuka Langsung</span>
+            <span className="badge-tech" style={styles.badgeGreen}>OPEN REGISTRATION</span>
           </div>
-          <h3 style={styles.cardTitle}>Level Dasar (Foundations)</h3>
+          <h3 style={styles.cardTitle}>Level Dasar (Preparatory)</h3>
           <p style={styles.cardDesc}>
-            Menjaring talenta potensial secara luas. Berfokus pada pemahaman logika AI, pemrograman Python, dasar pemrosesan citra digital, dan alur kerja Machine Learning.
+            Memulai dasar pemrograman python, pemrosesan citra, matematika dasar dan eksplorasi data analisis untuk AI.
           </p>
           <div style={styles.prereqBox}>
             <span style={styles.prereqLabel}>Penerimaan:</span>
@@ -30,34 +29,34 @@ export default function Pathway() {
         </Card>
 
         {/* Level Menengah */}
-        <Card glow style={styles.card}>
+        <Card glow style={{ ...styles.card, borderTop: '3px solid #f59e0b' }}>
           <div style={styles.cardHeader}>
             <span style={styles.levelNum}>02</span>
-            <span className="badge-tech badge-tech-accent" style={styles.openBadge}>Placement Test</span>
+            <span className="badge-tech" style={styles.badgeOrange}>PLACEMENT TEST</span>
           </div>
           <h3 style={styles.cardTitle}>Level Menengah (Intermediate)</h3>
           <p style={styles.cardDesc}>
-            Mendalami segmentasi gambar tingkat lanjut, arsitektur deep learning modern (ResNet, ViT), Transfer Learning, serta metodologi evaluasi performa model.
+            Membangun model machine learning, deep learning, computer vision, natural language processing...
           </p>
           <div style={styles.prereqBox}>
             <span style={styles.prereqLabel}>Syarat Masuk:</span>
-            <span style={styles.prereqValue}>Lolos Level Dasar ATAU Lulus Jalur Test Mandiri</span>
+            <span style={styles.prereqValue}>Lolos Level Dasar ATAU Jalur Test Mandiri</span>
           </div>
         </Card>
 
         {/* Level Advanced */}
-        <Card glow style={styles.card}>
+        <Card glow style={{ ...styles.card, borderTop: '3px solid #ef4444' }}>
           <div style={styles.cardHeader}>
             <span style={styles.levelNum}>03</span>
-            <span className="badge-tech badge-tech-accent" style={{ ...styles.openBadge, color: 'var(--lemon)', borderColor: 'rgba(255, 168, 38, 0.3)' }}>Terbatas</span>
+            <span className="badge-tech" style={styles.badgeRed}>LIMITED SEATS</span>
           </div>
           <h3 style={styles.cardTitle}>Level Lanjut (Advanced)</h3>
           <p style={styles.cardDesc}>
-            Melangkah ke tahap MLOps, deployment model ke production, orkestrasi pipeline data hybrid, serta pitching proyek yang dinilai langsung oleh tim penguji eksternal.
+            Mempelajari AI Agent, LLM, deployment model ke production, hingga optimasi performa model.
           </p>
           <div style={styles.prereqBox}>
             <span style={styles.prereqLabel}>Syarat Masuk:</span>
-            <span style={styles.prereqValue}>Lulusan Level Menengah & Seleksi Portofolio Ketat</span>
+            <span style={styles.prereqValue}>Lulusan Level Menengah & Portofolio Ketat</span>
           </div>
         </Card>
       </div>
@@ -67,7 +66,7 @@ export default function Pathway() {
 
 const styles: Record<string, React.CSSProperties> = {
   pathwaySection: {
-    padding: '4rem 1.5rem',
+    padding: '5rem 1.5rem',
     maxWidth: '1100px',
     margin: '0 auto',
     width: '100%',
@@ -77,19 +76,23 @@ const styles: Record<string, React.CSSProperties> = {
     marginBottom: '3.5rem',
   },
   sectionTitle: {
-    fontSize: '2.2rem',
+    fontSize: '2.5rem',
     marginTop: '0.75rem',
     marginBottom: '1rem',
     fontWeight: '800',
+    color: '#FFFFFF',
+    letterSpacing: '-0.02em',
   },
   sectionDesc: {
-    fontSize: '1.05rem',
+    fontSize: '1.1rem',
     maxWidth: '650px',
     margin: '0 auto',
+    color: '#94a3b8',
+    lineHeight: '1.6',
   },
   cardsGrid: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
     gap: '2rem',
   },
   card: {
@@ -97,6 +100,10 @@ const styles: Record<string, React.CSSProperties> = {
     display: 'flex',
     flexDirection: 'column',
     height: '100%',
+    background: 'rgba(255, 255, 255, 0.01)',
+    border: '1px solid rgba(255, 255, 255, 0.08)',
+    borderRadius: '16px',
+    backdropFilter: 'blur(16px)',
   },
   cardHeader: {
     display: 'flex',
@@ -107,24 +114,51 @@ const styles: Record<string, React.CSSProperties> = {
   levelNum: {
     fontSize: '2rem',
     fontWeight: '800',
-    color: 'var(--m-blue)',
+    color: '#3b82f6',
     fontFamily: 'var(--font-display)',
   },
-  openBadge: {
+  badgeGreen: {
     fontSize: '0.75rem',
+    fontWeight: '700',
+    padding: '0.3rem 0.8rem',
+    borderRadius: '9999px',
+    background: 'rgba(16, 185, 129, 0.1)',
+    color: '#10b981',
+    border: '1px solid rgba(16, 185, 129, 0.25)',
+  },
+  badgeOrange: {
+    fontSize: '0.75rem',
+    fontWeight: '700',
+    padding: '0.3rem 0.8rem',
+    borderRadius: '9999px',
+    background: 'rgba(245, 158, 11, 0.1)',
+    color: '#f59e0b',
+    border: '1px solid rgba(245, 158, 11, 0.25)',
+  },
+  badgeRed: {
+    fontSize: '0.75rem',
+    fontWeight: '700',
+    padding: '0.3rem 0.8rem',
+    borderRadius: '9999px',
+    background: 'rgba(239, 68, 68, 0.1)',
+    color: '#ef4444',
+    border: '1px solid rgba(239, 68, 68, 0.25)',
   },
   cardTitle: {
-    fontSize: '1.35rem',
+    fontSize: '1.4rem',
+    fontWeight: '700',
     marginBottom: '1rem',
+    color: '#FFFFFF',
   },
   cardDesc: {
     fontSize: '0.95rem',
     flex: 1,
     marginBottom: '1.5rem',
     lineHeight: '1.6',
+    color: '#94a3b8',
   },
   prereqBox: {
-    borderTop: '1px solid var(--border-color)',
+    borderTop: '1px solid rgba(255, 255, 255, 0.08)',
     paddingTop: '1.25rem',
     display: 'flex',
     flexDirection: 'column',
@@ -132,13 +166,13 @@ const styles: Record<string, React.CSSProperties> = {
   },
   prereqLabel: {
     fontSize: '0.8rem',
-    color: 'var(--l-grey)',
+    color: '#64748b',
     textTransform: 'uppercase',
     letterSpacing: '0.05em',
   },
   prereqValue: {
     fontSize: '0.9rem',
     fontWeight: 600,
-    color: 'var(--white)',
+    color: '#f8fafc',
   },
 };

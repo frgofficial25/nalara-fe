@@ -138,7 +138,7 @@ export default function CoursesPage() {
       setError(null);
       const auth = getAuthHeaders();
       const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://103.127.139.237:1000';
-      const headers = {
+      const headers: Record<string, string> = {
         'Content-Type': 'application/json',
         ...auth.headers
       };
@@ -263,7 +263,7 @@ export default function CoursesPage() {
     try {
       const auth = getAuthHeaders();
       const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://103.127.139.237:1000';
-      const headers = {
+      const headers: Record<string, string> = {
         'Content-Type': 'application/json',
         ...auth.headers
       };

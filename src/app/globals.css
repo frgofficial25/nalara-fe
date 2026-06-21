@@ -61,6 +61,15 @@
   margin: 0;
 }
 
+select {
+  color-scheme: dark;
+}
+
+select option {
+  background-color: #212121;
+  color: #ffffff;
+}
+
 html, body {
   width: 100%;
   color: var(--silver);

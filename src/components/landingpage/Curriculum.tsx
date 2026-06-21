@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import Card from '../quiz/Card';
 
 type LevelTab = 'dasar' | 'menengah' | 'advanced';
 
@@ -8,39 +7,39 @@ export default function Curriculum() {
 
   const tabData = {
     dasar: {
-      title: 'Level Dasar: Foundations of AI & Computer Vision',
-      duration: '32 Jam Instruksional Total',
+      title: 'Level Dasar (Preparatory)',
+      duration: '32 Jam Instruksional',
       dates: '23, 24, 25, 26 Juli',
       schedule: [
-        { day: 'Rabu, 22 Juli', topic: 'Technical Meeting (60 Menit)', desc: 'Onboarding LMS Nalara.academy, instalasi tools, setup environment, & pengumuman case pitching. Dipandu oleh Muhammad Hafiizh Anindya.' },
-        { day: 'Kamis, 23 Juli', topic: 'Python programming & Image Processing', desc: 'Sintaks Python lanjutan, NumPy, manipulasi citra menggunakan OpenCV, filter spasial, dan konversi ruang warna.' },
-        { day: 'Jumat, 24 Juli', topic: 'Exploratory Data Analysis (EDA) & AI Workflows', desc: 'Pemetaan data citra, augmentasi dataset, penanganan data tidak seimbang, dan pipeline pemrosesan awal.' },
-        { day: 'Sabtu, 25 Juli', topic: 'CNN Architectures (TensorFlow & PyTorch)', desc: 'Konvolusi dasar, pooling layer, perbandingan build model dengan TensorFlow vs PyTorch, dan transfer learning fundamental.' },
-        { day: 'Minggu, 26 Juli', topic: 'Data Splitting & Overfitting Workshop', desc: 'Strategi k-fold cross-validation, regularisasi (dropout, batch normalization), deteksi overfitting via grafik loss/accuracy, & Modul Ujian Dasar.' }
+        { day: 'Rabu, 22 Juli 2026', topic: 'Technical Meeting (100 Menit)', desc: 'Onboarding LMS Nalara.academy, instalasi tools, setup environment, & pengumuman case pitching. Dipandu oleh Muhammad Hafiizh Anindya.' },
+        { day: 'Kamis, 23 Juli 2026', topic: 'Python Programming & Image Processing', desc: 'Sintaks Python lanjutan, NumPy, manipulasi citra menggunakan OpenCV, filter spasial, dan konversi ruang warna.' },
+        { day: 'Jumat, 24 Juli 2026', topic: 'Exploring Data Analysis (EDA) & NumPy/Pandas', desc: 'Pemetaan data citra, augmentasi dataset, penanganan data tidak seimbang, dan pipeline pemrosesan awal.' },
+        { day: 'Sabtu, 25 Juli 2026', topic: 'Exploring Data Analysis (EDA) & NumPy/Pandas', desc: 'Konvolusi dasar, pooling layer, perbandingan build model dengan TensorFlow vs PyTorch, dan transfer learning fundamental.' },
+        { day: 'Minggu, 26 Juli 2026', topic: 'Data Splitting & Overfitting Workshop', desc: 'Strategi k-fold cross-validation, regularisasi (dropout, batch normalization), deteksi overfitting via grafik loss/accuracy, & Modul Ujian Dasar.' }
       ]
     },
     menengah: {
-      title: 'Level Menengah: Advanced CV & Segmentation',
-      duration: '32 Jam Instruksional Total',
+      title: 'Level Menengah (Intermediate)',
+      duration: '32 Jam Instruksional',
       dates: '30, 31 Juli, 1, 2 Agustus',
       schedule: [
-        { day: 'Rabu, 29 Juli', topic: 'Review Evaluasi Level Dasar', desc: 'Analisis hasil ujian level dasar, pembahasan feedback coding portofolio, dan sinkronisasi tools model menengah.' },
-        { day: 'Kamis, 30 Juli', topic: 'Image Segmentation (Semantic & Instance)', desc: 'FCN, U-Net architecture, perbedaan segmentasi semantik dan instansi, penyusunan dataset mask annotation.' },
-        { day: 'Jumat, 31 Juli', topic: 'Modern Backbone & Vision Transformers', desc: 'ResNet, MobileNet untuk komputasi ringan, konsep Vision Transformers (ViT) dalam klasifikasi & segmentasi.' },
-        { day: 'Sabtu, 1 Agustus', topic: 'Transfer Learning & Custom Datasets', desc: 'Fine-tuning weights model pre-trained COCO dataset, penyesuaian learning rate scheduler untuk konvergensi optimal.' },
-        { day: 'Minggu, 2 Agustus', topic: 'Evaluation Metrics Workshop & Case Study', desc: 'Perhitungan IoU (Intersection over Union), Dice Coefficient, analisis kebingungan matriks presisi-recall, & Modul Ujian Menengah.' }
+        { day: 'Rabu, 29 Juli 2026', topic: 'Review Evaluasi Level Dasar', desc: 'Analisis hasil ujian level dasar, pembahasan feedback coding portofolio, dan sinkronisasi tools model menengah.' },
+        { day: 'Kamis, 30 Juli 2026', topic: 'Image Segmentation (Semantic & Instance)', desc: 'FCN, U-Net architecture, perbedaan segmentasi semantik dan instansi, penyusunan dataset mask annotation.' },
+        { day: 'Jumat, 31 Juli 2026', topic: 'Modern Backbone & Vision Transformers', desc: 'ResNet, MobileNet untuk komputasi ringan, konsep Vision Transformers (ViT) dalam klasifikasi & segmentasi.' },
+        { day: 'Sabtu, 1 Agustus 2026', topic: 'Transfer Learning & Custom Datasets', desc: 'Fine-tuning weights model pre-trained COCO dataset, penyesuaian learning rate scheduler untuk konvergensi optimal.' },
+        { day: 'Minggu, 2 Agustus 2026', topic: 'Evaluation Metrics Workshop & Case Study', desc: 'Perhitungan IoU (Intersection over Union), Dice Coefficient, analisis kebingungan matriks presisi-recall, & Modul Ujian Menengah.' }
       ]
     },
     advanced: {
-      title: 'Level Advanced: Production & MLOps Deployment',
-      duration: '32 Jam Instruksional Total',
+      title: 'Level Advanced (MLOps)',
+      duration: '32 Jam Instruksional',
       dates: '6, 7, 8, 9 Agustus',
       schedule: [
-        { day: 'Rabu, 5 Agustus', topic: 'Briefing Project Akhir & Hybrid Pipeline', desc: 'Pembagian tim proyek, pengumuman studi kasus hybrid pipeline, dan konsultasi arsitektur deployment.' },
-        { day: 'Kamis, 6 Agustus', topic: 'MLOps Automation Lifecycle', desc: 'Version control untuk model (DVC), tracking eksperimen menggunakan MLflow, dan pembuatan docker image untuk environment model.' },
-        { day: 'Jumat, 7 Agustus', topic: 'Production API & Cloud Deployment', desc: 'Membangun REST API performa tinggi dengan FastAPI, deployment model ke Kubernetes/Cloud Engine, dan monitoring model drift.' },
-        { day: 'Sabtu, 8 Agustus', topic: 'Pitching Project Evaluated by Industry Reviewers', desc: 'Presentasi hasil proyek akhir di depan Dosen Pembina & reviewer industri terkemuka untuk validasi kelayakan produk.' },
-        { day: 'Minggu, 9 Agustus', topic: 'Graduation Ceremony & Career Networking', desc: 'Penyerahan sertifikat kelulusan resmi FRG FILKOM UB, sesi networking alumni, dan tips integrasi portofolio ke rekrutmen.' }
+        { day: 'Rabu, 5 Agustus 2026', topic: 'Briefing Project Akhir & Hybrid Pipeline', desc: 'Pembagian tim proyek, pengumuman studi kasus hybrid pipeline, dan konsultasi arsitektur deployment.' },
+        { day: 'Kamis, 6 Agustus 2026', topic: 'MLOps Automation Lifecycle', desc: 'Version control untuk model (DVC), tracking eksperimen menggunakan MLflow, dan pembuatan docker image untuk environment model.' },
+        { day: 'Jumat, 7 Agustus 2026', topic: 'Production API & Cloud Deployment', desc: 'Membangun REST API performa tinggi dengan FastAPI, deployment model ke Kubernetes/Cloud Engine, dan monitoring model drift.' },
+        { day: 'Sabtu, 8 Agustus 2026', topic: 'Pitching Project Evaluated by Industry Reviewers', desc: 'Presentasi hasil proyek akhir di depan Dosen Pembina & reviewer industri terkemuka untuk validasi kelayakan produk.' },
+        { day: 'Minggu, 9 Agustus 2026', topic: 'Graduation Ceremony & Career Networking', desc: 'Penyerahan sertifikat kelulusan resmi FRG FILKOM UB, sesi networking alumni, dan tips integrasi portofolio ke rekrutmen.' }
       ]
     }
   };
@@ -50,32 +49,22 @@ export default function Curriculum() {
   return (
     <section style={styles.curriculumSection} id="syllabus">
       <div style={styles.sectionHeader}>
-        <span className="badge-tech">Timeline & Silabus</span>
         <h2 style={styles.sectionTitle}>Kurikulum Terdistribusi Mingguan</h2>
         <p style={styles.sectionDesc}>
           Jadwal disusun secara berkala tiap akhir pekan (Rabu–Minggu) untuk memberikan waktu istirahat dan pemahaman konsep yang lebih matang, bukan kompresi satu minggu penuh yang melelahkan.
         </p>
       </div>
 
-      {/* Academic Compliance & Study Load Banner */}
+      {/* Stats Banner */}
       <div style={styles.academicCard}>
-        <div style={styles.academicLeft}>
-          <span style={styles.academicBadge}>🎓 Academic Compliance & Study Load</span>
-          <h3 style={styles.academicCardTitle}>Rigorous Academic Standard</h3>
-          <p style={styles.academicCardDesc}>
-            Program pelatihan terstruktur ini dirancang untuk mencakup kompetensi teoritis dan praktis setara dengan standar kurikulum perguruan tinggi dan kebutuhan riil industri.
-          </p>
+        <div style={styles.statBox}>
+          <span style={styles.statNumber}>96 JP</span>
+          <span style={styles.statLabel}>Porsi Praktikum & Proyek Lebih Dominan</span>
         </div>
-        <div style={styles.academicStats}>
-          <div style={styles.statBox}>
-            <span style={styles.statNumber}>96 JP</span>
-            <span style={styles.statLabel}>Total Beban Belajar (3 Levels × 32 JP)</span>
-          </div>
-          <div style={styles.statDivider} />
-          <div style={styles.statBox}>
-            <span style={{ ...styles.statNumber, color: 'var(--lemon)' }}>3 SKS</span>
-            <span style={styles.statLabel}>Setara Satuan Kredit Semester (SKS)</span>
-          </div>
+        <div style={styles.statDivider} />
+        <div style={styles.statBox}>
+          <span style={{ ...styles.statNumber, color: '#ffa826' }}>3-5 SKS</span>
+          <span style={styles.statLabel}>Konversi SKS dengan Pihak Kampus</span>
         </div>
       </div>
 
@@ -88,7 +77,7 @@ export default function Curriculum() {
             ...(activeTab === 'dasar' ? styles.tabBtnActive : {}),
           }}
         >
-          Level Dasar (Foundations)
+          Level Dasar (Preparatory)
         </button>
         <button
           onClick={() => setActiveTab('menengah')}
@@ -106,7 +95,7 @@ export default function Curriculum() {
             ...(activeTab === 'advanced' ? styles.tabBtnActive : {}),
           }}
         >
-          Level Advanced (MLOps)
+          Level Lanjut (Advanced)
         </button>
       </div>
 
@@ -143,7 +132,7 @@ export default function Curriculum() {
           </div>
         </div>
 
-        {/* Timeline Timeline List */}
+        {/* Timeline */}
         <div style={styles.timelineList}>
           {currentLevel.schedule.map((item, index) => (
             <div key={index} style={styles.timelineItem}>
@@ -166,7 +155,7 @@ export default function Curriculum() {
 
 const styles: Record<string, React.CSSProperties> = {
   curriculumSection: {
-    padding: '4rem 1.5rem',
+    padding: '5rem 1.5rem',
     maxWidth: '1000px',
     margin: '0 auto',
     width: '100%',
@@ -176,15 +165,19 @@ const styles: Record<string, React.CSSProperties> = {
     marginBottom: '3rem',
   },
   sectionTitle: {
-    fontSize: '2.2rem',
+    fontSize: '2.5rem',
     marginTop: '0.75rem',
     marginBottom: '1rem',
     fontWeight: '800',
+    color: '#FFFFFF',
+    letterSpacing: '-0.02em',
   },
   sectionDesc: {
-    fontSize: '1.05rem',
-    maxWidth: '700px',
+    fontSize: '1.1rem',
+    maxWidth: '#94a3b8',
     margin: '0 auto',
+    color: '#94a3b8',
+    lineHeight: '1.6',
   },
   tabsContainer: {
     display: 'flex',
@@ -195,8 +188,8 @@ const styles: Record<string, React.CSSProperties> = {
     padding: '0.35rem',
     borderRadius: '12px',
     background: 'rgba(255, 255, 255, 0.02)',
-    border: '1px solid var(--border-color)',
-    maxWidth: '700px',
+    border: '1px solid rgba(255, 255, 255, 0.08)',
+    maxWidth: '720px',
     margin: '0 auto 2.5rem auto',
   },
   tabBtn: {
@@ -205,17 +198,17 @@ const styles: Record<string, React.CSSProperties> = {
     borderRadius: '8px',
     border: 'none',
     background: 'transparent',
-    color: 'var(--grey-blue)',
+    color: '#94a3b8',
     fontFamily: 'var(--font-display)',
     fontWeight: 600,
     fontSize: '0.95rem',
     cursor: 'pointer',
-    transition: 'all var(--transition-fast)',
+    transition: 'all 0.2s ease',
   },
   tabBtnActive: {
-    background: 'var(--navy)',
-    color: 'var(--white)',
-    boxShadow: '0 4px 12px rgba(6, 99, 199, 0.25)',
+    background: '#0252a3',
+    color: '#FFFFFF',
+    boxShadow: '0 4px 12px rgba(2, 82, 163, 0.25)',
   },
   tabContent: {
     display: 'flex',
@@ -223,8 +216,8 @@ const styles: Record<string, React.CSSProperties> = {
     gap: '2rem',
   },
   levelMetaCard: {
-    background: 'rgba(255, 255, 255, 0.02)',
-    border: '1px solid var(--border-color)',
+    background: 'rgba(255, 255, 255, 0.01)',
+    border: '1px solid rgba(255, 255, 255, 0.08)',
     borderRadius: '16px',
     padding: '2rem',
     display: 'flex',
@@ -237,19 +230,20 @@ const styles: Record<string, React.CSSProperties> = {
     gap: '0.5rem',
   },
   levelTitle: {
-    fontSize: '1.5rem',
+    fontSize: '1.6rem',
     fontWeight: '700',
+    color: '#FFFFFF',
   },
   levelDates: {
     fontSize: '0.95rem',
-    color: 'var(--azure)',
+    color: '#38bdf8',
     fontWeight: 500,
   },
   componentsRow: {
     display: 'grid',
     gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
     gap: '1.5rem',
-    borderTop: '1px solid var(--border-color)',
+    borderTop: '1px solid rgba(255, 255, 255, 0.08)',
     paddingTop: '1.5rem',
   },
   compItem: {
@@ -262,12 +256,12 @@ const styles: Record<string, React.CSSProperties> = {
   },
   compTitle: {
     fontSize: '0.95rem',
-    color: 'var(--white)',
+    color: '#FFFFFF',
     display: 'block',
   },
   compSub: {
     fontSize: '0.8rem',
-    color: 'var(--l-grey)',
+    color: '#64748b',
     display: 'block',
   },
   timelineList: {
@@ -289,14 +283,14 @@ const styles: Record<string, React.CSSProperties> = {
     width: '12px',
     height: '12px',
     borderRadius: '50%',
-    background: 'var(--azure)',
-    boxShadow: '0 0 8px var(--azure)',
+    background: '#38bdf8',
+    boxShadow: '0 0 10px #38bdf8',
     marginTop: '0.5rem',
   },
   timelineLine: {
     width: '2px',
     flex: 1,
-    background: 'var(--border-color)',
+    background: 'rgba(255, 255, 255, 0.08)',
     minHeight: '60px',
   },
   timelineContent: {
@@ -305,7 +299,7 @@ const styles: Record<string, React.CSSProperties> = {
   },
   timelineDay: {
     fontSize: '0.85rem',
-    color: 'var(--lemon)',
+    color: '#ffa826',
     fontWeight: '700',
     fontFamily: 'var(--font-display)',
     display: 'block',
@@ -313,79 +307,47 @@ const styles: Record<string, React.CSSProperties> = {
     textTransform: 'uppercase',
   },
   timelineTopic: {
-    fontSize: '1.15rem',
+    fontSize: '1.25rem',
     fontWeight: '700',
+    color: '#FFFFFF',
     marginBottom: '0.5rem',
   },
   timelineDesc: {
     fontSize: '0.95rem',
-    color: 'var(--grey-blue)',
+    color: '#94a3b8',
     lineHeight: '1.6',
   },
   academicCard: {
-    background: 'linear-gradient(135deg, rgba(6, 99, 199, 0.08) 0%, rgba(255, 178, 64, 0.04) 100%)',
-    border: '1px solid rgba(6, 113, 224, 0.25)',
+    background: 'rgba(255, 255, 255, 0.01)',
+    border: '1px solid rgba(255, 255, 255, 0.08)',
     borderRadius: '16px',
     padding: '2rem',
     display: 'flex',
-    justifyContent: 'space-between',
+    justifyContent: 'space-around',
     alignItems: 'center',
     gap: '2rem',
     flexWrap: 'wrap',
     marginBottom: '3rem',
   },
-  academicLeft: {
-    flex: '2 1 400px',
-  },
-  academicBadge: {
-    fontSize: '0.75rem',
-    fontWeight: 700,
-    textTransform: 'uppercase',
-    letterSpacing: '0.08em',
-    color: 'var(--azure)',
-    display: 'inline-block',
-    marginBottom: '0.5rem',
-  },
-  academicCardTitle: {
-    fontSize: '1.4rem',
-    fontWeight: 800,
-    color: 'var(--white)',
-    marginBottom: '0.5rem',
-  },
-  academicCardDesc: {
-    fontSize: '0.95rem',
-    color: 'var(--grey-blue)',
-    lineHeight: '1.6',
-  },
-  academicStats: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '1.5rem',
-    flex: '1 1 auto',
-    justifyContent: 'center',
-    background: 'rgba(33, 33, 33, 0.5)',
-    padding: '1.25rem 1.75rem',
-    borderRadius: '12px',
-    border: '1px solid var(--border-color)',
-  },
   statBox: {
     textAlign: 'center',
+    flex: '1 1 200px',
   },
   statNumber: {
-    fontSize: '1.8rem',
+    fontSize: '2.5rem',
     fontWeight: 800,
-    color: 'var(--azure)',
+    color: '#38bdf8',
     display: 'block',
   },
   statLabel: {
-    fontSize: '0.75rem',
-    color: 'var(--l-grey)',
-    marginTop: '0.25rem',
+    fontSize: '0.9rem',
+    color: '#94a3b8',
+    marginTop: '0.5rem',
     display: 'block',
   },
   statDivider: {
     width: '1px',
-    height: '40px',
-    background: 'var(--border-color)',
+    height: '60px',
+    background: 'rgba(255, 255, 255, 0.08)',
   },
 };

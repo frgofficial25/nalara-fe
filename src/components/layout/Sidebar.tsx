@@ -13,7 +13,9 @@ import {
   Brain,
   GraduationCap,
   TrendingUp,
-  Inbox
+  Inbox,
+  FileText,
+  User
 } from 'lucide-react';
 import { logoutApi } from '@/services/auth';
 
@@ -37,7 +39,15 @@ export const getMenuForRole = (role?: string) => {
           { label: 'Dashboard', href: '/lecturer/dashboard', icon: LayoutDashboard },
           { label: 'Courses', href: '/lecturer/courses', icon: BookOpen },
           { label: 'Modules', href: '/lecturer/modules', icon: GraduationCap },
+          { label: 'Assignments', href: '/lecturer/tugas', icon: FileText },
           { label: 'Quiz Bank', href: '/lecturer/quizzes', icon: Brain },
+          { label: 'Grade Center', href: '/lecturer/grades', icon: TrendingUp },
+        ],
+      },
+      {
+        group: 'ACCOUNT',
+        items: [
+          { label: 'Profile', href: '/lecturer/profile', icon: User },
         ],
       },
     ];
