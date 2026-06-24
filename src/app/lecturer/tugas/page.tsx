@@ -58,9 +58,9 @@ export default function TugasPage() {
         headers: auth.headers
       });
       if (Array.isArray(response)) {
-        setCourses(response);
+        setCourses(response.map((c: any) => ({ ...c, id: c.uuid_pembelajaran || c.id })));
       } else if (response && 'data' in response && Array.isArray(response.data)) {
-        setCourses(response.data);
+        setCourses(response.data.map((c: any) => ({ ...c, id: c.uuid_pembelajaran || c.id })));
       }
     } catch (err) {
       console.error('Failed to fetch courses:', err);
@@ -76,9 +76,9 @@ export default function TugasPage() {
         headers: auth.headers
       });
       if (Array.isArray(response)) {
-        setModules(response);
+        setModules(response.map((m: any) => ({ ...m, id: m.uuid_modul || m.id })));
       } else if (response && 'data' in response && Array.isArray(response.data)) {
-        setModules(response.data);
+        setModules(response.data.map((m: any) => ({ ...m, id: m.uuid_modul || m.id })));
       }
     } catch (err) {
       console.error('Failed to fetch modules:', err);
@@ -104,12 +104,19 @@ export default function TugasPage() {
         headers: auth.headers
       });
 
-      let list: Tugas[] = [];
+      let list: any[] = [];
       if (Array.isArray(response)) {
         list = response;
       } else if (response && 'data' in response && Array.isArray(response.data)) {
         list = response.data;
       }
+
+      list = list
+        .filter((t: any) => (!filterCourseId || t.uuid_pembelajaran === filterCourseId) && (!filterModuleId || t.uuid_modul === filterModuleId))
+        .map((t: any) => ({
+          ...t,
+          id: t.uuid_tugas || t.id,
+        }));
 
       setTugasList(list);
     } catch (err) {
@@ -123,6 +130,11 @@ export default function TugasPage() {
   useEffect(() => {
     fetchCourses();
     fetchModules();
+    const params = new URLSearchParams(window.location.search);
+    const courseId = params.get('course_id');
+    const moduleId = params.get('module_id');
+    if (courseId) setFilterCourseId(courseId);
+    if (moduleId) setFilterModuleId(moduleId);
   }, []);
 
   useEffect(() => {
@@ -309,29 +321,12 @@ export default function TugasPage() {
       {/* Filter Bar */}
       <div style={s.filterBar}>
         <Filter size={16} color="var(--grey-blue)" />
-        <select
-          value={filterCourseId}
-          onChange={(e) => {
-            setFilterCourseId(e.target.value);
-            setFilterModuleId('');
-          }}
-          style={s.filterSelect}
-        >
-          <option value="" style={{ background: '#191919', color: '#fff' }}>All Courses</option>
-          {courses.map(c => (
-            <option key={c.id} value={c.id} style={{ background: '#191919', color: '#fff' }}>{c.title}</option>
-          ))}
-        </select>
-        <select
-          value={filterModuleId}
-          onChange={(e) => setFilterModuleId(e.target.value)}
-          style={s.filterSelect}
-        >
-          <option value="" style={{ background: '#191919', color: '#fff' }}>All Modules</option>
-          {(filterCourseId ? modules.filter(m => m.uuid_pembelajaran === filterCourseId) : modules).map(m => (
-            <option key={m.id} value={m.id} style={{ background: '#191919', color: '#fff' }}>{m.title}</option>
-          ))}
-        </select>
+        <div style={{ ...s.filterSelect as React.CSSProperties, display: 'flex', alignItems: 'center' }}>
+          {courses.find(c => (c.id || (c as any).uuid_pembelajaran) === filterCourseId)?.title || 'All Courses'}
+        </div>
+        <div style={{ ...s.filterSelect as React.CSSProperties, display: 'flex', alignItems: 'center' }}>
+          {modules.find(m => (m.id || (m as any).uuid_modul) === filterModuleId)?.title || 'All Modules'}
+        </div>
       </div>
 
       {error && (
@@ -456,8 +451,8 @@ export default function TugasPage() {
                   style={s.select}
                 >
                   <option value="" style={{ background: '#191919', color: '#fff' }}>Select course...</option>
-                  {courses.map(c => (
-                    <option key={c.id} value={c.id} style={{ background: '#191919', color: '#fff' }}>{c.title}</option>
+                  {courses.map((c, idx) => (
+                    <option key={c.id || (c as any).uuid_pembelajaran || idx} value={c.id || (c as any).uuid_pembelajaran} style={{ background: '#191919', color: '#fff' }}>{c.title}</option>
                   ))}
                 </select>
               </div>
@@ -470,8 +465,8 @@ export default function TugasPage() {
                   style={s.select}
                 >
                   <option value="" style={{ background: '#191919', color: '#fff' }}>Select module...</option>
-                  {getFormModules().map(m => (
-                    <option key={m.id} value={m.id} style={{ background: '#191919', color: '#fff' }}>{m.title}</option>
+                  {getFormModules().map((m, idx) => (
+                    <option key={m.id || (m as any).uuid_modul || idx} value={m.id || (m as any).uuid_modul} style={{ background: '#191919', color: '#fff' }}>{m.title}</option>
                   ))}
                 </select>
               </div>

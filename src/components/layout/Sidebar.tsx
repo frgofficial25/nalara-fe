@@ -38,8 +38,6 @@ export const getMenuForRole = (role?: string) => {
         items: [
           { label: 'Dashboard', href: '/lecturer/dashboard', icon: LayoutDashboard },
           { label: 'Courses', href: '/lecturer/courses', icon: BookOpen },
-          { label: 'Modules', href: '/lecturer/modules', icon: GraduationCap },
-          { label: 'Assignments', href: '/lecturer/tugas', icon: FileText },
           { label: 'Quiz Bank', href: '/lecturer/quizzes', icon: Brain },
           { label: 'Grade Center', href: '/lecturer/grades', icon: TrendingUp },
         ],

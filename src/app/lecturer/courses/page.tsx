@@ -5,6 +5,7 @@ import {
   BookOpen, Plus, Trash2, Edit2, Sparkles, X, 
   Loader2, Globe, AlertCircle, CheckCircle2, ChevronRight, Eye, EyeOff, Archive, Users, Search
 } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import { apiGet, apiPost } from '@/lib/api';
 import { getStoredToken } from '@/services/auth';
 
@@ -25,6 +26,7 @@ interface Student {
 }
 
 export default function CoursesPage() {
+  const router = useRouter();
   const [courses, setCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -81,8 +83,9 @@ export default function CoursesPage() {
       }
 
       // Add default statuses just like nalara_lite if not present
-      setCourses(list.map(c => ({
+      setCourses(list.map((c: any) => ({
         ...c,
+        id: c.uuid_pembelajaran || c.id,
         status: c.status || 'draft'
       })));
     } catch (err) {
@@ -137,7 +140,7 @@ export default function CoursesPage() {
     try {
       setError(null);
       const auth = getAuthHeaders();
-      const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://103.127.139.237:1000';
+      const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL as string;
       const headers: Record<string, string> = {
         'Content-Type': 'application/json',
         ...auth.headers
@@ -172,7 +175,7 @@ export default function CoursesPage() {
     try {
       setError(null);
       const auth = getAuthHeaders();
-      const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://103.127.139.237:1000';
+      const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL as string;
       const headers = { ...auth.headers };
       if (auth.token) {
         headers['Authorization'] = `Bearer ${auth.token}`;
@@ -262,7 +265,7 @@ export default function CoursesPage() {
     setGeneratedHtml('');
     try {
       const auth = getAuthHeaders();
-      const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://103.127.139.237:1000';
+      const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL as string;
       const headers: Record<string, string> = {
         'Content-Type': 'application/json',
         ...auth.headers
@@ -353,7 +356,12 @@ export default function CoursesPage() {
       ) : (
         <div style={s.grid}>
           {courses.map((course) => (
-            <div key={course.id} className="glass-panel" style={s.card}>
+            <div 
+              key={course.id} 
+              className="glass-panel" 
+              style={{ ...s.card as React.CSSProperties, cursor: 'pointer' }}
+              onClick={() => router.push(`/lecturer/modules?course_id=${course.id}`)}
+            >
               <div style={s.cardHeader}>
                 <div style={s.bookIconBox}>
                   <BookOpen size={18} color="var(--azure)" />
@@ -374,10 +382,10 @@ export default function CoursesPage() {
               </div>
               <div style={s.actionsRow}>
                 <button 
-                  onClick={() => handleOpenPublishModal(course.id)} 
+                  onClick={(e) => { e.stopPropagation(); handleOpenPublishModal(course.id); }} 
                   disabled={course.status === 'published'}
                   style={{
-                    ...s.publishBtn,
+                    ...s.publishBtn as React.CSSProperties,
                     opacity: course.status === 'published' ? 0.6 : 1
                   }}
                 >
@@ -385,10 +393,10 @@ export default function CoursesPage() {
                   <span>Publish & Assign</span>
                 </button>
                 <div style={{ display: 'flex', gap: 6 }}>
-                  <button onClick={() => openEditModal(course)} style={s.iconBtn}>
+                  <button onClick={(e) => { e.stopPropagation(); openEditModal(course); }} style={s.iconBtn}>
                     <Edit2 size={12} color="var(--grey-blue)" />
                   </button>
-                  <button onClick={() => handleDelete(course.id)} style={s.iconBtn}>
+                  <button onClick={(e) => { e.stopPropagation(); handleDelete(course.id); }} style={s.iconBtn}>
                     <Trash2 size={12} color="#FF5252" />
                   </button>
                 </div>

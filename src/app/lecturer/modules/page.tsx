@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Layers, Plus, Trash2, Edit2, X, Loader2, AlertCircle } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import { apiGet, apiPost } from '@/lib/api';
 import { getStoredToken } from '@/services/auth';
 
@@ -20,6 +21,7 @@ interface Module {
 }
 
 export default function ModulesPage() {
+  const router = useRouter();
   const [courses, setCourses] = useState<Course[]>([]);
   const [selectedCourseId, setSelectedCourseId] = useState<string>('');
   const [modules, setModules] = useState<Module[]>([]);
@@ -31,6 +33,34 @@ export default function ModulesPage() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [currentModule, setCurrentModule] = useState<Module | null>(null);
   const [form, setForm] = useState({ title: '', description: '', difficulty: 'Beginner' });
+
+  // Drag and Drop State
+  const [draggedItemIndex, setDraggedItemIndex] = useState<number | null>(null);
+
+  const handleDragStart = (e: React.DragEvent<HTMLDivElement>, index: number) => {
+    setDraggedItemIndex(index);
+    if (e.dataTransfer) {
+      e.dataTransfer.effectAllowed = "move";
+      e.dataTransfer.setData("text/plain", index.toString());
+    }
+  };
+
+  const handleDragEnter = (e: React.DragEvent<HTMLDivElement>, index: number) => {
+    e.preventDefault();
+  };
+
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>, index: number) => {
+    e.preventDefault();
+    if (draggedItemIndex === null || draggedItemIndex === index) return;
+    
+    const newModules = [...modules];
+    const draggedItem = newModules[draggedItemIndex];
+    newModules.splice(draggedItemIndex, 1);
+    newModules.splice(index, 0, draggedItem);
+    
+    setModules(newModules);
+    setDraggedItemIndex(null);
+  };
 
   const getAuthHeaders = () => {
     const token = getStoredToken();
@@ -54,9 +84,9 @@ export default function ModulesPage() {
       });
 
       if (Array.isArray(response)) {
-        setCourses(response);
+        setCourses(response.map((c: any) => ({ ...c, id: c.uuid_pembelajaran || c.id })));
       } else if (response && 'data' in response && Array.isArray(response.data)) {
-        setCourses(response.data);
+        setCourses(response.data.map((c: any) => ({ ...c, id: c.uuid_pembelajaran || c.id })));
       }
     } catch (err) {
       console.error('Failed to fetch courses:', err);
@@ -77,12 +107,19 @@ export default function ModulesPage() {
         headers: auth.headers
       });
 
-      let list: Module[] = [];
+      let list: any[] = [];
       if (Array.isArray(response)) {
         list = response;
       } else if (response && 'data' in response && Array.isArray(response.data)) {
         list = response.data;
       }
+
+      list = list
+        .filter((m: any) => m.uuid_pembelajaran === selectedCourseId)
+        .map((m: any) => ({
+          ...m,
+          id: m.uuid_modul || m.id,
+        }));
 
       setModules(list);
     } catch (err) {
@@ -95,6 +132,11 @@ export default function ModulesPage() {
 
   useEffect(() => {
     fetchCourses();
+    const params = new URLSearchParams(window.location.search);
+    const courseId = params.get('course_id');
+    if (courseId) {
+      setSelectedCourseId(courseId);
+    }
   }, []);
 
   useEffect(() => {
@@ -142,7 +184,7 @@ export default function ModulesPage() {
     try {
       setError(null);
       const auth = getAuthHeaders();
-      const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://103.127.139.237:1000';
+      const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL as string;
       const headers: Record<string, string> = {
         'Content-Type': 'application/json',
         ...auth.headers
@@ -178,7 +220,7 @@ export default function ModulesPage() {
     try {
       setError(null);
       const auth = getAuthHeaders();
-      const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://103.127.139.237:1000';
+      const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL as string;
       const headers = { ...auth.headers };
       if (auth.token) {
         headers['Authorization'] = `Bearer ${auth.token}`;
@@ -231,18 +273,12 @@ export default function ModulesPage() {
 
       {/* Course Selector */}
       <div style={s.selectorRow}>
-        <label style={s.selectorLabel}>Select Course:</label>
-        <select 
-          value={selectedCourseId}
-          onChange={(e) => setSelectedCourseId(e.target.value)}
-          style={s.courseSelect}
-        >
-          <option value="" style={{ background: '#191919', color: '#fff' }}>Choose a course...</option>
-          {courses.map(c => (
-            <option key={c.id} value={c.id} style={{ background: '#191919', color: '#fff' }}>{c.title}</option>
-          ))}
-        </select>
+        <label style={s.selectorLabel}>Course:</label>
+        <div style={{ ...s.courseSelect as React.CSSProperties, display: 'flex', alignItems: 'center' }}>
+          {courses.find(c => (c.id || (c as any).uuid_pembelajaran) === selectedCourseId)?.title || 'No course selected'}
+        </div>
       </div>
+
 
       {error && (
         <div style={s.errorAlert}>
@@ -273,19 +309,21 @@ export default function ModulesPage() {
         </div>
       ) : (
         <div style={s.grid}>
-          {modules.map((mod) => (
-            <div key={mod.id} className="glass-panel" style={s.card}>
+          {modules.map((mod, index) => (
+            <div 
+              key={mod.id} 
+              className="glass-panel" 
+              draggable
+              onDragStart={(e) => handleDragStart(e, index)}
+              onDragEnter={(e) => handleDragEnter(e, index)}
+              onDragOver={(e) => e.preventDefault()}
+              onDrop={(e) => handleDrop(e, index)}
+              style={{ ...s.card as React.CSSProperties, cursor: 'grab', opacity: draggedItemIndex === index ? 0.5 : 1 }}
+              onClick={() => router.push(`/lecturer/tugas?course_id=${selectedCourseId}&module_id=${mod.id}`)}
+            >
               <div style={s.cardHeader}>
                 <div style={s.bookIconBox}>
                   <Layers size={18} color="var(--lemon)" />
-                </div>
-                <div style={s.cardActions}>
-                  <button onClick={() => openEditModal(mod)} style={s.iconBtn} title="Edit Module">
-                    <Edit2 size={14} color="var(--grey-blue)" />
-                  </button>
-                  <button onClick={() => handleDelete(mod.id)} style={s.iconBtn} title="Delete Module">
-                    <Trash2 size={14} color="#FF5252" />
-                  </button>
                 </div>
               </div>
               <div style={s.cardBody}>
@@ -300,6 +338,15 @@ export default function ModulesPage() {
                   {mod.slug && <span style={s.slugBadge}>/{mod.slug}</span>}
                 </div>
               </div>
+              <div style={s.cardActions}>
+                <button onClick={(e) => { e.stopPropagation(); openEditModal(mod); }} style={s.iconBtn} title="Edit Module">
+                  <Edit2 size={14} color="var(--grey-blue)" />
+                </button>
+                <button onClick={(e) => { e.stopPropagation(); handleDelete(mod.id); }} style={s.iconBtn} title="Delete Module">
+                  <Trash2 size={14} color="#FF5252" />
+                </button>
+              </div>
+
             </div>
           ))}
         </div>
@@ -530,22 +577,23 @@ const s: Record<string, React.CSSProperties> = {
     textAlign: 'center',
   },
   grid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
-    gap: '20px',
-  },
-  card: {
-    padding: '24px',
     display: 'flex',
     flexDirection: 'column',
-    justifyContent: 'space-between',
-    minHeight: '180px',
+    gap: '16px',
+  },
+  card: {
+    padding: '16px 24px',
+    display: 'flex',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: '20px',
   },
   cardHeader: {
     display: 'flex',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: '16px',
+    margin: 0,
+    gap: '16px',
+    flexShrink: 0,
   },
   bookIconBox: {
     width: '36px',
@@ -559,6 +607,8 @@ const s: Record<string, React.CSSProperties> = {
   cardActions: {
     display: 'flex',
     gap: '8px',
+    flexShrink: 0,
+    marginLeft: 'auto',
   },
   iconBtn: {
     background: 'transparent',
@@ -575,7 +625,9 @@ const s: Record<string, React.CSSProperties> = {
   cardBody: {
     display: 'flex',
     flexDirection: 'column',
-    gap: '8px',
+    gap: '4px',
+    flex: 1,
+    minWidth: 0,
   },
   moduleTitle: {
     fontSize: '1.1rem',
