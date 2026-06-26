@@ -44,7 +44,14 @@ interface Tugas {
 // ─── Auth Helper ──────────────────────────────────────────────────────────────
 function getAuth() {
   const token = getStoredToken();
-  return { token: token ?? undefined, headers: token ? { Authorization: `Bearer ${token}` } : {} };
+  const apiKey = process.env.NEXT_PUBLIC_API_KEY;
+  const headers: Record<string, string> = {};
+  if (apiKey) {
+    headers['x-api-key'] = apiKey;
+  } else if (token) {
+    headers['x-api-key'] = token;
+  }
+  return { token: token ?? undefined, headers };
 }
 
 // ─── Delete Confirmation Modal ─────────────────────────────────────────────────
