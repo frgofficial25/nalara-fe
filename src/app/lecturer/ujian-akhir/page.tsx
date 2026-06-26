@@ -5,7 +5,7 @@ import {
   FileText, Plus, Search, Calendar, Award, Users, Trash2, Edit2,
   TrendingUp, Download, Eye, Loader2, AlertCircle, X, Check, PlusCircle, Trash
 } from 'lucide-react';
-import { apiGet, apiPost, apiPut, apiDelete, buildAuthOptions } from '@/lib/api';
+import { apiGet, apiPost, apiPut, apiDelete } from '@/lib/api';
 import { getStoredToken } from '@/services/auth';
 
 interface Exam {
@@ -51,7 +51,7 @@ interface FormQuestion {
 
 function getAuthHeaders() {
   const token = getStoredToken();
-  return buildAuthOptions(token || undefined);
+  return { token: token || undefined, headers: {} };
 }
 
 export default function UjianAkhirPage() {

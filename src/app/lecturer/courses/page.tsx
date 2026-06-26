@@ -3,7 +3,8 @@
 import React, { useState, useEffect } from 'react';
 import { 
   BookOpen, Plus, Trash2, Edit2, Sparkles, X, 
-  Loader2, Globe, AlertCircle, CheckCircle2, ChevronRight, Eye, EyeOff, Archive, Users, Search
+  Loader2, Globe, AlertCircle, CheckCircle2, ChevronRight, Eye, EyeOff, Archive, Users, Search,
+  Calendar, Layers
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { apiGet, apiPost } from '@/lib/api';
@@ -16,6 +17,8 @@ interface Course {
   slug?: string;
   status?: 'published' | 'draft' | 'archived';
   createdAt?: string;
+  created_at?: string;
+  modulesCount?: number;
 }
 
 interface Student {
@@ -53,6 +56,12 @@ export default function CoursesPage() {
   const [aiGenerating, setAiGenerating] = useState(false);
   const [generatedHtml, setGeneratedHtml] = useState('');
 
+  // Detail Kelas Popup/Modal State
+  const [detailCourse, setDetailCourse] = useState<Course | null>(null);
+  const [detailModuls, setDetailModuls] = useState<any[]>([]);
+  const [detailTugasMap, setDetailTugasMap] = useState<Record<string, any[]>>({});
+  const [loadingDetail, setLoadingDetail] = useState(false);
+
   const getAuthHeaders = () => {
     const token = getStoredToken();
     const apiKey = process.env.NEXT_PUBLIC_API_KEY;
@@ -83,16 +92,80 @@ export default function CoursesPage() {
       }
 
       // Add default statuses just like nalara_lite if not present
-      setCourses(list.map((c: any) => ({
+      const baseCourses = list.map((c: any) => ({
         ...c,
         id: c.uuid_pembelajaran || c.id,
         status: c.status || 'draft'
-      })));
+      }));
+
+      // Fetch moduls count for each course
+      const coursesWithModules = await Promise.all(baseCourses.map(async (c) => {
+        try {
+          const modulRes = await apiGet<any[] | { data?: any[] }>(
+            `/api/modul?uuid_pembelajaran=${c.id}`, { token: auth.token, headers: auth.headers }
+          );
+          const modulList = Array.isArray(modulRes)
+            ? modulRes
+            : (modulRes as any).data ?? [];
+          return {
+            ...c,
+            modulesCount: modulList.length
+          };
+        } catch (e) {
+          return {
+            ...c,
+            modulesCount: 0
+          };
+        }
+      }));
+
+      setCourses(coursesWithModules);
     } catch (err) {
       console.error(err);
       setError(err instanceof Error ? err.message : 'Gagal memuat daftar pembelajaran.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const openDetailModal = async (course: Course) => {
+    setDetailCourse(course);
+    setLoadingDetail(true);
+    setDetailModuls([]);
+    setDetailTugasMap({});
+    try {
+      const auth = getAuthHeaders();
+      const opts = { token: auth.token, headers: auth.headers };
+
+      // Fetch moduls for this course
+      const modulRes = await apiGet<any[] | { data?: any[] }>(
+        `/api/modul?uuid_pembelajaran=${course.id}`, opts
+      );
+      let modulList: any[] = Array.isArray(modulRes)
+        ? modulRes
+        : (modulRes as any).data ?? [];
+      modulList = modulList.map(m => ({ ...m, id: m.uuid_modul || m.id }));
+      setDetailModuls(modulList);
+
+      // Fetch tugas for each modul
+      const newTugasMap: Record<string, any[]> = {};
+      await Promise.all(
+        modulList.map(async (m) => {
+          const tugasRes = await apiGet<any[] | { data?: any[] }>(
+            `/api/tugas?uuid_pembelajaran=${course.id}&uuid_modul=${m.id}`, opts
+          );
+          let tugasList: any[] = Array.isArray(tugasRes)
+            ? tugasRes
+            : (tugasRes as any).data ?? [];
+          tugasList = tugasList.map(t => ({ ...t, id: t.uuid_tugas || t.id }));
+          newTugasMap[m.id] = tugasList;
+        })
+      );
+      setDetailTugasMap(newTugasMap);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoadingDetail(false);
     }
   };
 
@@ -360,7 +433,7 @@ export default function CoursesPage() {
               key={course.id} 
               className="glass-panel" 
               style={{ ...s.card as React.CSSProperties, cursor: 'pointer' }}
-              onClick={() => router.push(`/lecturer/modules?course_id=${course.id}`)}
+              onClick={() => router.push(`/lecturer/courses/detail?id=${course.id}`)}
             >
               <div style={s.cardHeader}>
                 <div style={s.bookIconBox}>
@@ -379,25 +452,63 @@ export default function CoursesPage() {
                 <h3 style={s.courseTitle}>{course.title}</h3>
                 <p style={s.courseDesc}>{course.description || 'No description provided.'}</p>
                 {course.slug && <span style={s.slugBadge}>/{course.slug}</span>}
+                <div style={s.cardMeta}>
+                  <div style={s.metaItem}>
+                    <Calendar size={13} color="var(--grey-blue)" />
+                    <span>
+                      {course.created_at ? new Date(course.created_at).toLocaleDateString('id-ID', {
+                        day: 'numeric',
+                        month: 'long',
+                        year: 'numeric'
+                      }) : (course.createdAt ? new Date(course.createdAt).toLocaleDateString('id-ID', {
+                        day: 'numeric',
+                        month: 'long',
+                        year: 'numeric'
+                      }) : '-')}
+                    </span>
+                  </div>
+                  <div style={s.metaItem}>
+                    <Layers size={13} color="var(--grey-blue)" />
+                    <span>{course.modulesCount ?? 0} Modul</span>
+                  </div>
+                </div>
               </div>
               <div style={s.actionsRow}>
-                <button 
-                  onClick={(e) => { e.stopPropagation(); handleOpenPublishModal(course.id); }} 
-                  disabled={course.status === 'published'}
-                  style={{
-                    ...s.publishBtn as React.CSSProperties,
-                    opacity: course.status === 'published' ? 0.6 : 1
-                  }}
-                >
-                  <Eye size={12} />
-                  <span>Publish & Assign</span>
-                </button>
-                <div style={{ display: 'flex', gap: 6 }}>
-                  <button onClick={(e) => { e.stopPropagation(); openEditModal(course); }} style={s.iconBtn}>
-                    <Edit2 size={12} color="var(--grey-blue)" />
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button 
+                    onClick={(e) => { e.stopPropagation(); handleOpenPublishModal(course.id); }} 
+                    disabled={course.status === 'published'}
+                    className="action-btn-publish"
+                    style={{
+                      ...s.publishBtn as React.CSSProperties,
+                      opacity: course.status === 'published' ? 0.6 : 1
+                    }}
+                  >
+                    <Eye size={12} />
+                    <span>Publish</span>
                   </button>
-                  <button onClick={(e) => { e.stopPropagation(); handleDelete(course.id); }} style={s.iconBtn}>
-                    <Trash2 size={12} color="#FF5252" />
+                  <button
+                    onClick={(e) => { e.stopPropagation(); openDetailModal(course); }}
+                    className="action-btn-detail"
+                    style={s.detailBtn}
+                  >
+                    Detail Kelas
+                  </button>
+                </div>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button 
+                    onClick={(e) => { e.stopPropagation(); openEditModal(course); }} 
+                    className="action-btn-edit"
+                    style={s.editActionBtn}
+                  >
+                    <Edit2 size={13} color="var(--azure)" />
+                  </button>
+                  <button 
+                    onClick={(e) => { e.stopPropagation(); handleDelete(course.id); }} 
+                    className="action-btn-delete"
+                    style={s.deleteActionBtn}
+                  >
+                    <Trash2 size={13} color="#FF5252" />
                   </button>
                 </div>
               </div>
@@ -638,10 +749,129 @@ export default function CoursesPage() {
         </div>
       )}
 
+      {/* Detail Kelas Modal */}
+      {detailCourse && (
+        <div style={s.modalOverlay}>
+          <div style={{ ...s.modalContent, maxWidth: 640 }} className="glass-panel">
+            <div style={s.modalHeader}>
+              <h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#fff', margin: 0 }}>{detailCourse.title}</h3>
+              <button onClick={() => setDetailCourse(null)} style={s.closeBtn}>
+                <X size={18} />
+              </button>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+              <div>
+                <h4 style={{ fontSize: '0.9rem', color: 'var(--grey-blue)', fontWeight: 600, marginBottom: 6 }}>Deskripsi Kelas</h4>
+                <p style={{ fontSize: '0.88rem', color: '#e2e8f0', lineHeight: 1.5, margin: 0 }}>
+                  {detailCourse.description || 'Tidak ada deskripsi.'}
+                </p>
+              </div>
+
+              <div>
+                <h4 style={{ fontSize: '0.9rem', color: 'var(--grey-blue)', fontWeight: 600, marginBottom: 12 }}>Modul & Materi</h4>
+                {loadingDetail ? (
+                  <div style={{ display: 'flex', justifyContent: 'center', padding: '24px 0' }}>
+                    <Loader2 size={24} color="var(--azure)" style={{ animation: 'spin 1s linear infinite' }} />
+                  </div>
+                ) : detailModuls.length === 0 ? (
+                  <p style={{ fontSize: '0.85rem', color: 'var(--grey)', fontStyle: 'italic', margin: 0 }}>
+                    Belum ada modul di kelas ini.
+                  </p>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                    {detailModuls.map((m) => (
+                      <div key={m.id} style={{
+                        padding: 14,
+                        background: 'rgba(255, 255, 255, 0.02)',
+                        border: '1px solid rgba(255, 255, 255, 0.06)',
+                        borderRadius: 8
+                      }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                          <h5 style={{ fontSize: '0.95rem', fontWeight: 600, color: '#fff', margin: 0 }}>{m.title}</h5>
+                          {m.difficulty && (
+                            <span style={{
+                              fontSize: '0.72rem',
+                              padding: '2px 8px',
+                              borderRadius: 4,
+                              background: m.difficulty === 'Beginner' ? 'rgba(0, 200, 83, 0.1)' : m.difficulty === 'Intermediate' ? 'rgba(255, 178, 64, 0.1)' : 'rgba(239, 68, 68, 0.1)',
+                              color: m.difficulty === 'Beginner' ? '#00C853' : m.difficulty === 'Intermediate' ? 'var(--lemon)' : '#ff4d4d',
+                              border: `1px solid ${m.difficulty === 'Beginner' ? 'rgba(0, 200, 83, 0.2)' : m.difficulty === 'Intermediate' ? 'rgba(255, 178, 64, 0.2)' : 'rgba(239, 68, 68, 0.2)'}`
+                            }}>{m.difficulty}</span>
+                          )}
+                        </div>
+                        {m.description && (
+                          <p style={{ fontSize: '0.82rem', color: 'var(--grey-blue)', margin: '0 0 10px 0', lineHeight: 1.4 }}>{m.description}</p>
+                        )}
+                        
+                        {/* Section / Tugas List per modul */}
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 8, paddingLeft: 10, borderLeft: '2px solid rgba(255, 255, 255, 0.1)' }}>
+                          <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--grey)' }}>Materi / Tugas:</span>
+                          {!detailTugasMap[m.id] || detailTugasMap[m.id].length === 0 ? (
+                            <span style={{ fontSize: '0.78rem', color: 'var(--grey)', fontStyle: 'italic' }}>Belum ada materi</span>
+                          ) : (
+                            detailTugasMap[m.id].map(t => (
+                              <div key={t.id} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                <div style={{ width: 4, height: 4, borderRadius: '50%', background: 'var(--azure)' }} />
+                                <span style={{ fontSize: '0.8rem', color: '#cbd5e1' }}>{t.title}</span>
+                                {t.type && (
+                                  <span style={{
+                                    fontSize: '0.65rem',
+                                    color: 'var(--grey-blue)',
+                                    background: 'rgba(255, 255, 255, 0.05)',
+                                    padding: '1px 5px',
+                                    borderRadius: 3
+                                  }}>{t.type}</span>
+                                )}
+                              </div>
+                            ))
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+            <div style={s.modalFooter}>
+              <button onClick={() => setDetailCourse(null)} style={s.cancelBtn}>Tutup</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <style>{`
         @keyframes spin {
           from { transform: rotate(0deg); }
           to { transform: rotate(360deg); }
+        }
+        .glass-panel {
+          transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.22s ease, border-color 0.22s ease !important;
+        }
+        .glass-panel:hover {
+          transform: translateY(-4px) !important;
+          box-shadow: 0 12px 30px rgba(99, 102, 241, 0.12) !important;
+          border-color: rgba(99, 102, 241, 0.3) !important;
+        }
+        .action-btn-edit, .action-btn-delete, .action-btn-detail, .action-btn-publish {
+          transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+        }
+        .action-btn-edit:hover {
+          background: rgba(65, 150, 240, 0.18) !important;
+          border-color: rgba(65, 150, 240, 0.4) !important;
+          transform: scale(1.05);
+        }
+        .action-btn-delete:hover {
+          background: rgba(255, 82, 82, 0.18) !important;
+          border-color: rgba(255, 82, 82, 0.4) !important;
+          transform: scale(1.05);
+        }
+        .action-btn-detail:hover {
+          background: rgba(255, 255, 255, 0.08) !important;
+          border-color: rgba(255, 255, 255, 0.2) !important;
+        }
+        .action-btn-publish:hover {
+          background: rgba(65, 150, 240, 0.2) !important;
+          border-color: rgba(65, 150, 240, 0.4) !important;
         }
       `}</style>
     </div>
@@ -759,7 +989,11 @@ const s: Record<string, React.CSSProperties> = {
     display: 'flex',
     flexDirection: 'column',
     justifyContent: 'space-between',
-    minHeight: '220px',
+    minHeight: '230px',
+    borderRadius: '14px',
+    background: 'rgba(255, 255, 255, 0.02)',
+    border: '1px solid rgba(255, 255, 255, 0.07)',
+    boxShadow: '0 8px 32px 0 rgba(0, 0, 0, 0.18)',
   },
   cardHeader: {
     display: 'flex',
@@ -832,6 +1066,56 @@ const s: Record<string, React.CSSProperties> = {
     fontWeight: 600,
     cursor: 'pointer',
     transition: 'all 0.2s',
+  },
+  detailBtn: {
+    background: 'rgba(255, 255, 255, 0.04)',
+    border: '1px solid rgba(255, 255, 255, 0.12)',
+    color: '#ffffff',
+    padding: '6px 12px',
+    borderRadius: '6px',
+    fontSize: '0.78rem',
+    fontWeight: 600,
+    cursor: 'pointer',
+    transition: 'all 0.2s',
+  },
+  editActionBtn: {
+    background: 'rgba(65, 150, 240, 0.06)',
+    border: '1px solid rgba(65, 150, 240, 0.2)',
+    borderRadius: '6px',
+    width: '30px',
+    height: '30px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    cursor: 'pointer',
+    transition: 'all 0.2s',
+  },
+  deleteActionBtn: {
+    background: 'rgba(255, 82, 82, 0.06)',
+    border: '1px solid rgba(255, 82, 82, 0.2)',
+    borderRadius: '6px',
+    width: '30px',
+    height: '30px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    cursor: 'pointer',
+    transition: 'all 0.2s',
+  },
+  cardMeta: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '14px',
+    marginTop: '12px',
+    paddingTop: '12px',
+    borderTop: '1px solid rgba(255, 255, 255, 0.05)',
+  },
+  metaItem: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '6px',
+    fontSize: '0.78rem',
+    color: 'var(--grey-blue)',
   },
   iconBtn: {
     background: 'transparent',
