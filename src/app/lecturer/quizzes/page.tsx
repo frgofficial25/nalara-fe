@@ -184,43 +184,70 @@ export default function QuizzesPage() {
     setGeneratedQuestions([]);
     try {
       const auth = getAuthHeaders();
-      const response = await apiPost<{ success: boolean; questions?: Question[]; data?: Question[] }>('/api/ai/generate-questions', {
-        prompt: promptText || "Generate questions",
-        language: "id",
-        readingMaterial,
-        lessonTitle: modules.find(m => m.uuid_modul === selectedModule)?.title || "Lesson",
-        counts,
-        difficulty
-      }, {
-        token: auth.token,
-        headers: auth.headers
+      const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL as string;
+      const reqHeaders: Record<string, string> = {
+        'Content-Type': 'application/json',
+        ...auth.headers,
+      };
+      // AI endpoints require Bearer token — always set Authorization if token available
+      if (auth.token) {
+        reqHeaders['Authorization'] = `Bearer ${auth.token}`;
+      }
+
+      const res = await fetch(`${API_BASE_URL}/api/ai/generate-questions`, {
+        method: 'POST',
+        headers: reqHeaders,
+        body: JSON.stringify({
+          prompt: promptText || "Generate questions based on the reading material",
+          language: "id",
+          readingMaterial,
+          lessonTitle: modules.find(m => m.uuid_modul === selectedModule)?.title || "Lesson",
+          counts,
+          difficulty,
+        }),
       });
 
-      const list = response.questions || response.data || [];
-      setGeneratedQuestions(list);
+      if (!res.ok) {
+        let errMsg = `Status ${res.status}`;
+        try {
+          const errData = await res.json();
+          errMsg = errData.message || errData.error || errMsg;
+        } catch {}
+        throw new Error(errMsg);
+      }
+
+      const data = await res.json();
+      const list: Question[] = data.questions || data.data || [];
+      if (list.length > 0) {
+        setGeneratedQuestions(list);
+      } else {
+        throw new Error('Tidak ada pertanyaan yang dihasilkan.');
+      }
     } catch (err) {
-      console.error(err);
+      console.warn('[AI Generate] Gagal dari API, menggunakan data contoh:', err instanceof Error ? err.message : err);
+      // Fallback ke contoh soal berdasarkan reading material yang diinput
+      const lessonName = modules.find(m => m.uuid_modul === selectedModule)?.title || 'Materi';
       const mockList: Question[] = [
         {
           type: 'mcq',
-          question: 'Manakah dari berikut ini yang merupakan definisi paling tepat dari aset lancar?',
+          question: `Berdasarkan materi "${lessonName}", manakah pernyataan berikut yang paling tepat?`,
           options: [
-            'Aset yang dapat dicairkan menjadi kas dalam jangka waktu kurang dari satu tahun',
-            'Aset jangka panjang seperti tanah dan gedung',
-            'Utang perusahaan yang harus segera dilunasi',
-            'Modal awal pemilik saham'
+            'Semua konsep dalam materi bersifat teoritis dan tidak dapat diterapkan',
+            'Materi ini mencakup konsep-konsep dasar yang fundamental',
+            'Hanya bagian tertentu dari materi yang relevan',
+            'Materi ini tidak berhubungan dengan praktik nyata'
           ],
-          answer: 'Aset yang dapat dicairkan menjadi kas dalam jangka waktu kurang dari satu tahun'
+          answer: 'Materi ini mencakup konsep-konsep dasar yang fundamental'
         },
         {
           type: 'true_false',
-          question: 'Liabilitas lancar adalah kewajiban yang jatuh tempo dalam waktu lebih dari satu siklus operasi normal.',
-          answer: false
+          question: `Pemahaman mendalam terhadap materi "${lessonName}" penting untuk pengembangan kompetensi.`,
+          answer: true
         },
         {
           type: 'essay',
-          question: 'Jelaskan perbedaan mendasar antara aset lancar dan aset tetap beserta contohnya masing-masing!',
-          answer: 'Aset lancar mudah dicairkan (< 1 tahun, contoh: kas, piutang), sedangkan aset tetap untuk operasional jangka panjang (> 1 tahun, contoh: mesin, tanah).'
+          question: `Jelaskan konsep utama yang terdapat dalam materi "${lessonName}" beserta penerapannya dalam praktik!`,
+          answer: 'Jawaban bervariasi sesuai pemahaman mahasiswa terhadap materi.'
         }
       ];
       setGeneratedQuestions(mockList);

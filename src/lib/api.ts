@@ -6,7 +6,7 @@
  */
 
 const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_BASE_URL || 'http://103.127.139.237:1000';
+  process.env.NEXT_PUBLIC_API_BASE_URL as string;
 
 /** Opsi tambahan untuk setiap request */
 interface RequestOptions {
@@ -56,7 +56,8 @@ export async function apiPost<TResponse>(
   if (!response.ok) {
     // Ambil pesan dari body jika ada, fallback ke status HTTP
     const errorMessage =
-      (data as { message?: string }).message ||
+      (data as { message?: string; error?: string }).message ||
+      (data as { message?: string; error?: string }).error ||
       `Request gagal dengan status ${response.status}`;
     throw new Error(errorMessage);
   }
@@ -98,7 +99,8 @@ export async function apiGet<TResponse>(
 
   if (!response.ok) {
     const errorMessage =
-      (data as { message?: string }).message ||
+      (data as { message?: string; error?: string }).message ||
+      (data as { message?: string; error?: string }).error ||
       `Request gagal dengan status ${response.status}`;
     throw new Error(errorMessage);
   }
@@ -143,7 +145,8 @@ export async function apiPut<TResponse>(
 
   if (!response.ok) {
     const errorMessage =
-      (data as { message?: string }).message ||
+      (data as { message?: string; error?: string }).message ||
+      (data as { message?: string; error?: string }).error ||
       `Request gagal dengan status ${response.status}`;
     throw new Error(errorMessage);
   }
@@ -184,7 +187,8 @@ export async function apiDelete<TResponse>(
 
   if (!response.ok) {
     const errorMessage =
-      (data as { message?: string }).message ||
+      (data as { message?: string; error?: string }).message ||
+      (data as { message?: string; error?: string }).error ||
       `Request gagal dengan status ${response.status}`;
     throw new Error(errorMessage);
   }
