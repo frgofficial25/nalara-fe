@@ -30,6 +30,20 @@ interface StudentData {
   upcoming_tasks: UpcomingTask[];
 }
 
+function formatNumber(num: number): string {
+  if (num === undefined || num === null) return '0';
+  if (num >= 1000000000000) {
+    return (num / 1000000000000).toFixed(1).replace(/\.0$/, '') + ' Triliun';
+  }
+  if (num >= 1000000000) {
+    return (num / 1000000000).toFixed(1).replace(/\.0$/, '') + ' Miliar';
+  }
+  if (num >= 1000000) {
+    return (num / 1000000).toFixed(1).replace(/\.0$/, '') + ' Juta';
+  }
+  return num.toLocaleString('id-ID');
+}
+
 export default function StudentDashboard() {
   const [data, setData] = useState<StudentData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -50,7 +64,7 @@ export default function StudentDashboard() {
         headers['x-api-key'] = token;
       }
 
-      const response = await apiGet<{ success: boolean; data: StudentData }>(
+      const response = await apiGet<any>(
         '/api/dashboard/student',
         {
           token: token || undefined,
@@ -69,8 +83,10 @@ export default function StudentDashboard() {
         } catch {}
       }
 
-      if (response.data) {
+      if (response && response.data) {
         setData(response.data);
+      } else if (response && typeof response === 'object') {
+        setData(response);
       } else {
         throw new Error('Format response data tidak valid');
       }
@@ -92,38 +108,48 @@ export default function StudentDashboard() {
     fetchData();
   };
 
+  const completed = data?.completed_materials ?? 0;
+  const enrolled = data?.enrolled_courses ?? 0;
+  const exams = data?.pending_exams ?? 0;
+  const streak = data?.learning_streak ?? 0;
+  const longestStreak = (data as any)?.longest_streak ?? 0;
+
+  const urgentTask = data?.upcoming_tasks && data.upcoming_tasks.length > 0 
+    ? [...data.upcoming_tasks].sort((a, b) => new Date(a.deadline).getTime() - new Date(b.deadline).getTime())[0]
+    : null;
+
   const kpiCards = [
     {
       title: "Modules Completed",
-      value: data ? `${data.completed_materials} / ${data.completed_materials + 2}` : "0 / 0",
+      value: data ? `${formatNumber(completed)} / ${formatNumber(completed + 2)}` : "0 / 0",
       desc: "Overall progress",
       icon: BookOpen,
       color: "#00C853", // Green
-      bg: "rgba(0, 200, 83, 0.1)"
+      bg: "rgba(0, 200, 83, 0.12)"
     },
     {
       title: "Enrolled Courses",
-      value: data?.enrolled_courses ?? 0,
+      value: formatNumber(enrolled),
       desc: "Cumulative average",
       icon: GraduationCap,
       color: "#4196F0", // Azure
-      bg: "rgba(65, 150, 240, 0.1)"
+      bg: "rgba(65, 150, 240, 0.12)"
     },
     {
       title: "Pending Exams",
-      value: data?.pending_exams ?? 0,
+      value: formatNumber(exams),
       desc: "Requires action",
       icon: Clock,
       color: "#FFA826", // Orange
-      bg: "rgba(255, 168, 38, 0.1)"
+      bg: "rgba(255, 168, 38, 0.12)"
     },
     {
       title: "Learning Streak",
-      value: data ? `${data.learning_streak} Days` : "0 Days",
-      desc: "Personal best: 7",
+      value: `${formatNumber(streak)} Days`,
+      desc: `Streak tertinggi: ${formatNumber(longestStreak)} Days`,
       icon: Flame,
       color: "#FF5252", // Red
-      bg: "rgba(255, 82, 82, 0.1)"
+      bg: "rgba(255, 82, 82, 0.12)"
     }
   ];
 
@@ -165,32 +191,64 @@ export default function StudentDashboard() {
         </div>
       )}
 
-      {/* Main Promo Banner (FinAdapt style) */}
-      <div style={s.bannerCard}>
-        <div style={s.bannerLeft}>
-          <h2 style={s.bannerGreeting}>Welcome back, {userName}.</h2>
-          <p style={s.bannerSubtitle}>
-            Your adaptive learning level is currently <strong style={{ color: 'var(--lemon)' }}>{data?.current_level || 'Menengah'}</strong>. Ready to tackle your current goals?
-          </p>
-          <div style={s.bannerBtnRow}>
-            <button style={s.bannerBtnPrimary}>
-              <Play size={14} fill="#fff" color="#fff" style={{ marginRight: 6 }} />
-              Continue Learning
-            </button>
-            <button style={s.bannerBtnSecondary}>View Personal Insights</button>
+      {/* Main Promo Banner or Hero Card Peringatan (Tugas Mendesak) */}
+      {loading ? (
+        <div style={{ ...s.bannerCard, background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)' }}>
+          <div style={s.skeletonWrapper}>
+            <div style={s.skeletonLabel} />
+            <div style={s.skeletonValue} />
           </div>
         </div>
-        <div style={s.bannerRight}>
-          <div style={s.progressLabelRow}>
-            <span style={s.progressLabel}>Course Progress</span>
-            <span style={s.progressValue}>78%</span>
+      ) : urgentTask ? (
+        <div style={{ ...s.bannerCard, background: 'linear-gradient(135deg, #4c1d1d 0%, #1a0505 100%)', border: '1px solid rgba(239, 82, 82, 0.25)' }}>
+          <div style={s.bannerLeft}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12, background: 'rgba(239, 82, 82, 0.15)', border: '1px solid rgba(239, 82, 82, 0.25)', borderRadius: 6, padding: '4px 10px', width: 'fit-content' }}>
+              <ShieldAlert size={14} color="#FF5252" />
+              <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#FF5252', letterSpacing: '0.05em' }}>TUGAS MENDESAK</span>
+            </div>
+            <h2 style={s.bannerGreeting}>{urgentTask.task_name}</h2>
+            <p style={{ ...s.bannerSubtitle, color: '#fca5a5' }}>
+              Kelas Asal: <strong>{urgentTask.course_name}</strong> • Modul Asal: <strong>{urgentTask.module_name}</strong>
+            </p>
+            <p style={{ fontSize: '0.85rem', color: '#f87171', margin: '-10px 0 20px 0' }}>
+              Deadline: <strong style={{ color: '#fff', background: 'rgba(239, 82, 82, 0.3)', padding: '2px 6px', borderRadius: 4 }}>{urgentTask.deadline}</strong>
+            </p>
+            <div style={s.bannerBtnRow}>
+              <button style={{ ...s.bannerBtnPrimary, background: '#FF5252' }}>
+                <Play size={14} fill="#fff" color="#fff" style={{ marginRight: 6 }} />
+                Kerjakan Tugas
+              </button>
+              <button style={s.bannerBtnSecondary}>
+                Lanjutkan Pembelajaran
+              </button>
+            </div>
           </div>
-          <div style={s.progressBarBg}>
-            <div style={{ ...s.progressBarFill, width: '78%' }} />
-          </div>
-          <span style={s.progressSubtext}>→ Next milestone: Module 3 Quiz</span>
         </div>
-      </div>
+      ) : (
+        <div style={s.bannerCard}>
+          <div style={s.bannerLeft}>
+            <h2 style={s.bannerGreeting}>Semua tugas telah diselesaikan!</h2>
+            <p style={s.bannerSubtitle}>
+              Kerja bagus, {userName}! Tidak ada tugas mendesak saat ini. Tetap pertahankan progres belajarmu.
+            </p>
+            <div style={s.bannerBtnRow}>
+              <button style={s.bannerBtnSecondary}>
+                Lanjutkan Pembelajaran
+              </button>
+            </div>
+          </div>
+          <div style={s.bannerRight}>
+            <div style={s.progressLabelRow}>
+              <span style={s.progressLabel}>Course Progress</span>
+              <span style={s.progressValue}>100%</span>
+            </div>
+            <div style={s.progressBarBg}>
+              <div style={{ ...s.progressBarFill, width: '100%' }} />
+            </div>
+            <span style={s.progressSubtext}>→ Semua materi tuntas</span>
+          </div>
+        </div>
+      )}
 
       {/* KPI Cards Grid */}
       <div style={s.grid}>

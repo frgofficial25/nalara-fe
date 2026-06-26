@@ -37,7 +37,7 @@ export default function SuperadminDashboard() {
         headers['x-api-key'] = token;
       }
 
-      const response = await apiGet<{ success: boolean; data: DashboardData }>(
+      const response = await apiGet<any>(
         '/api/dashboard/superadmin',
         {
           token: token || undefined,
@@ -45,8 +45,10 @@ export default function SuperadminDashboard() {
         }
       );
 
-      if (response.success && response.data) {
+      if (response && response.data) {
         setData(response.data);
+      } else if (response && typeof response === 'object') {
+        setData(response);
       } else {
         throw new Error('Format response data tidak valid');
       }
