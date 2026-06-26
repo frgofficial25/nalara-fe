@@ -37,7 +37,7 @@ export const getMenuForRole = (role?: string) => {
         group: 'OVERVIEW',
         items: [
           { label: 'Dashboard', href: '/lecturer/dashboard', icon: LayoutDashboard },
-          { label: 'Courses', href: '/lecturer/courses', icon: BookOpen },
+          { label: 'Kelas', href: '/lecturer/kelas', icon: Layers },
           { label: 'Quiz Bank', href: '/lecturer/quizzes', icon: Brain },
           { label: 'Grade Center', href: '/lecturer/grades', icon: TrendingUp },
         ],
