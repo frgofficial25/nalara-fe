@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { 
-  Users, BookOpen, Activity, RefreshCw, ShieldAlert, ChevronRight, Layers 
+  Users, BookOpen, RefreshCw, AlertTriangle, ArrowRight, Clock, CheckCircle, Flame, Target, Layers
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { apiGet } from '@/lib/api';
@@ -15,6 +15,7 @@ interface TaskToGrade {
   module_name: string;
   ungraded_count: number;
   total_submissions: number;
+  deadline?: string;
 }
 
 interface LecturerData {
@@ -25,13 +26,20 @@ interface LecturerData {
   tasks_to_grade?: TaskToGrade[];
 }
 
+const formatNumber = (num: number) => {
+  if (num >= 1000000000000) return (num / 1000000000000).toFixed(1).replace(/\.0$/, '') + ' Triliun';
+  if (num >= 1000000000) return (num / 1000000000).toFixed(1).replace(/\.0$/, '') + ' Miliar';
+  if (num >= 1000000) return (num / 1000000).toFixed(1).replace(/\.0$/, '') + ' Juta';
+  return num.toString();
+};
+
 export default function LecturerDashboard() {
   const router = useRouter();
   const [data, setData] = useState<LecturerData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [userName, setUserName] = useState("Lecturer");
+  const [userName, setUserName] = useState("Tentor");
 
   const fetchData = async () => {
     try {
@@ -46,22 +54,14 @@ export default function LecturerDashboard() {
         headers['x-api-key'] = token;
       }
 
-      // 1. Fetch dashboard stats & tasks
       const response = await apiGet<{ success: boolean; data: LecturerData }>(
         '/api/dashboard/lecturer',
-        {
-          token: token || undefined,
-          headers
-        }
+        { token: token || undefined, headers }
       );
 
-      // 2. Fetch real courses to get real active count
       const coursesRes = await apiGet<any[] | { success: boolean; data: any[] }>(
         '/api/pembelajaran',
-        {
-          token: token || undefined,
-          headers
-        }
+        { token: token || undefined, headers }
       );
       let realActiveCourses = 0;
       if (Array.isArray(coursesRes)) {
@@ -70,13 +70,9 @@ export default function LecturerDashboard() {
         realActiveCourses = coursesRes.data.length;
       }
 
-      // 3. Fetch real students to get real student count
       const studentsRes = await apiGet<any[] | { success: boolean; data: any[] }>(
         '/api/enroll',
-        {
-          token: token || undefined,
-          headers
-        }
+        { token: token || undefined, headers }
       );
       let realTotalStudents = 0;
       if (Array.isArray(studentsRes)) {
@@ -85,7 +81,6 @@ export default function LecturerDashboard() {
         realTotalStudents = studentsRes.data.length;
       }
 
-      // Local storage check for username
       const localUser = localStorage.getItem('nalara_user_info') || sessionStorage.getItem('nalara_user_info');
       if (localUser) {
         try {
@@ -101,7 +96,7 @@ export default function LecturerDashboard() {
           ...response.data,
           active_courses: realActiveCourses,
           total_students: realTotalStudents,
-          online_students: Math.max(1, Math.round(realTotalStudents * 0.3)) // realistic online fraction
+          online_students: Math.max(1, Math.round(realTotalStudents * 0.3))
         };
         setData(computedData);
       } else {
@@ -125,175 +120,190 @@ export default function LecturerDashboard() {
     fetchData();
   };
 
-  const attendanceRate = data && data.total_students > 0
-    ? Math.round((data.online_students / data.total_students) * 100)
-    : 0;
+  const activeCourses = data?.active_courses ?? 0;
+  const totalStudents = data?.total_students ?? 0;
+  
+  let totalPendingTasks = data?.pending_submissions ?? 0;
+  if (data?.tasks_to_grade && data.tasks_to_grade.length > 0) {
+    const sumUngraded = data.tasks_to_grade.reduce((acc, t) => acc + t.ungraded_count, 0);
+    if (sumUngraded > totalPendingTasks) {
+       totalPendingTasks = sumUngraded;
+    }
+  }
+
+  const urgentTask = data?.tasks_to_grade?.find(t => t.ungraded_count > 0) || data?.tasks_to_grade?.[0];
 
   const kpiCards = [
     {
-      title: "Online Students",
-      value: data?.online_students ?? 0,
-      desc: "Currently active on platform",
-      icon: Activity,
-      color: "#00C853", // Green
-      bg: "rgba(0, 200, 83, 0.1)"
-    },
-    {
-      title: "Active Courses",
-      value: data?.active_courses ?? 0,
-      desc: "Courses being taught",
+      title: "Kelas Dibuka",
+      value: activeCourses,
       icon: BookOpen,
-      color: "#4196F0", // Azure
-      bg: "rgba(65, 150, 240, 0.1)"
+      gradient: "linear-gradient(135deg, rgba(59,130,246,0.1) 0%, rgba(37,99,235,0.05) 100%)",
+      iconColor: "#3B82F6",
     },
     {
-      title: "Total Students",
-      value: data?.total_students ?? 0,
-      desc: "Registered class members",
+      title: "Total Student",
+      value: totalStudents,
       icon: Users,
-      color: "#9C27B0", // Purple
-      bg: "rgba(156, 39, 176, 0.1)"
+      gradient: "linear-gradient(135deg, rgba(16,185,129,0.1) 0%, rgba(5,150,105,0.05) 100%)",
+      iconColor: "#10B981",
+    },
+    {
+      title: "Tugas Belum Diverif",
+      value: totalPendingTasks,
+      icon: AlertTriangle,
+      gradient: "linear-gradient(135deg, rgba(245,158,11,0.1) 0%, rgba(217,119,6,0.05) 100%)",
+      iconColor: "#F59E0B",
     }
   ];
 
   return (
-    <div style={s.container}>
-      {/* Top action header */}
-      <div style={s.topHeader}>
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <h1 style={s.title}>Lecturer Command Panel</h1>
-          </div>
-          <p style={s.subtitle}>Monitor class activities, courses, and platform statistics</p>
-        </div>
-        <button 
-          onClick={handleRefresh}
-          disabled={loading || isRefreshing}
-          style={{
-            ...s.refreshBtn,
-            opacity: loading || isRefreshing ? 0.6 : 1,
-          }}
-        >
-          <RefreshCw 
-            size={14} 
-            color="var(--silver)" 
-            style={{ 
-              animation: isRefreshing ? 'spin 1s linear infinite' : 'none' 
-            }} 
-          />
-          <span>{isRefreshing ? 'Syncing...' : 'Refresh'}</span>
-        </button>
-      </div>
+    <div style={s.pageWrapper}>
+      {/* Background glow effects */}
+      <div style={s.bgGlow1} />
+      <div style={s.bgGlow2} />
 
-      {error && (
-        <div style={s.errorAlert}>
-          <ShieldAlert size={20} color="#F44336" />
-          <div style={s.errorContent}>
-            <strong style={s.errorTitle}>Koneksi API Bermasalah</strong>
-            <span style={s.errorMsg}>{error}</span>
-          </div>
-          <button style={s.retryBtn} onClick={handleRefresh}>Coba Lagi</button>
+      <div style={s.container}>
+        {/* Top bar with Refresh */}
+        <div style={s.topBar}>
+          <h1 style={s.pageTitle}>Dashboard</h1>
+          <button 
+            onClick={handleRefresh}
+            disabled={loading || isRefreshing}
+            style={{
+              ...s.refreshBtn,
+              opacity: loading || isRefreshing ? 0.7 : 1,
+            }}
+          >
+            <RefreshCw 
+              size={14} 
+              style={{ 
+                animation: isRefreshing ? 'spin 1s linear infinite' : 'none' 
+              }} 
+            />
+            {isRefreshing ? 'Syncing...' : 'Refresh'}
+          </button>
         </div>
-      )}
 
-      {/* Main Greeting Banner */}
-      <div style={s.bannerCard}>
-        <div style={s.bannerLeft}>
-          <h2 style={s.bannerGreeting}>Welcome back, Prof. {userName}.</h2>
-          <p style={s.bannerSubtitle}>
-            Your classes are currently operating at a healthy attendance. Manage your courses and learning modules directly.
-          </p>
-          <div style={s.bannerBtnRow}>
-            <button onClick={() => router.push('/lecturer/courses')} style={s.bannerBtnPrimary}>
-              <BookOpen size={14} color="#fff" style={{ marginRight: 6 }} />
-              Manage Courses
-            </button>
-            <button onClick={() => router.push('/lecturer/modules')} style={s.bannerBtnSecondary}>
-              <Layers size={14} color="#fff" style={{ marginRight: 6 }} />
-              Manage Modules
-            </button>
+        {error && (
+          <div style={s.errorAlert}>
+            <AlertTriangle size={20} color="#F87171" />
+            <div style={{ flex: 1 }}>
+              <strong style={{ display: 'block', color: '#FCA5A5', fontSize: '0.9rem' }}>Connection Error</strong>
+              <span style={{ color: '#FECACA', fontSize: '0.85rem' }}>{error}</span>
+            </div>
           </div>
-        </div>
-        <div style={s.bannerRight}>
-          <div style={s.progressLabelRow}>
-            <span style={s.progressLabel}>Online Attendance</span>
-            <span style={s.progressValue}>{attendanceRate}%</span>
-          </div>
-          <div style={s.progressBarBg}>
-            <div style={{ ...s.progressBarFill, width: `${attendanceRate}%` }} />
-          </div>
-          <span style={s.progressSubtext}>→ {data?.online_students || 0} out of {data?.total_students || 0} students online</span>
-        </div>
-      </div>
+        )}
 
-      {/* KPI Cards Grid */}
-      <div style={s.grid}>
-        {kpiCards.map((kpi, idx) => {
-          const Icon = kpi.icon;
-          return (
-            <div key={idx} style={s.card}>
-              {loading ? (
-                <div style={s.skeletonWrapper}>
-                  <div style={s.skeletonLabel} />
-                  <div style={s.skeletonValue} />
+        {/* Hero Section (Welcome & Urgent Task) */}
+        <div style={s.heroCard}>
+          <div style={s.heroLeft}>
+            <div style={s.heroGreetingWrapper}>
+              <h2 style={s.heroGreeting}>Welcome back, {userName}!</h2>
+              <p style={s.heroSubtitle}>
+                {urgentTask 
+                  ? "You have tasks waiting for verification. Let's get them cleared!"
+                  : "Everything is up to date. Excellent work!"}
+              </p>
+            </div>
+            
+            <div style={s.heroMetricsMini}>
+              <div style={s.miniMetric}>
+                <Target size={16} color="#3B82F6" />
+                <span>{formatNumber(activeCourses)} Classes</span>
+              </div>
+              <div style={s.miniMetric}>
+                <Users size={16} color="#10B981" />
+                <span>{formatNumber(totalStudents)} Students</span>
+              </div>
+            </div>
+          </div>
+
+          <div style={s.heroRight}>
+            {loading ? (
+              <div style={s.urgentTaskLoading}>
+                <div style={s.spinner} />
+                <span>Memuat data tugas...</span>
+              </div>
+            ) : urgentTask ? (
+              <div style={s.urgentTaskGlass}>
+                <div style={s.urgentTaskHeader}>
+                  <div style={s.urgentTaskBadge}>
+                    <Flame size={14} /> Tugas Mendesak
+                  </div>
+                  <div style={s.urgentDeadline}>
+                    <Clock size={14} /> {urgentTask.deadline || "Segera"}
+                  </div>
                 </div>
-              ) : (
-                <>
-                  <div style={s.cardHeader}>
-                    <span style={s.cardLabel}>{kpi.title}</span>
-                    <div style={{ ...s.iconWrap, background: kpi.bg }}>
-                      <Icon size={18} color={kpi.color} />
+
+                <div style={s.urgentTaskBody}>
+                  <h3 style={s.urgentTaskTitle}>{urgentTask.task_name}</h3>
+                  <div style={s.urgentTaskTags}>
+                    <span style={s.taskTag}><Layers size={12} /> {urgentTask.course_name}</span>
+                    <span style={s.taskTag}><BookOpen size={12} /> {urgentTask.module_name}</span>
+                  </div>
+                </div>
+
+                <div style={s.urgentTaskFooter}>
+                  <div style={s.taskProgress}>
+                    <span style={s.progressText}>
+                      <strong style={{ color: '#F59E0B', fontSize: '1.1rem' }}>{formatNumber(urgentTask.ungraded_count)}</strong> 
+                      <span style={{ opacity: 0.6 }}> / {formatNumber(urgentTask.total_submissions)} Belum dinilai</span>
+                    </span>
+                    <div style={s.progressBarBg}>
+                      <div style={{ ...s.progressBarFill, width: `${Math.min(100, Math.max(0, (urgentTask.total_submissions - urgentTask.ungraded_count) / Math.max(1, urgentTask.total_submissions) * 100))}%` }} />
                     </div>
                   </div>
-                  <div style={s.cardBody}>
-                    <span style={s.cardValue}>{kpi.value}</span>
-                    <span style={s.cardDesc}>{kpi.desc}</span>
-                  </div>
-                </>
-              )}
-            </div>
-          );
-        })}
-      </div>
-
-      {/* Tasks to Grade Section */}
-      {!loading && data?.tasks_to_grade && data.tasks_to_grade.length > 0 && (
-        <div style={s.sectionContainer}>
-          <h3 style={s.sectionTitle}>Tasks Needing Grading</h3>
-          <div style={s.tableCard} className="glass-panel">
-            <table style={s.table}>
-              <thead>
-                <tr>
-                  <th style={s.th}>Task Name</th>
-                  <th style={s.th}>Course</th>
-                  <th style={s.th}>Module</th>
-                  <th style={s.th}>Ungraded Submissions</th>
-                  <th style={s.th}>Total Submissions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {data.tasks_to_grade.map((task) => (
-                  <tr key={task.id} style={s.tr}>
-                    <td style={s.td}><strong>{task.task_name}</strong></td>
-                    <td style={s.td}>{task.course_name}</td>
-                    <td style={s.td}>{task.module_name}</td>
-                    <td style={s.td}>
-                      <span style={s.badgeAlert}>{task.ungraded_count} submissions</span>
-                    </td>
-                    <td style={s.td}>{task.total_submissions}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                  
+                  <button 
+                    onClick={() => router.push(`/lecturer/tasks/${urgentTask.id}`)} 
+                    style={s.ctaButton}
+                  >
+                    Beri Nilai <ArrowRight size={16} />
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div style={s.urgentTaskEmpty}>
+                <CheckCircle size={40} color="#10B981" style={{ marginBottom: 12 }} />
+                <h3 style={{ margin: 0, fontSize: '1.1rem', color: '#F8FAFC' }}>All Caught Up!</h3>
+                <p style={{ margin: '8px 0 0 0', fontSize: '0.85rem', color: '#94A3B8' }}>Tidak ada tugas yang perlu diverifikasi.</p>
+              </div>
+            )}
           </div>
         </div>
-      )}
 
+        {/* KPIs Grid */}
+        <h3 style={s.sectionHeader}>Overview Metrics</h3>
+        <div style={s.metricsGrid}>
+          {kpiCards.map((kpi, idx) => {
+            const Icon = kpi.icon;
+            return (
+              <div key={idx} style={{ ...s.metricCard, background: kpi.gradient }}>
+                <div style={s.metricIconWrapper}>
+                  <Icon size={24} color={kpi.iconColor} />
+                </div>
+                <div style={s.metricInfo}>
+                  <div style={s.metricLabel}>{kpi.title}</div>
+                  <div style={s.metricValue}>
+                    {loading ? <div style={s.skeletonValue} /> : formatNumber(kpi.value)}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
 
       <style>{`
         @keyframes spin {
           from { transform: rotate(0deg); }
           to { transform: rotate(360deg); }
+        }
+        @keyframes pulseGlow {
+          0% { opacity: 0.6; }
+          50% { opacity: 1; }
+          100% { opacity: 0.6; }
         }
       `}</style>
     </div>
@@ -301,308 +311,341 @@ export default function LecturerDashboard() {
 }
 
 const s: Record<string, React.CSSProperties> = {
-  container: {
-    padding: '4px 0',
+  pageWrapper: {
+    position: 'relative',
+    minHeight: '100%',
+    width: '100%',
+    overflow: 'hidden',
   },
-  topHeader: {
+  bgGlow1: {
+    position: 'absolute',
+    top: '-20%',
+    left: '-10%',
+    width: '50%',
+    height: '60%',
+    background: 'radial-gradient(circle, rgba(59, 130, 246, 0.08) 0%, transparent 70%)',
+    zIndex: 0,
+    pointerEvents: 'none',
+  },
+  bgGlow2: {
+    position: 'absolute',
+    bottom: '-20%',
+    right: '-10%',
+    width: '50%',
+    height: '60%',
+    background: 'radial-gradient(circle, rgba(245, 158, 11, 0.05) 0%, transparent 70%)',
+    zIndex: 0,
+    pointerEvents: 'none',
+  },
+  container: {
+    position: 'relative',
+    zIndex: 1,
+    padding: '12px 0 40px 0',
+    maxWidth: '1200px',
+    margin: '0 auto',
+  },
+  topBar: {
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: '24px',
-    flexWrap: 'wrap',
-    gap: '16px',
   },
-  title: {
-    fontSize: '1.75rem',
+  pageTitle: {
+    fontSize: '1.25rem',
     fontWeight: 700,
-    color: '#ffffff',
-    fontFamily: 'var(--font-display)',
-    letterSpacing: '-0.5px',
+    color: '#E2E8F0',
+    letterSpacing: '0.05em',
+    textTransform: 'uppercase',
     margin: 0,
-  },
-  subtitle: {
-    fontSize: '0.85rem',
-    color: 'var(--grey-blue)',
-    marginTop: '4px',
-    margin: 0,
-  },
-  apiBadge: {
-    fontSize: '0.72rem',
-    fontWeight: 700,
-    background: 'rgba(0, 200, 83, 0.12)',
-    color: '#00C853',
-    padding: '4px 10px',
-    borderRadius: '99px',
-    border: '1px solid rgba(0, 200, 83, 0.25)',
   },
   refreshBtn: {
     display: 'flex',
     alignItems: 'center',
-    gap: '8px',
-    padding: '8px 16px',
-    borderRadius: '8px',
-    border: '1px solid var(--border-color)',
-    background: 'rgba(255, 255, 255, 0.03)',
-    color: 'var(--silver)',
-    fontSize: '0.82rem',
+    gap: '6px',
+    padding: '8px 14px',
+    borderRadius: '20px',
+    background: 'rgba(255, 255, 255, 0.05)',
+    border: '1px solid rgba(255, 255, 255, 0.1)',
+    color: '#E2E8F0',
+    fontSize: '0.8rem',
     fontWeight: 600,
     cursor: 'pointer',
+    transition: 'all 0.2s',
   },
   errorAlert: {
     display: 'flex',
     alignItems: 'center',
     gap: '16px',
-    padding: '16px 20px',
-    background: 'rgba(244, 67, 54, 0.08)',
-    border: '1px solid rgba(244, 67, 54, 0.2)',
+    padding: '16px',
+    background: 'rgba(239, 68, 68, 0.15)',
+    border: '1px solid rgba(239, 68, 68, 0.3)',
     borderRadius: '12px',
     marginBottom: '24px',
+    backdropFilter: 'blur(10px)',
   },
-  errorContent: {
+
+  // HERO CARD
+  heroCard: {
+    display: 'flex',
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)',
+    border: '1px solid rgba(255, 255, 255, 0.08)',
+    borderRadius: '24px',
+    overflow: 'hidden',
+    marginBottom: '40px',
+    boxShadow: '0 20px 40px -10px rgba(0,0,0,0.4)',
+  },
+  heroLeft: {
+    flex: '1 1 350px',
+    padding: '40px',
     display: 'flex',
     flexDirection: 'column',
-    flex: 1,
+    justifyContent: 'center',
+    position: 'relative',
   },
-  errorTitle: {
-    fontSize: '0.88rem',
-    color: '#FF5252',
+  heroGreeting: {
+    fontSize: '2.5rem',
+    fontWeight: 800,
+    color: '#FFFFFF',
+    margin: '0 0 12px 0',
+    lineHeight: 1.1,
+    letterSpacing: '-0.02em',
+  },
+  heroSubtitle: {
+    fontSize: '1rem',
+    color: '#94A3B8',
+    margin: 0,
+    lineHeight: 1.5,
+    maxWidth: '85%',
+  },
+  heroGreetingWrapper: {
+    marginBottom: '32px',
+  },
+  heroMetricsMini: {
+    display: 'flex',
+    gap: '20px',
+  },
+  miniMetric: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    background: 'rgba(255, 255, 255, 0.05)',
+    padding: '8px 16px',
+    borderRadius: '99px',
+    fontSize: '0.85rem',
     fontWeight: 600,
+    color: '#E2E8F0',
   },
-  errorMsg: {
-    fontSize: '0.82rem',
-    color: 'var(--grey-blue)',
-    marginTop: '2px',
+
+  heroRight: {
+    flex: '1 1 450px',
+    padding: '32px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    background: 'rgba(0,0,0,0.15)',
+    borderLeft: '1px solid rgba(255, 255, 255, 0.05)',
   },
-  retryBtn: {
-    background: '#F44336',
-    color: '#fff',
-    border: 'none',
-    padding: '6px 12px',
-    borderRadius: '6px',
-    fontSize: '0.78rem',
-    fontWeight: 600,
-    cursor: 'pointer',
+  urgentTaskGlass: {
+    width: '100%',
+    background: 'rgba(255, 255, 255, 0.03)',
+    backdropFilter: 'blur(20px)',
+    WebkitBackdropFilter: 'blur(20px)',
+    border: '1px solid rgba(255, 255, 255, 0.1)',
+    borderRadius: '20px',
+    padding: '24px',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '20px',
+    boxShadow: '0 10px 30px -5px rgba(0,0,0,0.2)',
   },
-  bannerCard: {
-    background: 'linear-gradient(135deg, #0e3047 0%, #061c2b 100%)',
-    border: '1px solid rgba(65, 150, 240, 0.15)',
-    borderRadius: '16px',
-    padding: '28px',
+  urgentTaskHeader: {
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: '28px',
-    flexWrap: 'wrap',
-    gap: '24px',
   },
-  bannerLeft: {
-    flex: 1,
-    minWidth: '280px',
-  },
-  bannerGreeting: {
-    fontFamily: 'Georgia, serif',
-    fontSize: '1.85rem',
+  urgentTaskBadge: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '6px',
+    background: 'rgba(245, 158, 11, 0.15)',
+    color: '#F59E0B',
+    padding: '6px 12px',
+    borderRadius: '8px',
+    fontSize: '0.75rem',
     fontWeight: 700,
-    color: '#ffffff',
+    textTransform: 'uppercase',
+    letterSpacing: '0.05em',
+  },
+  urgentDeadline: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '6px',
+    color: '#EF4444',
+    fontSize: '0.85rem',
+    fontWeight: 600,
+  },
+  urgentTaskBody: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '12px',
+  },
+  urgentTaskTitle: {
+    fontSize: '1.4rem',
+    fontWeight: 700,
+    color: '#FFFFFF',
     margin: 0,
-    letterSpacing: '-0.5px',
+    lineHeight: 1.3,
   },
-  bannerSubtitle: {
-    fontSize: '0.9rem',
-    color: '#a0b9ca',
-    marginTop: '8px',
-    lineHeight: 1.5,
-    margin: '8px 0 20px 0',
-  },
-  bannerBtnRow: {
+  urgentTaskTags: {
     display: 'flex',
     gap: '12px',
     flexWrap: 'wrap',
   },
-  bannerBtnPrimary: {
-    background: '#4196F0',
-    color: '#ffffff',
-    border: 'none',
-    padding: '10px 20px',
-    borderRadius: '8px',
-    fontSize: '0.85rem',
-    fontWeight: 600,
-    cursor: 'pointer',
+  taskTag: {
     display: 'flex',
     alignItems: 'center',
-    transition: 'background 0.2s ease',
-  },
-  bannerBtnSecondary: {
-    background: 'rgba(255, 255, 255, 0.08)',
-    color: '#ffffff',
-    border: '1px solid rgba(255, 255, 255, 0.15)',
-    padding: '10px 20px',
-    borderRadius: '8px',
+    gap: '6px',
+    color: '#94A3B8',
     fontSize: '0.85rem',
-    fontWeight: 600,
-    cursor: 'pointer',
-    display: 'flex',
-    alignItems: 'center',
-    transition: 'background 0.2s ease',
+    background: 'rgba(0,0,0,0.2)',
+    padding: '4px 10px',
+    borderRadius: '6px',
   },
-  bannerRight: {
-    background: 'rgba(255, 255, 255, 0.04)',
-    border: '1px solid rgba(255, 255, 255, 0.08)',
-    borderRadius: '12px',
-    padding: '20px',
-    width: '320px',
-    maxWidth: '100%',
-  },
-  progressLabelRow: {
+  urgentTaskFooter: {
     display: 'flex',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: '8px',
+    alignItems: 'flex-end',
+    marginTop: '8px',
+    paddingTop: '20px',
+    borderTop: '1px solid rgba(255,255,255,0.08)',
+    flexWrap: 'wrap',
+    gap: '16px',
   },
-  progressLabel: {
-    fontSize: '0.82rem',
-    color: '#a0b9ca',
-    fontWeight: 600,
+  taskProgress: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '8px',
+    flex: 1,
+    minWidth: '200px',
   },
-  progressValue: {
-    fontSize: '0.88rem',
-    color: '#ffffff',
-    fontWeight: 700,
+  progressText: {
+    fontSize: '0.85rem',
+    color: '#E2E8F0',
   },
   progressBarBg: {
+    width: '100%',
     height: '6px',
     background: 'rgba(255, 255, 255, 0.1)',
-    borderRadius: '999px',
+    borderRadius: '99px',
     overflow: 'hidden',
-    marginBottom: '12px',
   },
   progressBarFill: {
     height: '100%',
-    background: '#4196F0',
-    borderRadius: '999px',
+    background: 'linear-gradient(90deg, #3B82F6 0%, #10B981 100%)',
+    borderRadius: '99px',
   },
-  progressSubtext: {
-    fontSize: '0.75rem',
-    color: '#7ba2be',
-    display: 'block',
-  },
-  grid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-    gap: '20px',
-    marginBottom: '28px',
-  },
-  card: {
-    background: 'rgba(30, 30, 30, 0.45)',
-    border: '1px solid var(--border-color)',
+  ctaButton: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    background: '#3B82F6',
+    color: '#FFFFFF',
+    border: 'none',
+    padding: '12px 20px',
     borderRadius: '12px',
-    padding: '20px',
+    fontSize: '0.95rem',
+    fontWeight: 600,
+    cursor: 'pointer',
+    transition: 'transform 0.2s, background 0.2s',
+    boxShadow: '0 4px 12px rgba(59, 130, 246, 0.3)',
+  },
+  urgentTaskLoading: {
     display: 'flex',
     flexDirection: 'column',
-    justifyContent: 'space-between',
-    minHeight: '120px',
+    alignItems: 'center',
+    gap: '16px',
+    color: '#94A3B8',
+    fontSize: '0.95rem',
+    padding: '40px',
   },
-  cardHeader: {
+  spinner: {
+    width: '24px',
+    height: '24px',
+    border: '3px solid rgba(255,255,255,0.1)',
+    borderTopColor: '#3B82F6',
+    borderRadius: '50%',
+    animation: 'spin 1s infinite linear',
+  },
+  urgentTaskEmpty: {
     display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    gap: '12px',
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    textAlign: 'center',
+    padding: '40px',
+    background: 'rgba(255, 255, 255, 0.02)',
+    borderRadius: '20px',
+    border: '1px dashed rgba(255,255,255,0.1)',
   },
-  cardLabel: {
-    fontSize: '0.82rem',
-    color: 'var(--grey-blue)',
+
+  // Metrics Grid
+  sectionHeader: {
+    fontSize: '1.1rem',
     fontWeight: 600,
+    color: '#F8FAFC',
+    marginBottom: '20px',
+    textTransform: 'uppercase',
+    letterSpacing: '0.05em',
   },
-  iconWrap: {
-    width: '32px',
-    height: '32px',
-    borderRadius: '8px',
-    background: 'rgba(65, 150, 240, 0.1)',
+  metricsGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+    gap: '24px',
+  },
+  metricCard: {
+    borderRadius: '20px',
+    padding: '24px',
+    border: '1px solid rgba(255, 255, 255, 0.05)',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '20px',
+    position: 'relative',
+    overflow: 'hidden',
+    boxShadow: '0 10px 30px -10px rgba(0,0,0,0.2)',
+  },
+  metricIconWrapper: {
+    width: '56px',
+    height: '56px',
+    borderRadius: '16px',
+    background: 'rgba(0,0,0,0.2)',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
+    border: '1px solid rgba(255,255,255,0.05)',
   },
-  cardBody: {
+  metricInfo: {
     display: 'flex',
     flexDirection: 'column',
-    marginTop: '12px',
+    gap: '4px',
   },
-  cardValue: {
-    fontSize: '1.75rem',
-    fontWeight: 700,
-    color: '#ffffff',
-    fontFamily: 'var(--font-display)',
+  metricLabel: {
+    fontSize: '0.9rem',
+    color: '#94A3B8',
+    fontWeight: 500,
+  },
+  metricValue: {
+    fontSize: '2rem',
+    fontWeight: 800,
+    color: '#FFFFFF',
     lineHeight: 1.1,
   },
-  cardDesc: {
-    fontSize: '0.75rem',
-    color: 'var(--grey)',
-    marginTop: '4px',
-  },
-  skeletonWrapper: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '10px',
-    width: '100%',
-  },
-  skeletonLabel: {
-    height: '14px',
-    width: '70%',
-    background: 'rgba(255, 255, 255, 0.05)',
-    borderRadius: '4px',
-  },
   skeletonValue: {
-    height: '24px',
-    width: '40%',
-    background: 'rgba(255, 255, 255, 0.05)',
-    borderRadius: '4px',
-    marginTop: '6px',
-  },
-  sectionContainer: {
-    marginTop: '32px',
-  },
-  sectionTitle: {
-    fontSize: '1.25rem',
-    fontWeight: 700,
-    color: '#ffffff',
-    marginBottom: '16px',
-    fontFamily: 'var(--font-display)',
-  },
-  tableCard: {
-    padding: '16px',
-    overflowX: 'auto',
-    background: 'rgba(30, 30, 30, 0.45)',
-    border: '1px solid var(--border-color)',
-    borderRadius: '12px',
-  },
-  table: {
-    width: '100%',
-    borderCollapse: 'collapse',
-    textAlign: 'left',
-    fontSize: '0.88rem',
-  },
-  th: {
-    padding: '12px 16px',
-    color: 'var(--grey-blue)',
-    fontWeight: 600,
-    borderBottom: '1px solid rgba(255,255,255,0.08)',
-  },
-  tr: {
-    borderBottom: '1px solid rgba(255,255,255,0.04)',
-    transition: 'background 0.2s',
-  },
-  td: {
-    padding: '16px',
-    color: 'var(--silver)',
-  },
-  badgeAlert: {
-    display: 'inline-block',
-    padding: '4px 8px',
-    borderRadius: '4px',
-    background: 'rgba(255, 178, 64, 0.12)',
-    color: 'var(--m-yellow)',
-    fontWeight: 600,
-    fontSize: '0.78rem',
+    height: '34px',
+    width: '80px',
+    background: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: '8px',
   },
 };

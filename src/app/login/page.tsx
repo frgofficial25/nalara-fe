@@ -213,15 +213,16 @@ export default function LoginPage() {
       {/* RIGHT PANEL: Form Container */}
       <div style={styles.rightPanel} className="login-right-panel">
         <div style={styles.formWrapper}>
-          {/* Logo (Inverted to show on dark panel) */}
+          {/* Logo */}
           <div style={styles.logoContainer}>
-            <span style={styles.logoText}>⚡ Nalara</span>
+            <img src="/image/logonalara2.png" alt="Nalara Academy Logo" style={{ height: '80px', objectFit: 'contain' }} />
           </div>
 
           {!session ? (
             <>
               {/* Form Headers */}
-              <h1 style={styles.formTitle}>Sign In</h1>
+              <h1 style={styles.formTitle}>Welcome Nalarians!</h1>
+              <p style={styles.formSubtitle}>Sign in with your Nalara accounts credentials to access your learning workspace.</p>
 
               {/* API Alert Banners */}
               {errorMsg && (
@@ -237,48 +238,58 @@ export default function LoginPage() {
 
               {/* Input Form */}
               <form onSubmit={handleSubmit} style={styles.form}>
-                {/* Email Field */}
+                {/* Username Field */}
                 <div style={styles.inputGroup}>
-                  <label htmlFor="email" style={styles.label}>E-mail</label>
-                  <input
-                    id="email"
-                    type="email"
-                    placeholder="example@gmail.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                    style={styles.input}
-                    disabled={loading}
-                  />
+                  <label htmlFor="username" style={styles.label}>Username</label>
+                  <div style={styles.inputIconWrapper}>
+                    <svg style={styles.inputIcon} width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                      <circle cx="12" cy="7" r="4" />
+                    </svg>
+                    <input
+                      id="username"
+                      type="text"
+                      placeholder="Enter your username"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      required
+                      style={styles.inputWithLeftIcon}
+                      disabled={loading}
+                    />
+                  </div>
                 </div>
 
                 {/* Password Field */}
                 <div style={styles.inputGroup}>
                   <label htmlFor="password" style={styles.label}>Password</label>
                   <div style={styles.passwordWrapper}>
+                    <svg style={styles.inputIcon} width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                      <path d="M7 11V7a5 5 0 0110 0v4"></path>
+                    </svg>
                     <input
                       id="password"
                       type={showPassword ? 'text' : 'password'}
-                      placeholder="Masukkan password..."
+                      placeholder="Enter your password"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       required
-                      style={styles.inputWithIcon}
+                      style={styles.inputWithBothIcons}
                       disabled={loading}
                     />
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
                       style={styles.passwordToggleBtn}
-                      aria-label={showPassword ? 'Sembunyikan password' : 'Tampilkan password'}
+                      aria-label={showPassword ? 'Hide password' : 'Show password'}
                     >
                       {showPassword ? (
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--grey-blue)" strokeWidth="2">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#6B7280" strokeWidth="2">
                           <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
                           <line x1="1" y1="1" x2="23" y2="23" />
                         </svg>
                       ) : (
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--grey-blue)" strokeWidth="2">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#6B7280" strokeWidth="2">
                           <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
                           <circle cx="12" cy="12" r="3" />
                         </svg>
@@ -287,35 +298,19 @@ export default function LoginPage() {
                   </div>
                 </div>
 
-                {/* Remember Me & Forgot PW */}
-                <div style={styles.rememberRow}>
-                  <label style={styles.checkboxLabel}>
-                    <input
-                      type="checkbox"
-                      checked={rememberMe}
-                      onChange={(e) => setRememberMe(e.target.checked)}
-                      style={styles.checkbox}
-                      disabled={loading}
-                    />
-                    <span>Ingat saya</span>
-                  </label>
-                  <a href="#" style={styles.forgotLink}>Lupa Password?</a>
-                </div>
-
                 {/* Submit button */}
                 <button
                   type="submit"
                   disabled={loading}
-                  className={`nalara-btn nalara-btn-cta ${loading ? 'nalara-btn-disabled' : ''}`}
                   style={styles.submitButton}
                 >
                   {loading ? (
-                    <>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
                       <div style={styles.spinner} />
-                      <span>Memproses masuk...</span>
-                    </>
+                      <span>Signing in...</span>
+                    </div>
                   ) : (
-                    <span>Sign in</span>
+                    <span>Sign In</span>
                   )}
                 </button>
               </form>
@@ -329,27 +324,23 @@ export default function LoginPage() {
                   <polyline points="20 6 9 17 4 12" />
                 </svg>
               </div>
-              <h1 style={styles.successTitle}>Login Berhasil!</h1>
+              <h1 style={styles.successTitle}>Login Successful!</h1>
               <p style={styles.successSub}>
-                Selamat datang kembali, <strong>{session.user.name}</strong> ({session.user.email}). Anda masuk sebagai role <strong>{session.user.role}</strong>.
+                Welcome back, <strong>{session.user.name}</strong> ({session.user.email}). You are logged in as <strong>{session.user.role}</strong>.
                 <br /><br />
-                Mengarahkan ke dashboard...
+                Redirecting to dashboard...
               </p>
 
               <div style={styles.successActions}>
-                <a href="/" className="nalara-btn nalara-btn-cta" style={{ textDecoration: 'none', flex: 1, textAlign: 'center' }}>
-                  Masuk Dashboard
+                <a href="/" style={{ ...styles.submitButton, textDecoration: 'none', textAlign: 'center', display: 'block' }}>
+                  Go to Dashboard
                 </a>
-                <button
-                  onClick={handleLogout}
-                  className="nalara-btn nalara-btn-secondary"
-                  style={{ flex: 1 }}
-                >
-                  Keluar
-                </button>
               </div>
             </div>
           )}
+        </div>
+        <div style={styles.footerText}>
+            @ 2026 Nalara Academy. All rights reserved.
         </div>
       </div>
     </div>
@@ -594,48 +585,69 @@ const styles: Record<string, React.CSSProperties> = {
   // Right Panel: Form
   rightPanel: {
     flex: '1 1 0%',
-    background: 'var(--bg-darker)',
+    background: '#111827',
     display: 'flex',
+    flexDirection: 'column',
     alignItems: 'center',
     justifyContent: 'center',
     padding: '3rem 2rem',
+    position: 'relative',
     zIndex: 5,
   },
   formWrapper: {
-    maxWidth: '440px',
+    maxWidth: '400px',
     width: '100%',
     display: 'flex',
     flexDirection: 'column',
   },
   logoContainer: {
-    marginBottom: '3rem',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: '1rem',
+    marginBottom: '2rem',
   },
-  logoText: {
-    fontSize: '1.5rem',
-    fontWeight: 800,
-    color: 'var(--white)',
-    fontFamily: 'var(--font-display)',
-    letterSpacing: '-0.03em',
+  logoIcon: {
+    display: 'flex',
+    alignItems: 'center',
+  },
+  logoTextGroup: {
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'flex-start',
+    justifyContent: 'center',
+    gap: '2px',
+  },
+  logoNalara: {
+    fontSize: '1.2rem',
+    fontWeight: 700,
+    color: '#3B82F6',
+    letterSpacing: '0.3em',
+  },
+  logoAcademy: {
+    fontSize: '0.8rem',
+    fontWeight: 700,
+    color: '#F59E0B',
+    letterSpacing: '0.35em',
   },
   formTitle: {
-    fontSize: '2.5rem',
-    fontWeight: 800,
-    marginBottom: '0.5rem',
+    fontSize: '1.75rem',
+    fontWeight: 700,
+    color: '#F9FAFB',
+    marginBottom: '0.75rem',
+    textAlign: 'center',
   },
   formSubtitle: {
-    fontSize: '0.95rem',
-    color: 'var(--grey-blue)',
-    marginBottom: '2.5rem',
-  },
-  accentLink: {
-    color: 'var(--lemon)',
-    textDecoration: 'none',
-    fontWeight: 600,
+    fontSize: '0.875rem',
+    color: '#9CA3AF',
+    marginBottom: '2rem',
+    textAlign: 'center',
+    lineHeight: '1.5',
   },
   form: {
     display: 'flex',
     flexDirection: 'column',
-    gap: '1.5rem',
+    gap: '1.25rem',
   },
   inputGroup: {
     display: 'flex',
@@ -643,42 +655,52 @@ const styles: Record<string, React.CSSProperties> = {
     gap: '0.5rem',
   },
   label: {
-    fontSize: '0.85rem',
-    fontWeight: 600,
-    color: 'var(--grey-blue)',
+    fontSize: '0.875rem',
+    fontWeight: 500,
+    color: '#D1D5DB',
   },
-  input: {
+  inputIconWrapper: {
+    position: 'relative',
+    display: 'flex',
+    alignItems: 'center',
     width: '100%',
-    padding: '0.9rem 1.2rem',
-    borderRadius: '10px',
-    border: '1px solid var(--border-color)',
-    background: 'rgba(255,255,255,0.03)',
-    color: 'var(--white)',
-    fontSize: '0.95rem',
+  },
+  inputIcon: {
+    position: 'absolute',
+    left: '12px',
+    color: '#6B7280',
+  },
+  inputWithLeftIcon: {
+    width: '100%',
+    padding: '0.75rem 1rem 0.75rem 2.5rem',
+    borderRadius: '6px',
+    border: '1px solid #374151',
+    background: '#1F2937',
+    color: '#F9FAFB',
+    fontSize: '0.875rem',
     outline: 'none',
-    transition: 'all 0.25s ease',
+    transition: 'all 0.2s ease',
   },
   passwordWrapper: {
     position: 'relative',
     display: 'flex',
+    alignItems: 'center',
     width: '100%',
   },
-  inputWithIcon: {
+  inputWithBothIcons: {
     width: '100%',
-    padding: '0.9rem 3.2rem 0.9rem 1.2rem',
-    borderRadius: '10px',
-    border: '1px solid var(--border-color)',
-    background: 'rgba(255,255,255,0.03)',
-    color: 'var(--white)',
-    fontSize: '0.95rem',
+    padding: '0.75rem 2.5rem 0.75rem 2.5rem',
+    borderRadius: '6px',
+    border: '1px solid #374151',
+    background: '#1F2937',
+    color: '#F9FAFB',
+    fontSize: '0.875rem',
     outline: 'none',
-    transition: 'all 0.25s ease',
+    transition: 'all 0.2s ease',
   },
   passwordToggleBtn: {
     position: 'absolute',
     right: '12px',
-    top: '50%',
-    transform: 'translateY(-50%)',
     background: 'none',
     border: 'none',
     cursor: 'pointer',
@@ -689,44 +711,61 @@ const styles: Record<string, React.CSSProperties> = {
   },
   rememberRow: {
     display: 'flex',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    fontSize: '0.85rem',
-    marginTop: '0.25rem',
+    fontSize: '0.875rem',
   },
   checkboxLabel: {
     display: 'flex',
     alignItems: 'center',
     gap: '0.5rem',
     cursor: 'pointer',
-    color: 'var(--grey-blue)',
+    color: '#9CA3AF',
   },
   checkbox: {
-    accentColor: 'var(--lemon)',
-    width: '16px',
-    height: '16px',
-  },
-  forgotLink: {
-    color: 'var(--grey-blue)',
-    textDecoration: 'none',
-    fontWeight: 500,
+    accentColor: '#3B82F6',
+    width: '14px',
+    height: '14px',
+    cursor: 'pointer',
   },
   submitButton: {
     width: '100%',
-    padding: '0.95rem',
-    borderRadius: '10px',
-    fontSize: '1rem',
-    fontWeight: 700,
-    marginTop: '1rem',
-    gap: '0.75rem',
+    padding: '0.75rem',
+    borderRadius: '6px',
+    fontSize: '0.875rem',
+    fontWeight: 600,
+    marginTop: '0.5rem',
+    background: '#2563EB',
+    color: '#FFFFFF',
+    border: 'none',
+    cursor: 'pointer',
+    transition: 'background 0.2s',
   },
   spinner: {
-    width: '18px',
-    height: '18px',
-    border: '2px solid rgba(0,0,0,0.1)',
-    borderTopColor: 'var(--bg-dark)',
+    width: '16px',
+    height: '16px',
+    border: '2px solid rgba(255,255,255,0.3)',
+    borderTopColor: '#FFFFFF',
     borderRadius: '50%',
     animation: 'pulse 1s infinite linear',
+  },
+  supportText: {
+    textAlign: 'center',
+    fontSize: '0.75rem',
+    color: '#9CA3AF',
+    marginTop: '1rem',
+    lineHeight: '1.5',
+  },
+  supportLink: {
+    color: '#3B82F6',
+    textDecoration: 'none',
+  },
+  footerText: {
+    position: 'absolute',
+    bottom: '2rem',
+    width: '100%',
+    textAlign: 'center',
+    fontSize: '0.75rem',
+    color: '#6B7280',
   },
   separator: {
     display: 'flex',
