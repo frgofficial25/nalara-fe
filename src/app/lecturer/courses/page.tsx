@@ -95,6 +95,10 @@ export default function CoursesPage() {
       const baseCourses = list.map((c: any) => ({
         ...c,
         id: c.uuid_pembelajaran || c.id,
+        title: c.nama_pembelajaran || c.title || '',
+        description: c.deskripsi || c.description || '',
+        createdAt: c.tanggal_dibuat || c.createdAt || c.created_at,
+        created_at: c.tanggal_dibuat || c.created_at || c.createdAt,
         status: c.status || 'draft'
       }));
 
@@ -102,14 +106,15 @@ export default function CoursesPage() {
       const coursesWithModules = await Promise.all(baseCourses.map(async (c) => {
         try {
           const modulRes = await apiGet<any[] | { data?: any[] }>(
-            `/api/modul?uuid_pembelajaran=${c.id}`, { token: auth.token, headers: auth.headers }
+            `/api/modul`, { token: auth.token, headers: auth.headers }
           );
           const modulList = Array.isArray(modulRes)
             ? modulRes
             : (modulRes as any).data ?? [];
+          const filtered = modulList.filter((m: any) => m.uuid_pembelajaran === c.id);
           return {
             ...c,
-            modulesCount: modulList.length
+            modulesCount: filtered.length
           };
         } catch (e) {
           return {
@@ -139,12 +144,17 @@ export default function CoursesPage() {
 
       // Fetch moduls for this course
       const modulRes = await apiGet<any[] | { data?: any[] }>(
-        `/api/modul?uuid_pembelajaran=${course.id}`, opts
+        `/api/modul`, opts
       );
       let modulList: any[] = Array.isArray(modulRes)
         ? modulRes
         : (modulRes as any).data ?? [];
-      modulList = modulList.map(m => ({ ...m, id: m.uuid_modul || m.id }));
+      
+      // Filter modules belonging to this course
+      modulList = modulList
+        .filter(m => m.uuid_pembelajaran === course.id)
+        .map(m => ({ ...m, id: m.uuid_modul || m.id }));
+      
       setDetailModuls(modulList);
 
       // Fetch tugas for each modul

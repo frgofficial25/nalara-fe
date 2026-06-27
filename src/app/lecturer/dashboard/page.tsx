@@ -54,10 +54,32 @@ export default function LecturerDashboard() {
         headers['x-api-key'] = token;
       }
 
-      const response = await apiGet<{ success: boolean; data: LecturerData }>(
-        '/api/dashboard/lecturer',
-        { token: token || undefined, headers }
-      );
+      let lecturerData: LecturerData;
+      try {
+        const response = await apiGet<{ success: boolean; data: LecturerData }>(
+          '/api/dashboard/lecturer',
+          { token: token || undefined, headers }
+        );
+        lecturerData = response.data;
+      } catch (err: any) {
+        if (err.message?.includes('Forbidden') || err.message?.includes('403')) {
+          console.warn('Lecturer dashboard forbidden, falling back to tentor dashboard');
+          const tentorRes = await apiGet<{ success: boolean; data: any } | any>(
+            '/api/dashboard/tentor',
+            { token: token || undefined, headers }
+          );
+          const rawData = tentorRes.data || tentorRes;
+          lecturerData = {
+            online_students: rawData.online_students || 0,
+            active_courses: rawData.managed_courses || rawData.active_courses || 0,
+            total_students: rawData.total_students || 0,
+            pending_submissions: rawData.pending_submissions || 0,
+            tasks_to_grade: rawData.tasks_to_grade || []
+          };
+        } else {
+          throw err;
+        }
+      }
 
       const coursesRes = await apiGet<any[] | { success: boolean; data: any[] }>(
         '/api/pembelajaran',
@@ -91,9 +113,9 @@ export default function LecturerDashboard() {
         } catch {}
       }
 
-      if (response.data) {
+      if (lecturerData) {
         const computedData = {
-          ...response.data,
+          ...lecturerData,
           active_courses: realActiveCourses,
           total_students: realTotalStudents,
           online_students: Math.max(1, Math.round(realTotalStudents * 0.3))

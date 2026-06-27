@@ -23,6 +23,7 @@ interface Pembelajaran {
 interface Modul {
   id: string;
   uuid_modul?: string;
+  uuid_pembelajaran?: string;
   title: string;
   description?: string;
   difficulty?: string;
@@ -44,7 +45,11 @@ interface Tugas {
 // ─── Auth Helper ──────────────────────────────────────────────────────────────
 function getAuth() {
   const token = getStoredToken();
-  return { token: token ?? undefined, headers: token ? { Authorization: `Bearer ${token}` } : {} };
+  const headers: Record<string, string> = {};
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+  return { token: token ?? undefined, headers };
 }
 
 // ─── Delete Confirmation Modal ─────────────────────────────────────────────────
@@ -281,9 +286,13 @@ export default function CourseDetailClient() {
       const courseRes = await apiGet<{ data?: Pembelajaran } | Pembelajaran>(
         `/api/pembelajaran/${courseId}`, opts
       );
-      const courseData: Pembelajaran = ('data' in courseRes && courseRes.data)
-        ? { ...courseRes.data, id: courseRes.data.uuid_pembelajaran || courseRes.data.id }
-        : { ...(courseRes as Pembelajaran), id: (courseRes as any).uuid_pembelajaran || (courseRes as any).id };
+      const rawCourse = (courseRes && 'data' in courseRes && courseRes.data) ? courseRes.data : courseRes as any;
+      const courseData: Pembelajaran = {
+        ...rawCourse,
+        id: rawCourse.uuid_pembelajaran || rawCourse.id,
+        title: rawCourse.nama_pembelajaran || rawCourse.title || '',
+        description: rawCourse.deskripsi || rawCourse.description || '',
+      };
       setCourse(courseData);
 
       // Fetch moduls for this course
@@ -293,7 +302,9 @@ export default function CourseDetailClient() {
       let modulList: Modul[] = Array.isArray(modulRes)
         ? modulRes
         : (modulRes as any).data ?? [];
-      modulList = modulList.map(m => ({ ...m, id: m.uuid_modul || m.id }));
+      modulList = modulList
+        .filter(m => m.uuid_pembelajaran === courseId)
+        .map(m => ({ ...m, id: m.uuid_modul || m.id }));
       setModuls(modulList);
 
       // Fetch tugas for each modul

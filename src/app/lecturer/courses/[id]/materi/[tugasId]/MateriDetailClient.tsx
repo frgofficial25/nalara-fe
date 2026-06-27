@@ -25,7 +25,11 @@ interface TugasDetail {
 
 function getAuth() {
   const token = getStoredToken();
-  return { token: token ?? undefined, headers: token ? { Authorization: `Bearer ${token}` } : {} };
+  const headers: Record<string, string> = {};
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+  return { token: token ?? undefined, headers };
 }
 
 function TypeIcon({ type }: { type?: string }) {

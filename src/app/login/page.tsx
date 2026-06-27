@@ -27,7 +27,7 @@ export default function LoginPage() {
         const role = userObj.role?.toLowerCase();
         if (role === 'superadmin') {
           router.push('/superadmin/dashboard');
-        } else if (role === 'lecture') {
+        } else if (role === 'lecture' || role === 'lecturer') {
           router.push('/lecturer/dashboard');
         } else if (role === 'mentor' || role === 'tentor') {
           router.push('/tentor/dashboard');
@@ -85,7 +85,7 @@ export default function LoginPage() {
         const role = response.data.user.role.toLowerCase();
         if (role === 'superadmin') {
           router.push('/superadmin/dashboard');
-        } else if (role === 'lecture') {
+        } else if (role === 'lecture' || role === 'lecturer') {
           router.push('/lecturer/dashboard');
         } else if (role === 'mentor' || role === 'tentor') {
           router.push('/tentor/dashboard');
