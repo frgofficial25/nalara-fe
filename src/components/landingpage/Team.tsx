@@ -12,7 +12,7 @@ interface Member {
 const commissioners: Member[] = [
   {
     name: "Athallah Anargya Mahardika",
-    role: "COMMISSIONER",
+    role: "LEARNING & CURRICULUM ADVISOR",
     image: "/image/team/athalah.png"
   },
   {
@@ -23,7 +23,7 @@ const commissioners: Member[] = [
   },
   {
     name: "Aryan Zaky Prayogo",
-    role: "COMMISSIONER",
+    role: "INDEPENDENT COMMISSIONER",
     image: "/image/team/aryan.png"
   }
 ];

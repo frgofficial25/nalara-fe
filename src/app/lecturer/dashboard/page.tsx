@@ -153,7 +153,16 @@ export default function LecturerDashboard() {
     }
   }
 
-  const urgentTask = data?.tasks_to_grade?.find(t => t.ungraded_count > 0) || data?.tasks_to_grade?.[0];
+  // FIFO sorting: Get task with ungraded_count > 0 having the closest deadline date
+  const urgentTask = data?.tasks_to_grade
+    ? [...data.tasks_to_grade]
+        .filter(t => t.ungraded_count > 0)
+        .sort((a, b) => {
+          if (!a.deadline) return 1;
+          if (!b.deadline) return -1;
+          return new Date(a.deadline).getTime() - new Date(b.deadline).getTime();
+        })[0]
+    : undefined;
 
   const kpiCards = [
     {
@@ -278,10 +287,10 @@ export default function LecturerDashboard() {
                   </div>
                   
                   <button 
-                    onClick={() => router.push(`/lecturer/tasks/${urgentTask.id}`)} 
+                    onClick={() => router.push(`/lecturer/grades`)} 
                     style={s.ctaButton}
                   >
-                    Beri Nilai <ArrowRight size={16} />
+                    Lanjutkan Pemberian Penilaian <ArrowRight size={16} />
                   </button>
                 </div>
               </div>
