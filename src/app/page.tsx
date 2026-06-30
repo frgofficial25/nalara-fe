@@ -26,6 +26,12 @@ export default function LandingPage() {
 
   return (
     <>
+      {/* Ambient Floating Glow Blobs */}
+      <div className="ambient-glows-container">
+        <div className="ambient-blob blob-blue-1"></div>
+        <div className="ambient-blob blob-yellow-2"></div>
+        <div className="ambient-blob blob-blue-3"></div>
+      </div>
       {/* Navigation Bar */}
       <nav style={styles.navbar}>
         <div style={styles.navInner}>
