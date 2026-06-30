@@ -3,7 +3,7 @@ import Card from '../quiz/Card';
 
 export default function Pathway() {
   return (
-    <section style={styles.pathwaySection}>
+    <section style={styles.pathwaySection} id="pathway">
       <div style={styles.sectionHeader}>
         <h2 style={styles.sectionTitle}>Kurikulum Berjenjang & Sistem Prasyarat</h2>
         <p style={styles.sectionDesc}>

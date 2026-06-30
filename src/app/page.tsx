@@ -9,12 +9,19 @@ import Team from '../components/landingpage/Team';
 import Footer from '../components/landingpage/Footer';
 
 export default function LandingPage() {
+  const [activeItem, setActiveItem] = React.useState('ECOSYSTEM');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
 
   const scrollToSection = (id: string) => {
     const el = document.getElementById(id);
     if (el) el.scrollIntoView({ behavior: 'smooth' });
     setIsMobileMenuOpen(false);
+  };
+
+  const handleLinkClick = (e: React.MouseEvent, name: string, id: string) => {
+    e.preventDefault();
+    setActiveItem(name);
+    scrollToSection(id);
   };
 
   return (
@@ -27,11 +34,34 @@ export default function LandingPage() {
           </div>
           
           <div className="nav-links-desktop" style={styles.navLinks}>
-            <a href="#syllabus" style={styles.navLink}>ECOSYSTEM</a>
-            <a href="#syllabus" style={styles.navLink}>LEARNING PATH</a>
-            <a href="#syllabus" style={styles.navLink}>CURRICULUM</a>
-            <a href="#pricing" style={styles.navLink}>COMMUNITY</a>
-            <a href="#pricing" style={styles.navLink}>ABOUT US</a>
+            <a 
+              href="#syllabus" 
+              className={`nav-link ${activeItem === 'ECOSYSTEM' ? 'active' : ''}`}
+              onClick={(e) => handleLinkClick(e, 'ECOSYSTEM', 'syllabus')}
+            >
+              ECOSYSTEM
+            </a>
+            <a 
+              href="#pathway" 
+              className={`nav-link ${activeItem === 'LEARNING PATH' ? 'active' : ''}`}
+              onClick={(e) => handleLinkClick(e, 'LEARNING PATH', 'pathway')}
+            >
+              LEARNING PATH
+            </a>
+            <a 
+              href="#syllabus" 
+              className={`nav-link ${activeItem === 'CURRICULUM' ? 'active' : ''}`}
+              onClick={(e) => handleLinkClick(e, 'CURRICULUM', 'syllabus')}
+            >
+              CURRICULUM
+            </a>
+            <a 
+              href="#team" 
+              className={`nav-link ${activeItem === 'TEAM' ? 'active' : ''}`}
+              onClick={(e) => handleLinkClick(e, 'TEAM', 'team')}
+            >
+              TEAM
+            </a>
             <button
               className="nalara-btn"
               style={styles.navCta}
@@ -42,19 +72,44 @@ export default function LandingPage() {
           </div>
 
           <button 
-            className="hamburger-btn" 
+            className={`hamburger-btn ${isMobileMenuOpen ? 'open' : ''}`} 
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
           >
-            {isMobileMenuOpen ? '✕' : '☰'}
+            <span></span>
+            <span></span>
+            <span></span>
           </button>
         </div>
 
         <div className={`mobile-menu ${isMobileMenuOpen ? 'open' : ''}`} style={styles.mobileMenu}>
-          <a href="#syllabus" onClick={() => scrollToSection('syllabus')}>ECOSYSTEM</a>
-          <a href="#syllabus" onClick={() => scrollToSection('syllabus')}>LEARNING PATH</a>
-          <a href="#syllabus" onClick={() => scrollToSection('syllabus')}>CURRICULUM</a>
-          <a href="#pricing" onClick={() => scrollToSection('pricing')}>COMMUNITY</a>
-          <a href="#pricing" onClick={() => scrollToSection('pricing')}>ABOUT US</a>
+          <a 
+            href="#syllabus" 
+            className={activeItem === 'ECOSYSTEM' ? 'active' : ''}
+            onClick={(e) => handleLinkClick(e, 'ECOSYSTEM', 'syllabus')}
+          >
+            ECOSYSTEM
+          </a>
+          <a 
+            href="#pathway" 
+            className={activeItem === 'LEARNING PATH' ? 'active' : ''}
+            onClick={(e) => handleLinkClick(e, 'LEARNING PATH', 'pathway')}
+          >
+            LEARNING PATH
+          </a>
+          <a 
+            href="#syllabus" 
+            className={activeItem === 'CURRICULUM' ? 'active' : ''}
+            onClick={(e) => handleLinkClick(e, 'CURRICULUM', 'syllabus')}
+          >
+            CURRICULUM
+          </a>
+          <a 
+            href="#team" 
+            className={activeItem === 'TEAM' ? 'active' : ''}
+            onClick={(e) => handleLinkClick(e, 'TEAM', 'team')}
+          >
+            TEAM
+          </a>
           <button
             className="nalara-btn"
             style={{ ...styles.navCta, width: '100%' }}
@@ -107,7 +162,7 @@ const styles: Record<string, React.CSSProperties> = {
     left: '50%',
     transform: 'translateX(-50%)',
     zIndex: 100,
-    background: 'rgba(11, 11, 12, 0.45)',
+    background: 'rgba(11, 11, 12, 0.15)',
     backdropFilter: 'blur(20px)',
     WebkitBackdropFilter: 'blur(20px)',
     border: '1px solid rgba(255, 255, 255, 0.1)',
@@ -126,7 +181,7 @@ const styles: Record<string, React.CSSProperties> = {
     alignItems: 'center',
   },
   logoImg: {
-    height: '32px',
+    height: '38px',
     width: 'auto',
   },
   logoTextGroup: {
