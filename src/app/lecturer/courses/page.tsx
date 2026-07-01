@@ -62,6 +62,11 @@ export default function CoursesPage() {
   const [detailTugasMap, setDetailTugasMap] = useState<Record<string, any[]>>({});
   const [loadingDetail, setLoadingDetail] = useState(false);
 
+  // Course Schedule State
+  const [courseSchedules, setCourseSchedules] = useState<Record<string, { scheduledAt: string; studentIds: string[] }>>({});
+  const [scheduleMode, setScheduleMode] = useState<'now' | 'schedule'>('now');
+  const [scheduleDatetime, setScheduleDatetime] = useState('');
+
   const getAuthHeaders = () => {
     const token = getStoredToken();
     const apiKey = process.env.NEXT_PUBLIC_API_KEY;
@@ -181,7 +186,43 @@ export default function CoursesPage() {
 
   useEffect(() => {
     fetchCourses();
+    // Load saved schedules
+    try {
+      const stored = localStorage.getItem('nalara_course_schedules');
+      if (stored) setCourseSchedules(JSON.parse(stored));
+    } catch { /* ignore */ }
   }, []);
+
+  // Background schedule checker for courses
+  useEffect(() => {
+    const interval = setInterval(async () => {
+      const now = new Date();
+      const updated = { ...courseSchedules };
+      let changed = false;
+      for (const [courseId, schedule] of Object.entries(updated)) {
+        if (new Date(schedule.scheduledAt) <= now) {
+          // Time to publish — enroll students
+          try {
+            const auth = getAuthHeaders();
+            await apiPost('/api/enroll', {
+              course_id: courseId,
+              student_ids: schedule.studentIds
+            }, { token: auth.token, headers: auth.headers });
+            setCourses(prev => prev.map(c => c.id === courseId ? { ...c, status: 'published' } : c));
+          } catch (err) {
+            console.error('Auto-publish failed for course:', courseId, err);
+          }
+          delete updated[courseId];
+          changed = true;
+        }
+      }
+      if (changed) {
+        setCourseSchedules(updated);
+        localStorage.setItem('nalara_course_schedules', JSON.stringify(updated));
+      }
+    }, 30000); // check every 30s
+    return () => clearInterval(interval);
+  }, [courseSchedules]);
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -315,6 +356,25 @@ export default function CoursesPage() {
       return;
     }
 
+    if (scheduleMode === 'schedule') {
+      if (!scheduleDatetime) {
+        alert("Harap pilih tanggal dan waktu untuk penjadwalan.");
+        return;
+      }
+      // Save schedule to localStorage
+      const updated = { ...courseSchedules };
+      updated[publishCourseId] = {
+        scheduledAt: new Date(scheduleDatetime).toISOString(),
+        studentIds: selectedStudents,
+      };
+      setCourseSchedules(updated);
+      localStorage.setItem('nalara_course_schedules', JSON.stringify(updated));
+      setPublishCourseId(null);
+      setScheduleMode('now');
+      setScheduleDatetime('');
+      return;
+    }
+
     setPublishing(true);
     try {
       const auth = getAuthHeaders();
@@ -328,6 +388,11 @@ export default function CoursesPage() {
 
       // Update local course status dynamically to published
       setCourses(prev => prev.map(c => c.id === publishCourseId ? { ...c, status: 'published' } : c));
+      // Remove any existing schedule for this course
+      const updated = { ...courseSchedules };
+      delete updated[publishCourseId];
+      setCourseSchedules(updated);
+      localStorage.setItem('nalara_course_schedules', JSON.stringify(updated));
       setPublishCourseId(null);
     } catch (err) {
       alert(err instanceof Error ? err.message : 'Gagal memberikan akses kelas.');

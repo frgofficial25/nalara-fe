@@ -1,9 +1,9 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
-import { Layers, Plus, Trash2, Edit2, X, Loader2, AlertCircle } from 'lucide-react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Layers, Plus, Trash2, Edit2, X, Loader2, AlertCircle, Calendar, Clock, Eye, EyeOff } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { apiGet, apiPost } from '@/lib/api';
+import { apiGet, apiPost, apiPut, apiDelete } from '@/lib/api';
 import { getStoredToken } from '@/services/auth';
 
 interface Course {
@@ -20,6 +20,12 @@ interface Module {
   uuid_user?: string;
 }
 
+interface ModuleSchedule {
+  moduleId: string;
+  scheduledAt: string; // ISO date string
+  status: 'scheduled' | 'published';
+}
+
 export default function ModulesPage() {
   const router = useRouter();
   const [courses, setCourses] = useState<Course[]>([]);
@@ -33,6 +39,12 @@ export default function ModulesPage() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [currentModule, setCurrentModule] = useState<Module | null>(null);
   const [form, setForm] = useState({ title: '', description: '', difficulty: 'Beginner' });
+
+  // Schedule / Publish State
+  const [schedules, setSchedules] = useState<Record<string, ModuleSchedule>>({});
+  const [showScheduleModal, setShowScheduleModal] = useState(false);
+  const [scheduleModuleId, setScheduleModuleId] = useState<string | null>(null);
+  const [scheduleDate, setScheduleDate] = useState('');
 
   // Drag and Drop State
   const [draggedItemIndex, setDraggedItemIndex] = useState<number | null>(null);
@@ -102,7 +114,8 @@ export default function ModulesPage() {
       setLoading(true);
       setError(null);
       const auth = getAuthHeaders();
-      const response = await apiGet<Module[] | { success: boolean; data: Module[] }>('/api/modul', {
+      const response = await apiGet<Module[] | { success: boolean; data: Module[] }>(
+        `/api/modul?uuid_pembelajaran=${selectedCourseId}`, {
         token: auth.token,
         headers: auth.headers
       });
@@ -119,6 +132,8 @@ export default function ModulesPage() {
         .map((m: any) => ({
           ...m,
           id: m.uuid_modul || m.id,
+          title: m.nama_modul || m.title || '',
+          description: m.deskripsi || m.description || '',
         }));
 
       setModules(list);
@@ -130,8 +145,24 @@ export default function ModulesPage() {
     }
   };
 
+  // Load schedules from localStorage
+  const loadSchedules = useCallback(() => {
+    try {
+      const stored = localStorage.getItem('nalara_module_schedules');
+      if (stored) {
+        setSchedules(JSON.parse(stored));
+      }
+    } catch { /* ignore */ }
+  }, []);
+
+  const saveSchedules = (newSchedules: Record<string, ModuleSchedule>) => {
+    setSchedules(newSchedules);
+    localStorage.setItem('nalara_module_schedules', JSON.stringify(newSchedules));
+  };
+
   useEffect(() => {
     fetchCourses();
+    loadSchedules();
     const params = new URLSearchParams(window.location.search);
     const courseId = params.get('course_id');
     if (courseId) {
@@ -142,6 +173,25 @@ export default function ModulesPage() {
   useEffect(() => {
     fetchModules();
   }, [selectedCourseId]);
+
+  // Background schedule checker
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const now = new Date();
+      const updated = { ...schedules };
+      let changed = false;
+      Object.entries(updated).forEach(([moduleId, schedule]) => {
+        if (schedule.status === 'scheduled' && new Date(schedule.scheduledAt) <= now) {
+          updated[moduleId] = { ...schedule, status: 'published' };
+          changed = true;
+        }
+      });
+      if (changed) {
+        saveSchedules(updated);
+      }
+    }, 30000); // check every 30s
+    return () => clearInterval(interval);
+  }, [schedules]);
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -184,26 +234,11 @@ export default function ModulesPage() {
     try {
       setError(null);
       const auth = getAuthHeaders();
-      const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL as string;
-      const headers: Record<string, string> = {
-        'Content-Type': 'application/json',
-        ...auth.headers
-      };
-      if (auth.token) {
-        headers['Authorization'] = `Bearer ${auth.token}`;
-      }
-
-      const res = await fetch(`${API_BASE_URL}/api/modul/${currentModule.id}`, {
-        method: 'PUT',
-        headers,
-        body: JSON.stringify({
-          title: form.title,
-          description: form.description,
-          difficulty: form.difficulty
-        })
-      });
-
-      if (!res.ok) throw new Error('Gagal memperbarui modul.');
+      await apiPut(`/api/modul/${currentModule.id}`, {
+        title: form.title,
+        description: form.description,
+        difficulty: form.difficulty
+      }, { token: auth.token, headers: auth.headers });
 
       setShowEditModal(false);
       setCurrentModule(null);
@@ -220,22 +255,65 @@ export default function ModulesPage() {
     try {
       setError(null);
       const auth = getAuthHeaders();
-      const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL as string;
-      const headers = { ...auth.headers };
-      if (auth.token) {
-        headers['Authorization'] = `Bearer ${auth.token}`;
-      }
-
-      const res = await fetch(`${API_BASE_URL}/api/modul/${id}`, {
-        method: 'DELETE',
-        headers
-      });
-
-      if (!res.ok) throw new Error('Gagal menghapus modul.');
+      await apiDelete(`/api/modul/${id}`, { token: auth.token, headers: auth.headers });
+      // Also remove schedule if any
+      const updated = { ...schedules };
+      delete updated[id];
+      saveSchedules(updated);
       fetchModules();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Gagal menghapus modul.');
     }
+  };
+
+  const handleSchedule = (moduleId: string) => {
+    setScheduleModuleId(moduleId);
+    const existing = schedules[moduleId];
+    if (existing && existing.status === 'scheduled') {
+      // Pre-fill with existing schedule
+      const d = new Date(existing.scheduledAt);
+      const pad = (n: number) => String(n).padStart(2, '0');
+      setScheduleDate(`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`);
+    } else {
+      setScheduleDate('');
+    }
+    setShowScheduleModal(true);
+  };
+
+  const handleSaveSchedule = () => {
+    if (!scheduleModuleId || !scheduleDate) return;
+    const updated = { ...schedules };
+    updated[scheduleModuleId] = {
+      moduleId: scheduleModuleId,
+      scheduledAt: new Date(scheduleDate).toISOString(),
+      status: 'scheduled',
+    };
+    saveSchedules(updated);
+    setShowScheduleModal(false);
+    setScheduleModuleId(null);
+    setScheduleDate('');
+  };
+
+  const handlePublishNow = (moduleId: string) => {
+    const updated = { ...schedules };
+    updated[moduleId] = {
+      moduleId,
+      scheduledAt: new Date().toISOString(),
+      status: 'published',
+    };
+    saveSchedules(updated);
+  };
+
+  const handleUnpublish = (moduleId: string) => {
+    const updated = { ...schedules };
+    delete updated[moduleId];
+    saveSchedules(updated);
+  };
+
+  const getModuleStatus = (moduleId: string): 'draft' | 'scheduled' | 'published' => {
+    const schedule = schedules[moduleId];
+    if (!schedule) return 'draft';
+    return schedule.status;
   };
 
   const openCreateModal = () => {
@@ -274,9 +352,18 @@ export default function ModulesPage() {
       {/* Course Selector */}
       <div style={s.selectorRow}>
         <label style={s.selectorLabel}>Course:</label>
-        <div style={{ ...s.courseSelect as React.CSSProperties, display: 'flex', alignItems: 'center' }}>
-          {courses.find(c => (c.id || (c as any).uuid_pembelajaran) === selectedCourseId)?.title || 'No course selected'}
-        </div>
+        <select
+          value={selectedCourseId}
+          onChange={(e) => setSelectedCourseId(e.target.value)}
+          style={s.courseSelect as React.CSSProperties}
+        >
+          <option value="">— Pilih Kelas —</option>
+          {courses.map(c => (
+            <option key={c.id} value={c.id}>
+              {(c as any).nama_pembelajaran || c.title}
+            </option>
+          ))}
+        </select>
       </div>
 
 
@@ -335,10 +422,51 @@ export default function ModulesPage() {
                       {mod.difficulty}
                     </span>
                   )}
+                  {/* Status badge */}
+                  {(() => {
+                    const status = getModuleStatus(mod.id);
+                    if (status === 'published') return (
+                      <span style={{ ...s.slugBadge, background: 'rgba(16,185,129,0.15)', color: '#10b981' }}>
+                        <Eye size={10} style={{ marginRight: 4 }} /> Published
+                      </span>
+                    );
+                    if (status === 'scheduled') {
+                      const sch = schedules[mod.id];
+                      return (
+                        <span style={{ ...s.slugBadge, background: 'rgba(251,191,36,0.15)', color: '#fbbf24' }}>
+                          <Clock size={10} style={{ marginRight: 4 }} /> {new Date(sch.scheduledAt).toLocaleString('id-ID', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                      );
+                    }
+                    return (
+                      <span style={{ ...s.slugBadge, background: 'rgba(148,163,184,0.15)', color: '#94a3b8' }}>
+                        <EyeOff size={10} style={{ marginRight: 4 }} /> Draft
+                      </span>
+                    );
+                  })()}
                   {mod.slug && <span style={s.slugBadge}>/{mod.slug}</span>}
                 </div>
               </div>
               <div style={s.cardActions}>
+                {/* Publish/Schedule buttons */}
+                {(() => {
+                  const status = getModuleStatus(mod.id);
+                  if (status === 'published') return (
+                    <button onClick={(e) => { e.stopPropagation(); handleUnpublish(mod.id); }} style={{ ...s.iconBtn, background: 'rgba(16,185,129,0.1)' }} title="Unpublish">
+                      <EyeOff size={14} color="#10b981" />
+                    </button>
+                  );
+                  return (
+                    <>
+                      <button onClick={(e) => { e.stopPropagation(); handlePublishNow(mod.id); }} style={{ ...s.iconBtn, background: 'rgba(16,185,129,0.1)' }} title="Publish Now">
+                        <Eye size={14} color="#10b981" />
+                      </button>
+                      <button onClick={(e) => { e.stopPropagation(); handleSchedule(mod.id); }} style={{ ...s.iconBtn, background: 'rgba(251,191,36,0.1)' }} title="Schedule Publish">
+                        <Calendar size={14} color="#fbbf24" />
+                      </button>
+                    </>
+                  );
+                })()}
                 <button onClick={(e) => { e.stopPropagation(); openEditModal(mod); }} style={s.iconBtn} title="Edit Module">
                   <Edit2 size={14} color="var(--grey-blue)" />
                 </button>
@@ -453,6 +581,46 @@ export default function ModulesPage() {
                 <button type="submit" style={s.submitBtn}>Save Changes</button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Schedule Modal */}
+      {showScheduleModal && (
+        <div style={s.modalOverlay}>
+          <div style={s.modalContent} className="glass-panel">
+            <div style={s.modalHeader}>
+              <h3>Jadwalkan Publikasi Modul</h3>
+              <button onClick={() => setShowScheduleModal(false)} style={s.closeBtn}>
+                <X size={18} />
+              </button>
+            </div>
+            <div style={s.form}>
+              <div style={s.formGroup}>
+                <label style={s.label}>Tanggal & Waktu Publikasi</label>
+                <input
+                  type="datetime-local"
+                  value={scheduleDate}
+                  onChange={(e) => setScheduleDate(e.target.value)}
+                  min={new Date().toISOString().slice(0, 16)}
+                  style={s.input}
+                />
+              </div>
+              <p style={{ color: 'var(--grey-blue)', fontSize: '0.82rem', margin: 0 }}>
+                Modul akan otomatis berubah status menjadi Published pada waktu yang ditentukan.
+              </p>
+              <div style={s.modalFooter}>
+                <button type="button" onClick={() => setShowScheduleModal(false)} style={s.cancelBtn}>Batal</button>
+                <button 
+                  type="button" 
+                  onClick={handleSaveSchedule} 
+                  disabled={!scheduleDate}
+                  style={{ ...s.submitBtn, opacity: scheduleDate ? 1 : 0.5, background: 'linear-gradient(135deg, #f59e0b, #d97706)' }}
+                >
+                  <Calendar size={14} style={{ marginRight: 6 }} /> Jadwalkan
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

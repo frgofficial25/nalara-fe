@@ -81,7 +81,7 @@ function ConfirmModal({
   );
 }
 
-// ─── Add Materi Modal ──────────────────────────────────────────────────────────
+// ─── Add Materi Modal (2-step: create + upload) ────────────────────────────────
 function AddMateriModal({
   modulId,
   pembelajaranId,
@@ -93,25 +93,65 @@ function AddMateriModal({
   onSuccess: () => void;
   onClose: () => void;
 }) {
+  const [step, setStep] = useState(1);
   const [title, setTitle] = useState('');
-  const [type, setType] = useState<'Reading' | 'Video' | 'CaseStudy' | 'Practice'>('Reading');
+  const [type, setType] = useState<'Reading' | 'Video'>('Reading');
+  const [videoUrl, setVideoUrl] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [createdMateriId, setCreatedMateriId] = useState<string | null>(null);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  // File upload state
+  const [file, setFile] = useState<File | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [isDragOver, setIsDragOver] = useState(false);
+  const [uploadSuccess, setUploadSuccess] = useState(false);
+
+  const READING_TYPES = ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'application/vnd.ms-powerpoint', 'application/vnd.openxmlformats-officedocument.presentationml.presentation'];
+  const READING_EXTS = ['.pdf', '.docx', '.ppt', '.pptx'];
+  const VIDEO_TYPES = ['video/mp4', 'video/webm', 'video/quicktime', 'video/x-msvideo'];
+  const VIDEO_EXTS = ['.mp4', '.webm', '.mov', '.avi'];
+  const MAX_SIZE = 100 * 1024 * 1024; // 100MB
+
+  const validateFile = (f: File): string | null => {
+    const allowedTypes = type === 'Reading' ? READING_TYPES : VIDEO_TYPES;
+    const allowedExts = type === 'Reading' ? READING_EXTS : VIDEO_EXTS;
+    const ext = '.' + f.name.split('.').pop()?.toLowerCase();
+    if (!allowedTypes.includes(f.type) && !allowedExts.includes(ext)) {
+      return `Tipe file tidak didukung. Gunakan: ${allowedExts.join(', ')}`;
+    }
+    if (f.size > MAX_SIZE) {
+      return `Ukuran file terlalu besar (max 100MB). File Anda: ${(f.size / 1024 / 1024).toFixed(1)}MB`;
+    }
+    return null;
+  };
+
+  const handleStep1 = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim()) return;
     setLoading(true);
     setError(null);
     try {
       const auth = getAuth();
-      await apiPost('/api/tugas', {
+      const body: any = {
         title,
         type,
         uuid_pembelajaran: pembelajaranId,
         uuid_modul: modulId,
-      }, { token: auth.token, headers: auth.headers });
-      onSuccess();
+      };
+      if (type === 'Video' && videoUrl.trim()) {
+        body.video_url = videoUrl.trim();
+      }
+      const res = await apiPost<any>('/api/materi', body, { token: auth.token, headers: auth.headers });
+      const materiId = res?.data?.uuid_materi || res?.uuid_materi || res?.data?.id || res?.id;
+      if (materiId) {
+        setCreatedMateriId(materiId);
+        setStep(2);
+      } else {
+        // If no ID returned, just close and refresh
+        onSuccess();
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Gagal menambahkan materi.');
     } finally {
@@ -119,47 +159,199 @@ function AddMateriModal({
     }
   };
 
+  const handleFileDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(false);
+    const f = e.dataTransfer.files[0];
+    if (f) {
+      const err = validateFile(f);
+      if (err) { setError(err); return; }
+      setError(null);
+      setFile(f);
+    }
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0];
+    if (f) {
+      const err = validateFile(f);
+      if (err) { setError(err); return; }
+      setError(null);
+      setFile(f);
+    }
+  };
+
+  const handleUpload = async () => {
+    if (!file || !createdMateriId) return;
+    setUploading(true);
+    setError(null);
+    setUploadProgress(10);
+    try {
+      const auth = getAuth();
+      const formData = new FormData();
+      formData.append('file', file);
+
+      // Use raw fetch for progress tracking ability
+      const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL as string;
+      const headers: Record<string, string> = { ...auth.headers };
+      if (auth.token) headers['Authorization'] = `Bearer ${auth.token}`;
+
+      setUploadProgress(30);
+      const response = await fetch(`${API_BASE_URL}/api/materi/${createdMateriId}/upload`, {
+        method: 'POST',
+        headers,
+        body: formData,
+      });
+      setUploadProgress(90);
+
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error((data as any).message || (data as any).error || `Upload gagal (HTTP ${response.status})`);
+      }
+      setUploadProgress(100);
+      setUploadSuccess(true);
+      setTimeout(() => onSuccess(), 800);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Gagal mengupload file.');
+      setUploadProgress(0);
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleSkipUpload = () => {
+    onSuccess();
+  };
+
+  const formatSize = (bytes: number) => {
+    if (bytes >= 1024 * 1024) return (bytes / 1024 / 1024).toFixed(1) + ' MB';
+    return (bytes / 1024).toFixed(0) + ' KB';
+  };
+
   return (
     <div style={overlay}>
-      <div style={modal}>
+      <div style={{ ...modal, maxWidth: 520 }}>
         <div style={modalHeader}>
-          <h3 style={modalTitle}>Tambah Materi</h3>
+          <h3 style={modalTitle}>{step === 1 ? 'Tambah Materi' : 'Upload File'}</h3>
           <button onClick={onClose} style={closeBtn}><X size={18} /></button>
         </div>
+
+        {/* Step indicator */}
+        <div style={{ display: 'flex', gap: 8, marginBottom: 18, alignItems: 'center' }}>
+          <div style={{ width: 28, height: 28, borderRadius: '50%', background: step >= 1 ? 'linear-gradient(135deg,#6366f1,#8b5cf6)' : 'rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', fontWeight: 700, color: '#fff' }}>1</div>
+          <div style={{ flex: 1, height: 2, background: step >= 2 ? '#6366f1' : 'rgba(255,255,255,0.1)', borderRadius: 2 }} />
+          <div style={{ width: 28, height: 28, borderRadius: '50%', background: step >= 2 ? 'linear-gradient(135deg,#6366f1,#8b5cf6)' : 'rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', fontWeight: 700, color: step >= 2 ? '#fff' : '#64748b' }}>2</div>
+        </div>
+
         {error && (
           <div style={errBox}>
             <AlertCircle size={16} />
             <span>{error}</span>
           </div>
         )}
-        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-          <div style={formGroup}>
-            <label style={label}>Nama Materi</label>
-            <input
-              type="text"
-              required
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="e.g., Bacaan Bab 1 — Pengantar Akuntansi"
-              style={input}
-            />
+
+        {step === 1 ? (
+          <form onSubmit={handleStep1} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            <div style={formGroup}>
+              <label style={label}>Nama Materi</label>
+              <input type="text" required value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g., Bacaan Bab 1 — Pengantar Akuntansi" style={input} />
+            </div>
+            <div style={formGroup}>
+              <label style={label}>Tipe Materi</label>
+              <select value={type} onChange={(e) => setType(e.target.value as typeof type)} style={input}>
+                <option value="Reading">Reading (PDF/DOCX/PPT)</option>
+                <option value="Video">Video</option>
+              </select>
+            </div>
+            {type === 'Video' && (
+              <div style={formGroup}>
+                <label style={label}>URL YouTube (opsional)</label>
+                <input type="url" value={videoUrl} onChange={(e) => setVideoUrl(e.target.value)} placeholder="https://youtube.com/watch?v=..." style={input} />
+                <span style={{ fontSize: '0.75rem', color: '#64748b' }}>Atau upload file video di langkah berikutnya</span>
+              </div>
+            )}
+            <div style={{ display: 'flex', gap: 10, marginTop: 4 }}>
+              <button type="button" onClick={onClose} style={{ ...btnBase, flex: 1, background: 'rgba(255,255,255,0.06)', color: '#cbd5e1' }}>Batal</button>
+              <button type="submit" disabled={loading} style={{ ...btnBase, flex: 2, background: 'linear-gradient(135deg,#6366f1,#8b5cf6)', color: '#fff' }}>
+                {loading ? <Loader2 size={15} style={{ animation: 'spin 1s linear infinite' }} /> : 'Lanjut →'}
+              </button>
+            </div>
+          </form>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            {/* Drag and Drop Zone */}
+            <div
+              onDragOver={(e) => { e.preventDefault(); setIsDragOver(true); }}
+              onDragLeave={() => setIsDragOver(false)}
+              onDrop={handleFileDrop}
+              style={{
+                border: `2px dashed ${isDragOver ? '#6366f1' : 'rgba(255,255,255,0.15)'}`,
+                borderRadius: 12,
+                padding: '32px 20px',
+                textAlign: 'center',
+                background: isDragOver ? 'rgba(99,102,241,0.08)' : 'rgba(255,255,255,0.02)',
+                transition: 'all 0.2s',
+                cursor: 'pointer',
+              }}
+              onClick={() => document.getElementById('materi-file-input')?.click()}
+            >
+              <input
+                id="materi-file-input"
+                type="file"
+                accept={type === 'Reading' ? '.pdf,.docx,.ppt,.pptx' : '.mp4,.webm,.mov,.avi'}
+                onChange={handleFileSelect}
+                style={{ display: 'none' }}
+              />
+              <Upload size={32} color={isDragOver ? '#6366f1' : '#64748b'} style={{ marginBottom: 10 }} />
+              <p style={{ color: '#e2e8f0', fontSize: '0.9rem', fontWeight: 600, margin: '0 0 4px' }}>
+                {file ? file.name : 'Drag & drop file di sini'}
+              </p>
+              <p style={{ color: '#64748b', fontSize: '0.78rem', margin: 0 }}>
+                {type === 'Reading' ? 'PDF, DOCX, PPT, PPTX' : 'MP4, WebM, MOV, AVI'} • Max 100MB
+              </p>
+              {file && (
+                <div style={{ marginTop: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                  <FileText size={14} color="#a5b4fc" />
+                  <span style={{ color: '#a5b4fc', fontSize: '0.8rem' }}>{formatSize(file.size)}</span>
+                  <button onClick={(e) => { e.stopPropagation(); setFile(null); }} style={{ background: 'none', border: 'none', color: '#f87171', cursor: 'pointer', fontSize: '0.78rem' }}>Hapus</button>
+                </div>
+              )}
+            </div>
+
+            {/* Upload progress */}
+            {uploadProgress > 0 && (
+              <div style={{ background: 'rgba(255,255,255,0.06)', borderRadius: 8, overflow: 'hidden', height: 6 }}>
+                <div style={{
+                  width: `${uploadProgress}%`,
+                  height: '100%',
+                  background: uploadSuccess ? '#10b981' : 'linear-gradient(90deg, #6366f1, #8b5cf6)',
+                  borderRadius: 8,
+                  transition: 'width 0.3s ease',
+                }} />
+              </div>
+            )}
+
+            {uploadSuccess && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#10b981', fontSize: '0.85rem', fontWeight: 600 }}>
+                <Download size={16} /> File berhasil diupload!
+              </div>
+            )}
+
+            <div style={{ display: 'flex', gap: 10, marginTop: 4 }}>
+              <button type="button" onClick={handleSkipUpload} style={{ ...btnBase, flex: 1, background: 'rgba(255,255,255,0.06)', color: '#cbd5e1' }}>
+                Lewati
+              </button>
+              <button
+                type="button"
+                onClick={handleUpload}
+                disabled={!file || uploading || uploadSuccess}
+                style={{ ...btnBase, flex: 2, background: file && !uploadSuccess ? 'linear-gradient(135deg,#6366f1,#8b5cf6)' : 'rgba(255,255,255,0.08)', color: file && !uploadSuccess ? '#fff' : '#64748b' }}
+              >
+                {uploading ? <Loader2 size={15} style={{ animation: 'spin 1s linear infinite' }} /> : uploadSuccess ? '✓ Selesai' : '⬆ Upload File'}
+              </button>
+            </div>
           </div>
-          <div style={formGroup}>
-            <label style={label}>Tipe Materi</label>
-            <select value={type} onChange={(e) => setType(e.target.value as typeof type)} style={input}>
-              <option value="Reading">Reading</option>
-              <option value="Video">Video</option>
-              <option value="CaseStudy">Case Study</option>
-              <option value="Practice">Practice</option>
-            </select>
-          </div>
-          <div style={{ display: 'flex', gap: 10, marginTop: 4 }}>
-            <button type="button" onClick={onClose} style={{ ...btnBase, flex: 1, background: 'rgba(255,255,255,0.06)', color: '#cbd5e1' }}>Batal</button>
-            <button type="submit" disabled={loading} style={{ ...btnBase, flex: 2, background: 'linear-gradient(135deg,#6366f1,#8b5cf6)', color: '#fff' }}>
-              {loading ? <Loader2 size={15} style={{ animation: 'spin 1s linear infinite' }} /> : 'Tambah Materi'}
-            </button>
-          </div>
-        </form>
+        )}
       </div>
     </div>
   );

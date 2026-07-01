@@ -240,3 +240,49 @@ export async function apiUpload<TResponse>(
 
   return data;
 }
+
+/**
+ * Kirim upload file (multipart/form-data) via POST ke backend API.
+ *
+ * @param path    - Path endpoint, contoh: '/api/materi/{id}/upload'
+ * @param formData - FormData yang berisi file
+ * @param options  - Opsi tambahan (token, headers)
+ * @returns        Parsed JSON response
+ */
+export async function apiUploadPost<TResponse>(
+  path: string,
+  formData: FormData,
+  options: RequestOptions = {}
+): Promise<TResponse> {
+  // Jangan set Content-Type — browser akan auto-set boundary untuk multipart
+  const headers: Record<string, string> = {
+    ...options.headers,
+  };
+
+  if (options.token) {
+    headers['Authorization'] = `Bearer ${options.token}`;
+  }
+
+  const response = await fetch(`${API_BASE_URL}${path}`, {
+    method: 'POST',
+    headers,
+    body: formData,
+  });
+
+  let data: TResponse;
+  try {
+    data = (await response.json()) as TResponse;
+  } catch {
+    throw new Error(`Server mengembalikan response yang tidak valid (HTTP ${response.status})`);
+  }
+
+  if (!response.ok) {
+    const errorMessage =
+      (data as { message?: string; error?: string }).message ||
+      (data as { message?: string; error?: string }).error ||
+      `Request gagal dengan status ${response.status}`;
+    throw new Error(errorMessage);
+  }
+
+  return data;
+}
