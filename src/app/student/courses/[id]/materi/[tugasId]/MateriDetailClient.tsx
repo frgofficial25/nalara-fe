@@ -23,6 +23,23 @@ interface TugasDetail {
   modul?: { title: string };
 }
 
+function getFileExtension(url?: string) {
+  if (!url) return '';
+  const cleanUrl = url.split('?')[0];
+  const match = cleanUrl.match(/\.([a-z0-9]+)$/i);
+  return match ? `.${match[1].toLowerCase()}` : '';
+}
+
+function buildDocumentPreviewUrl(url?: string) {
+  if (!url) return null;
+  const ext = getFileExtension(url);
+  if (ext === '.pdf') return url;
+  if (['.docx', '.ppt', '.pptx'].includes(ext)) {
+    return `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(url)}`;
+  }
+  return null;
+}
+
 function getAuth() {
   const token = getStoredToken();
   const headers: Record<string, string> = {};
@@ -81,6 +98,9 @@ export default function MateriDetailClient() {
     if (!tugas?.file_url) return;
     window.open(tugas.file_url, '_blank');
   };
+
+  const previewUrl = buildDocumentPreviewUrl(tugas?.file_url);
+  const isPdf = getFileExtension(tugas?.file_url) === '.pdf';
 
   const renderContent = (content: any) => {
     if (!content) return null;
@@ -204,19 +224,33 @@ export default function MateriDetailClient() {
 
             {/* File */}
             {tugas.file_url && (
-              <div style={filePreview}>
-                <FileText size={32} color="#6366f1" />
-                <div>
-                  <p style={{ color: '#e2e8f0', fontWeight: 600, margin: 0 }}>File Terlampir</p>
-                  <p style={{ color: '#64748b', fontSize: '0.82rem', margin: '4px 0 0' }}>
-                    <a href={tugas.file_url} target="_blank" rel="noopener noreferrer" style={{ color: '#a5b4fc' }}>
-                      {tugas.file_url}
-                    </a>
-                  </p>
+              <div style={{ ...filePreview, flexDirection: 'column', alignItems: 'stretch' }}>
+                {previewUrl ? (
+                  <div style={{ width: '100%', marginBottom: 12 }}>
+                    <iframe
+                      src={previewUrl}
+                      title={tugas.title}
+                      style={{ width: '100%', minHeight: 520, borderRadius: 12, border: 'none', background: '#fff' }}
+                    />
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <FileText size={32} color="#6366f1" />
+                    <div>
+                      <p style={{ color: '#e2e8f0', fontWeight: 600, margin: 0 }}>File Terlampir</p>
+                      <p style={{ color: '#64748b', fontSize: '0.82rem', margin: '4px 0 0' }}>
+                        <a href={tugas.file_url} target="_blank" rel="noopener noreferrer" style={{ color: '#a5b4fc' }}>
+                          {tugas.file_url}
+                        </a>
+                      </p>
+                    </div>
+                  </div>
+                )}
+                <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 8 }}>
+                  <button onClick={handleDownload} style={{ ...primaryBtn }}>
+                    <Download size={13} /> {isPdf ? 'Buka PDF' : 'Download'}
+                  </button>
                 </div>
-                <button onClick={handleDownload} style={{ ...primaryBtn, marginLeft: 'auto' }}>
-                  <Download size={13} /> Download
-                </button>
               </div>
             )}
 

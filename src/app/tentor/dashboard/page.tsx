@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { 
-  Users, BookOpen, FileText, RefreshCw, ShieldAlert, ChevronRight, FileCheck, Flame, Clock, Layers, ArrowRight
+  Users, BookOpen, FileText, RefreshCw, ShieldAlert, ChevronRight, FileCheck, Flame, Clock, Layers, ArrowRight, CheckCircle
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { apiGet } from '@/lib/api';

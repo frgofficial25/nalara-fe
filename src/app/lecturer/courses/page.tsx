@@ -634,10 +634,47 @@ export default function CoursesPage() {
                     </label>
                   ))}
                 </div>
+                {/* Schedule Options */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: '10px 0', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+                  <label style={s.label}>Waktu Publikasi Kelas</label>
+                  <div style={{ display: 'flex', gap: 16 }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: '0.85rem' }}>
+                      <input
+                        type="radio"
+                        name="publishMode"
+                        checked={scheduleMode === 'now'}
+                        onChange={() => setScheduleMode('now')}
+                      />
+                      Publish Sekarang
+                    </label>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: '0.85rem' }}>
+                      <input
+                        type="radio"
+                        name="publishMode"
+                        checked={scheduleMode === 'schedule'}
+                        onChange={() => setScheduleMode('schedule')}
+                      />
+                      Jadwalkan Publikasi
+                    </label>
+                  </div>
+
+                  {scheduleMode === 'schedule' && (
+                    <div style={{ marginTop: 8 }}>
+                      <input
+                        type="datetime-local"
+                        value={scheduleDatetime}
+                        onChange={(e) => setScheduleDatetime(e.target.value)}
+                        min={new Date().toISOString().slice(0, 16)}
+                        style={s.input}
+                      />
+                    </div>
+                  )}
+                </div>
+
                 <div style={s.modalFooter}>
                   <button onClick={() => setPublishCourseId(null)} style={s.cancelBtn}>Cancel</button>
                   <button onClick={submitPublish} disabled={publishing} style={s.submitBtn}>
-                    {publishing ? 'Publishing...' : 'Publish & Enroll'}
+                    {publishing ? 'Processing...' : scheduleMode === 'schedule' ? 'Jadwalkan' : 'Publish & Enroll'}
                   </button>
                 </div>
               </div>

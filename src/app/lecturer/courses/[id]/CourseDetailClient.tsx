@@ -7,7 +7,7 @@ import {
   Download, Package
 } from 'lucide-react';
 import { useRouter, useParams } from 'next/navigation';
-import { apiGet, apiPost, apiDelete } from '@/lib/api';
+import { apiGet, apiPost, apiPut, apiDelete, apiUploadPost } from '@/lib/api';
 import { getStoredToken } from '@/services/auth';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -31,15 +31,243 @@ interface Modul {
   createdAt?: string;
 }
 
-interface Tugas {
+interface Materi {
   id: string;
-  uuid_tugas?: string;
+  uuid_materi?: string;
   title: string;
-  type?: string;
-  slug?: string;
-  order?: number;
+  type: 'Reading' | 'Video';
+  video_url?: string;
   file_url?: string;
+  order_index?: number;
   createdAt?: string;
+}
+
+function getFileExtension(url?: string) {
+  if (!url) return '';
+  const cleanUrl = url.split('?')[0];
+  const match = cleanUrl.match(/\.([a-z0-9]+)$/i);
+  return match ? `.${match[1].toLowerCase()}` : '';
+}
+
+function buildDocumentPreviewUrl(url?: string) {
+  if (!url) return null;
+  const ext = getFileExtension(url);
+  if (ext === '.pdf') return url;
+  if (['.docx', '.ppt', '.pptx'].includes(ext)) {
+    return `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(url)}`;
+  }
+  return null;
+}
+
+// ─── Edit Materi Modal ──────────────────────────────────────────────────────────
+function EditMateriModal({
+  materi,
+  onSuccess,
+  onClose,
+}: {
+  materi: Materi;
+  onSuccess: () => void;
+  onClose: () => void;
+}) {
+  const [title, setTitle] = useState(materi.title);
+  const [type, setType] = useState(materi.type);
+  const [videoUrl, setVideoUrl] = useState(materi.video_url || '');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!title.trim()) return;
+    setLoading(true);
+    setError(null);
+    try {
+      const auth = getAuth();
+      await apiPut(`/api/materi/${materi.id}`, {
+        title,
+        type,
+        video_url: type === 'Video' ? videoUrl : undefined
+      }, { token: auth.token, headers: auth.headers });
+      onSuccess();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Gagal memperbarui materi.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div style={overlay}>
+      <div style={modal}>
+        <div style={modalHeader}>
+          <h3 style={modalTitle}>Edit Materi</h3>
+          <button onClick={onClose} style={closeBtn}><X size={18} /></button>
+        </div>
+        {error && (
+          <div style={errBox}>
+            <AlertCircle size={16} />
+            <span>{error}</span>
+          </div>
+        )}
+        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <div style={formGroup}>
+            <label style={label}>Nama Materi</label>
+            <input
+              type="text"
+              required
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              style={input}
+            />
+          </div>
+          <div style={formGroup}>
+            <label style={label}>Tipe Materi</label>
+            <select value={type} onChange={(e) => setType(e.target.value as typeof type)} style={input}>
+              <option value="Reading">Reading</option>
+              <option value="Video">Video</option>
+            </select>
+          </div>
+          {type === 'Video' && (
+            <div style={formGroup}>
+              <label style={label}>URL Video / YouTube</label>
+              <input
+                type="url"
+                value={videoUrl}
+                onChange={(e) => setVideoUrl(e.target.value)}
+                placeholder="https://youtube.com/watch?v=..."
+                style={input}
+              />
+            </div>
+          )}
+          <div style={{ display: 'flex', gap: 10, marginTop: 4 }}>
+            <button type="button" onClick={onClose} style={{ ...btnBase, flex: 1, background: 'rgba(255,255,255,0.06)', color: '#cbd5e1' }}>Batal</button>
+            <button type="submit" disabled={loading} style={{ ...btnBase, flex: 2, background: 'linear-gradient(135deg,#6366f1,#8b5cf6)', color: '#fff' }}>
+              {loading ? <Loader2 size={15} style={{ animation: 'spin 1s linear infinite' }} /> : 'Simpan Perubahan'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+// ─── Preview Materi Modal ──────────────────────────────────────────────────────
+function PreviewMateriModal({
+  materi,
+  onClose,
+}: {
+  materi: Materi;
+  onClose: () => void;
+}) {
+  const [detail, setDetail] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchDetail = async () => {
+      try {
+        const auth = getAuth();
+        const res = await apiGet<any>(`/api/materi/${materi.id}`, { token: auth.token, headers: auth.headers });
+        setDetail(res?.data || res);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Gagal memuat detail materi.');
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchDetail();
+  }, [materi.id]);
+
+  const fileUrl = detail?.file_url || detail?.fileUrl || materi.file_url;
+  const isVideo = materi.type === 'Video';
+  const youtubeUrl = detail?.video_url || detail?.videoUrl || materi.video_url;
+  const previewUrl = buildDocumentPreviewUrl(fileUrl);
+  const isPdf = getFileExtension(fileUrl) === '.pdf';
+  const isSupportedDocument = Boolean(previewUrl);
+
+  return (
+    <div style={overlay}>
+      <div style={{ ...modal, maxWidth: 800, width: '90%' }}>
+        <div style={modalHeader}>
+          <h3 style={modalTitle}>Preview: {materi.title}</h3>
+          <button onClick={onClose} style={closeBtn}><X size={18} /></button>
+        </div>
+
+        {loading ? (
+          <div style={{ padding: '40px', display: 'flex', justifyContent: 'center' }}>
+            <Loader2 size={24} color="#6366f1" style={{ animation: 'spin 1s linear infinite' }} />
+          </div>
+        ) : error ? (
+          <div style={errBox}>
+            <AlertCircle size={16} />
+            <span>{error}</span>
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            {isVideo ? (
+              <div>
+                {youtubeUrl ? (
+                  <div style={{ position: 'relative', paddingBottom: '56.25%', height: 0, overflow: 'hidden', borderRadius: 8, background: '#000' }}>
+                    <iframe
+                      src={youtubeUrl.includes('youtube.com') || youtubeUrl.includes('youtu.be')
+                        ? `https://www.youtube.com/embed/${youtubeUrl.split('v=')[1]?.split('&')[0] || youtubeUrl.split('/').pop()}`
+                        : youtubeUrl
+                      }
+                      title={materi.title}
+                      frameBorder="0"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                      allowFullScreen
+                      style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}
+                    />
+                  </div>
+                ) : fileUrl ? (
+                  <video controls style={{ width: '100%', borderRadius: 8, maxHeight: 400, background: '#000' }}>
+                    <source src={fileUrl} />
+                    Browser Anda tidak mendukung pemutaran video.
+                  </video>
+                ) : (
+                  <div style={{ padding: '30px', textAlign: 'center', background: 'rgba(255,255,255,0.02)', borderRadius: 8 }}>
+                    <p style={{ color: '#94a3b8', margin: 0 }}>Belum ada video atau file yang diupload.</p>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div>
+                {fileUrl ? (
+                  isPdf ? (
+                    <iframe
+                      src={fileUrl}
+                      title={materi.title}
+                      style={{ width: '100%', height: 500, borderRadius: 8, border: 'none' }}
+                    />
+                  ) : isSupportedDocument ? (
+                    <iframe
+                      src={previewUrl!}
+                      title={materi.title}
+                      style={{ width: '100%', height: 500, borderRadius: 8, border: 'none' }}
+                    />
+                  ) : (
+                    <div style={{ padding: '30px', textAlign: 'center', background: 'rgba(255,255,255,0.02)', borderRadius: 8 }}>
+                      <p style={{ color: '#e2e8f0', fontWeight: 600, margin: '0 0 8px' }}>Dokumen terlampir</p>
+                      <a href={fileUrl} target="_blank" rel="noreferrer" style={{ ...btnBase, display: 'inline-flex', background: '#6366f1', color: '#fff', textDecoration: 'none' }}>
+                        <Download size={14} /> Unduh File
+                      </a>
+                    </div>
+                  )
+                ) : (
+                  <div style={{ padding: '30px', textAlign: 'center', background: 'rgba(255,255,255,0.02)', borderRadius: 8 }}>
+                    <p style={{ color: '#94a3b8', margin: 0 }}>Belum ada dokumen yang diupload.</p>
+                  </div>
+                )}
+              </div>
+            )}
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 10 }}>
+              <button onClick={onClose} style={{ ...btnBase, background: 'rgba(255,255,255,0.06)', color: '#cbd5e1' }}>Tutup</button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
 }
 
 // ─── Auth Helper ──────────────────────────────────────────────────────────────
@@ -191,23 +419,9 @@ function AddMateriModal({
       const formData = new FormData();
       formData.append('file', file);
 
-      // Use raw fetch for progress tracking ability
-      const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL as string;
-      const headers: Record<string, string> = { ...auth.headers };
-      if (auth.token) headers['Authorization'] = `Bearer ${auth.token}`;
-
       setUploadProgress(30);
-      const response = await fetch(`${API_BASE_URL}/api/materi/${createdMateriId}/upload`, {
-        method: 'POST',
-        headers,
-        body: formData,
-      });
+      await apiUploadPost(`/api/materi/${createdMateriId}/upload`, formData, { token: auth.token, headers: auth.headers });
       setUploadProgress(90);
-
-      if (!response.ok) {
-        const data = await response.json().catch(() => ({}));
-        throw new Error((data as any).message || (data as any).error || `Upload gagal (HTTP ${response.status})`);
-      }
       setUploadProgress(100);
       setUploadSuccess(true);
       setTimeout(() => onSuccess(), 800);
@@ -308,6 +522,9 @@ function AddMateriModal({
               </p>
               <p style={{ color: '#64748b', fontSize: '0.78rem', margin: 0 }}>
                 {type === 'Reading' ? 'PDF, DOCX, PPT, PPTX' : 'MP4, WebM, MOV, AVI'} • Max 100MB
+              </p>
+              <p style={{ color: '#94a3b8', fontSize: '0.72rem', margin: '6px 0 0' }}>
+                File akan dikirim ke Supabase Storage dan metadata materi akan tersimpan otomatis ke database.
               </p>
               {file && (
                 <div style={{ marginTop: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
@@ -456,7 +673,7 @@ export default function CourseDetailClient() {
 
   const [course, setCourse] = useState<Pembelajaran | null>(null);
   const [moduls, setModuls] = useState<Modul[]>([]);
-  const [tugasMap, setTugasMap] = useState<Record<string, Tugas[]>>({});
+  const [materiMap, setMateriMap] = useState<Record<string, Materi[]>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -464,7 +681,9 @@ export default function CourseDetailClient() {
   const [showAddModul, setShowAddModul] = useState(false);
   const [addMateriForModul, setAddMateriForModul] = useState<string | null>(null);
   const [deleteModul, setDeleteModul] = useState<Modul | null>(null);
-  const [deleteTugas, setDeleteTugas] = useState<{ tugas: Tugas; modulId: string } | null>(null);
+  const [deleteMateri, setDeleteMateri] = useState<{ materi: Materi; modulId: string } | null>(null);
+  const [editMateri, setEditMateri] = useState<Materi | null>(null);
+  const [previewMateri, setPreviewMateri] = useState<Materi | null>(null);
 
   // ── Fetch ────────────────────────────────────────────────────────────────────
   const fetchAll = useCallback(async () => {
@@ -499,21 +718,34 @@ export default function CourseDetailClient() {
         .map(m => ({ ...m, id: m.uuid_modul || m.id }));
       setModuls(modulList);
 
-      // Fetch tugas for each modul
-      const newTugasMap: Record<string, Tugas[]> = {};
+      // Fetch materi for each modul
+      const newMateriMap: Record<string, Materi[]> = {};
       await Promise.all(
         modulList.map(async (m) => {
-          const tugasRes = await apiGet<Tugas[] | { data?: Tugas[] }>(
-            `/api/tugas?uuid_pembelajaran=${courseId}&uuid_modul=${m.id}`, opts
-          );
-          let tugasList: Tugas[] = Array.isArray(tugasRes)
-            ? tugasRes
-            : (tugasRes as any).data ?? [];
-          tugasList = tugasList.map(t => ({ ...t, id: t.uuid_tugas || t.id }));
-          newTugasMap[m.id] = tugasList;
+          try {
+            const materiRes = await apiGet<Materi[] | { data?: Materi[] } | any>(
+              `/api/materi?uuid_modul=${m.id}`, opts
+            );
+            let materiList: any[] = [];
+            if (Array.isArray(materiRes)) {
+              materiList = materiRes;
+            } else if (materiRes && 'data' in materiRes && Array.isArray(materiRes.data)) {
+              materiList = materiRes.data;
+            } else if (materiRes && Array.isArray(materiRes.materi)) {
+              materiList = materiRes.materi;
+            }
+            materiList = materiList.map(item => ({
+              ...item,
+              id: item.uuid_materi || item.id,
+              title: item.title || item.nama_materi || '',
+            }));
+            newMateriMap[m.id] = materiList;
+          } catch (e) {
+            newMateriMap[m.id] = [];
+          }
         })
       );
-      setTugasMap(newTugasMap);
+      setMateriMap(newMateriMap);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Gagal memuat data kelas.');
     } finally {
@@ -537,16 +769,27 @@ export default function CourseDetailClient() {
     }
   };
 
-  const confirmDeleteTugas = async () => {
-    if (!deleteTugas) return;
+  const confirmDeleteMateri = async () => {
+    if (!deleteMateri) return;
     try {
       const auth = getAuth();
-      await apiDelete(`/api/tugas/${deleteTugas.tugas.id}`, { token: auth.token, headers: auth.headers });
-      setDeleteTugas(null);
+      await apiDelete(`/api/materi/${deleteMateri.materi.id}`, { token: auth.token, headers: auth.headers });
+      setDeleteMateri(null);
       fetchAll();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Gagal menghapus materi.');
-      setDeleteTugas(null);
+      setDeleteMateri(null);
+    }
+  };
+
+  const handleDeleteFile = async (materiId: string) => {
+    if (!confirm('Apakah Anda yakin ingin menghapus file dari materi ini?')) return;
+    try {
+      const auth = getAuth();
+      await apiDelete(`/api/materi/${materiId}/file`, { token: auth.token, headers: auth.headers });
+      fetchAll();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Gagal menghapus file.');
     }
   };
 
@@ -617,7 +860,7 @@ export default function CourseDetailClient() {
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
           {moduls.map((modul) => {
-            const tugasList = tugasMap[modul.id] ?? [];
+            const materiList = materiMap[modul.id] ?? [];
             return (
               <div key={modul.id} style={modulCard}>
                 {/* Modul Header */}
@@ -644,14 +887,14 @@ export default function CourseDetailClient() {
                 </div>
 
                 {/* Materi List */}
-                {tugasList.length === 0 ? (
+                {materiList.length === 0 ? (
                   <div style={emptyMateri}>
                     <FileText size={18} color="#4a5568" />
                     <span style={{ color: '#64748b', fontSize: '0.82rem' }}>Belum ada materi di modul ini.</span>
                   </div>
                 ) : (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 12 }}>
-                    {tugasList.map((t, idx) => (
+                    {materiList.map((t, idx) => (
                       <div key={t.id} style={tugasRow}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                           <span style={tugasOrder}>{idx + 1}</span>
@@ -660,15 +903,30 @@ export default function CourseDetailClient() {
                             {t.type && <span style={typeBadge}>{t.type}</span>}
                           </div>
                         </div>
-                        <div style={{ display: 'flex', gap: 8 }}>
+                        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                           <button
-                            onClick={() => router.push(`/lecturer/courses/${courseId}/materi/${t.id}`)}
+                            onClick={() => setPreviewMateri(t)}
                             style={detailBtn}
                           >
-                            <Eye size={13} /> Detail
+                            <Eye size={13} /> Preview
                           </button>
                           <button
-                            onClick={() => setDeleteTugas({ tugas: t, modulId: modul.id })}
+                            onClick={() => setEditMateri(t)}
+                            style={{ ...detailBtn, background: 'rgba(255,255,255,0.03)' }}
+                          >
+                            Edit
+                          </button>
+                          {(t.file_url || (t as any).fileUrl) && (
+                            <button
+                              onClick={() => handleDeleteFile(t.id)}
+                              style={{ ...detailBtn, background: 'rgba(239,68,68,0.1)', color: '#f87171', border: '1px solid rgba(239,68,68,0.2)' }}
+                              title="Hapus File Lampiran"
+                            >
+                              Hapus File
+                            </button>
+                          )}
+                          <button
+                            onClick={() => setDeleteMateri({ materi: t, modulId: modul.id })}
                             style={iconDanger}
                           >
                             <Trash2 size={13} />
@@ -707,11 +965,24 @@ export default function CourseDetailClient() {
           onCancel={() => setDeleteModul(null)}
         />
       )}
-      {deleteTugas && (
+      {deleteMateri && (
         <ConfirmModal
-          message={`Apakah yakin ingin menghapus materi "${deleteTugas.tugas.title}"?`}
-          onConfirm={confirmDeleteTugas}
-          onCancel={() => setDeleteTugas(null)}
+          message={`Apakah yakin ingin menghapus materi "${deleteMateri.materi.title}"?`}
+          onConfirm={confirmDeleteMateri}
+          onCancel={() => setDeleteMateri(null)}
+        />
+      )}
+      {editMateri && (
+        <EditMateriModal
+          materi={editMateri}
+          onSuccess={() => { setEditMateri(null); fetchAll(); }}
+          onClose={() => setEditMateri(null)}
+        />
+      )}
+      {previewMateri && (
+        <PreviewMateriModal
+          materi={previewMateri}
+          onClose={() => setPreviewMateri(null)}
         />
       )}
     </div>
