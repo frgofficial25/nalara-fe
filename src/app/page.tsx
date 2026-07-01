@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { useRouter } from 'next/navigation';
 import Hero from '../components/landingpage/Hero';
 import Pathway from '../components/landingpage/Pathway';
 import Curriculum from '../components/landingpage/Curriculum';
@@ -9,6 +10,7 @@ import Team from '../components/landingpage/Team';
 import Footer from '../components/landingpage/Footer';
 
 export default function LandingPage() {
+  const router = useRouter();
   const [activeItem, setActiveItem] = React.useState('ECOSYSTEM');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
 
@@ -71,7 +73,7 @@ export default function LandingPage() {
             <button
               className="nalara-btn"
               style={styles.navCta}
-              onClick={() => scrollToSection('pricing')}
+              onClick={() => router.push('/login')}
             >
               SIGN IN
             </button>
@@ -119,7 +121,7 @@ export default function LandingPage() {
           <button
             className="nalara-btn"
             style={{ ...styles.navCta, width: '100%' }}
-            onClick={() => scrollToSection('pricing')}
+            onClick={() => router.push('/login')}
           >
             SIGN IN
           </button>

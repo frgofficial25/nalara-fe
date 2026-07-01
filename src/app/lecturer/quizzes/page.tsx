@@ -86,6 +86,13 @@ export default function QuizzesPage() {
   const [manualQuestions, setManualQuestions] = useState<QuizQuestionInput[]>([]);
   const [savingManualQuiz, setSavingManualQuiz] = useState(false);
 
+  // Wizard and extra Swagger fields
+  const [modalStep, setModalStep] = useState<1 | 2>(1);
+  const [manualDeadline, setManualDeadline] = useState('');
+  const [manualDescription, setManualDescription] = useState('');
+  const [manualIsPublished, setManualIsPublished] = useState(true);
+  const [hasLocalDraft, setHasLocalDraft] = useState(false);
+
   const getAuthHeaders = () => {
     const token = getStoredToken();
     const apiKey = process.env.NEXT_PUBLIC_API_KEY;
@@ -101,37 +108,56 @@ export default function QuizzesPage() {
   const fetchCourses = async () => {
     try {
       const auth = getAuthHeaders();
-      const response = await apiGet<Course[] | { success: boolean; data: Course[] }>('/api/pembelajaran', {
+      const response = await apiGet<any>('/api/pembelajaran', {
         token: auth.token,
         headers: auth.headers
       });
+      let list: any[] = [];
       if (Array.isArray(response)) {
-        setCourses(response);
+        list = response;
       } else if (response && 'data' in response && Array.isArray(response.data)) {
-        setCourses(response.data);
+        list = response.data;
       }
+
+      const mapped = list.map((c: any) => ({
+        uuid_pembelajaran: c.uuid_pembelajaran || c.id || '',
+        title: c.nama_pembelajaran || c.title || ''
+      }));
+      setCourses(mapped);
     } catch (err) {
       console.error('Failed to fetch courses:', err);
     }
   };
 
-  const fetchModules = async () => {
+  const fetchModules = async (courseId?: string) => {
     try {
       const auth = getAuthHeaders();
-      const response = await apiGet<Module[] | { success: boolean; data: Module[] }>('/api/modul', {
+      let url = '/api/modul';
+      if (courseId) {
+        url += `?uuid_pembelajaran=${courseId}`;
+      }
+      const response = await apiGet<any>(url, {
         token: auth.token,
         headers: auth.headers
       });
 
+      let list: any[] = [];
       if (Array.isArray(response)) {
-        setModules(response);
+        list = response;
       } else if (response && 'data' in response && Array.isArray(response.data)) {
-        setModules(response.data);
-      } else {
-        setModules([]);
+        list = response.data;
       }
+
+      const mapped = list.map((m: any) => ({
+        uuid_modul: m.uuid_modul || m.id || '',
+        title: m.nama_modul || m.title || '',
+        description: m.deskripsi || m.description || '',
+        difficulty: m.difficulty || '',
+        uuid_pembelajaran: m.uuid_pembelajaran || m.id_pembelajaran || ''
+      }));
+      setModules(mapped);
     } catch (err) {
-      console.error(err);
+      console.error('Failed to fetch modules:', err);
     }
   };
 
@@ -167,11 +193,83 @@ export default function QuizzesPage() {
     }
   };
 
+  const checkLocalDraft = () => {
+    const draft = localStorage.getItem('nalara_quiz_draft');
+    if (draft) {
+      setHasLocalDraft(true);
+    } else {
+      setHasLocalDraft(false);
+    }
+  };
+
   useEffect(() => {
     fetchCourses();
-    fetchModules();
     fetchQuizzes();
+    checkLocalDraft();
   }, []);
+
+  // Fetch modules dynamically when manual quiz course changes
+  useEffect(() => {
+    if (manualCourse) {
+      fetchModules(manualCourse);
+    } else {
+      setModules([]);
+    }
+  }, [manualCourse]);
+
+  // Fetch modules dynamically when AI generator course changes
+  useEffect(() => {
+    if (selectedCourse) {
+      fetchModules(selectedCourse);
+    }
+  }, [selectedCourse]);
+
+  // Auto-save draft logic
+  const saveDraftToLocal = (fields: any) => {
+    if (fields.title || fields.course || fields.questions.length > 0) {
+      localStorage.setItem('nalara_quiz_draft', JSON.stringify(fields));
+      setHasLocalDraft(true);
+    }
+  };
+
+  const clearLocalDraft = () => {
+    localStorage.removeItem('nalara_quiz_draft');
+    setHasLocalDraft(false);
+  };
+
+  useEffect(() => {
+    if (showManualModal && !manualQuizId) {
+      saveDraftToLocal({
+        title: manualTitle,
+        course: manualCourse,
+        module: manualModule,
+        difficulty: manualDifficulty,
+        passingScore: manualPassingScore,
+        maxAttempts: manualMaxAttempts,
+        timeLimit: manualTimeLimit,
+        deadline: manualDeadline,
+        description: manualDescription,
+        isPublished: manualIsPublished,
+        questions: manualQuestions,
+        step: modalStep
+      });
+    }
+  }, [
+    showManualModal,
+    manualQuizId,
+    manualTitle,
+    manualCourse,
+    manualModule,
+    manualDifficulty,
+    manualPassingScore,
+    manualMaxAttempts,
+    manualTimeLimit,
+    manualDeadline,
+    manualDescription,
+    manualIsPublished,
+    manualQuestions,
+    modalStep
+  ]);
 
   // AI Question Generator Handler
   const handleGenerateQuestions = async () => {
@@ -324,8 +422,50 @@ export default function QuizzesPage() {
     setManualPassingScore(70);
     setManualMaxAttempts(3);
     setManualTimeLimit(30);
+    setManualDeadline('');
+    setManualDescription('');
+    setManualIsPublished(true);
     setManualQuestions([]);
+    setModalStep(1);
     setShowManualModal(true);
+  };
+
+  const handleResumeDraft = async () => {
+    const draftStr = localStorage.getItem('nalara_quiz_draft');
+    if (draftStr) {
+      try {
+        const draft = JSON.parse(draftStr);
+        setManualQuizId(null);
+        setManualTitle(draft.title || '');
+        setManualCourse(draft.course || '');
+        
+        if (draft.course) {
+          await fetchModules(draft.course);
+        } else {
+          setModules([]);
+        }
+
+        setManualModule(draft.module || '');
+        setManualDifficulty(draft.difficulty || 'Beginner');
+        setManualPassingScore(draft.passingScore ?? 70);
+        setManualMaxAttempts(draft.maxAttempts ?? 3);
+        setManualTimeLimit(draft.timeLimit ?? 30);
+        setManualDeadline(draft.deadline || '');
+        setManualDescription(draft.description || '');
+        setManualIsPublished(draft.isPublished ?? true);
+        setManualQuestions(draft.questions || []);
+        setModalStep(draft.step || 1);
+        setShowManualModal(true);
+      } catch (err) {
+        console.error('Failed to parse draft:', err);
+      }
+    }
+  };
+
+  const handleDiscardDraft = () => {
+    if (confirm('Apakah Anda yakin ingin membuang draft kuis ini?')) {
+      clearLocalDraft();
+    }
   };
 
   const handleOpenManualEdit = async (quizId: string) => {
@@ -346,6 +486,17 @@ export default function QuizzesPage() {
       setManualPassingScore(quizData.passing_score ?? 70);
       setManualMaxAttempts(quizData.max_attempts ?? 3);
       setManualTimeLimit(quizData.time_limit ?? 30);
+      
+      if (quizData.deadline) {
+        const d = new Date(quizData.deadline);
+        const pad = (n: number) => String(n).padStart(2, '0');
+        const formattedDeadline = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+        setManualDeadline(formattedDeadline);
+      } else {
+        setManualDeadline('');
+      }
+      setManualDescription(quizData.description || '');
+      setManualIsPublished(quizData.is_published ?? true);
 
       // Map questions
       const mappedQuestions: QuizQuestionInput[] = (quizData.questions || []).map((q: any) => {
@@ -367,7 +518,14 @@ export default function QuizzesPage() {
         };
       });
 
+      if (quizData.uuid_pembelajaran) {
+        await fetchModules(quizData.uuid_pembelajaran);
+      } else {
+        setModules([]);
+      }
+
       setManualQuestions(mappedQuestions);
+      setModalStep(1);
       setShowManualModal(true);
     } catch (err) {
       alert(err instanceof Error ? err.message : 'Gagal memuat detail kuis.');
@@ -445,6 +603,10 @@ export default function QuizzesPage() {
       alert('Judul Kuis dan Target Course wajib diisi.');
       return;
     }
+    if (manualQuestions.length < 10) {
+      alert('Kuis minimal harus memiliki 10 soal untuk dapat disimpan.');
+      return;
+    }
 
     setSavingManualQuiz(true);
     try {
@@ -478,10 +640,10 @@ export default function QuizzesPage() {
 
       const payload = {
         title: manualTitle,
-        difficulty: manualDifficulty,
-        passing_score: Number(manualPassingScore),
-        max_attempts: Number(manualMaxAttempts),
+        description: manualDescription || undefined,
+        deadline: manualDeadline ? new Date(manualDeadline).toISOString() : undefined,
         time_limit: Number(manualTimeLimit),
+        is_published: manualIsPublished,
         uuid_pembelajaran: manualCourse,
         uuid_modul: manualModule || undefined,
         questions: formattedQuestions
@@ -501,6 +663,7 @@ export default function QuizzesPage() {
         });
       }
 
+      clearLocalDraft();
       setShowManualModal(false);
       fetchQuizzes();
     } catch (err) {
@@ -550,6 +713,29 @@ export default function QuizzesPage() {
         <div style={s.errorAlert}>
           <AlertCircle size={20} color="#FF5252" />
           <span style={s.errorMsg}>{error}</span>
+        </div>
+      )}
+
+      {/* Local Draft recovery panel if exists */}
+      {hasLocalDraft && (
+        <div style={s.draftPanel}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div style={s.iconWrapDraft}>
+              <Brain size={18} color="var(--azure)" />
+            </div>
+            <div>
+              <h4 style={s.draftName}>Lanjutkan Pembuatan Kuis Terakhir?</h4>
+              <span style={s.draftMeta}>Anda memiliki draf kuis yang belum selesai disimpan.</span>
+            </div>
+          </div>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button onClick={handleResumeDraft} style={s.resumeBtn}>
+              Lanjutkan Draft
+            </button>
+            <button onClick={handleDiscardDraft} style={s.discardBtn}>
+              Hapus Draft
+            </button>
+          </div>
         </div>
       )}
 
@@ -784,240 +970,311 @@ export default function QuizzesPage() {
             <div style={s.modalHeader}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <Brain size={18} color="var(--azure)" />
-                <h3>{manualQuizId ? 'Edit Quiz (Manual)' : 'Create Quiz (Manual)'}</h3>
+                <h3>
+                  {manualQuizId ? 'Edit Quiz (Manual)' : 'Create Quiz (Manual)'} 
+                  <span style={{ fontSize: '0.85rem', color: 'var(--grey-blue)', marginLeft: 12 }}>
+                    (Langkah {modalStep} dari 2: {modalStep === 1 ? 'Data Kuis' : 'Daftar Soal'})
+                  </span>
+                </h3>
               </div>
               <button onClick={() => setShowManualModal(false)} style={s.closeBtn}>
                 <X size={18} />
               </button>
             </div>
+
             <form onSubmit={handleSaveManualQuizSubmit} style={s.form}>
-              <div style={s.formGrid2Col}>
-                <div style={s.formGroup}>
-                  <label style={s.label}>Quiz Title *</label>
-                  <input 
-                    type="text"
-                    required
-                    value={manualTitle}
-                    onChange={(e) => setManualTitle(e.target.value)}
-                    placeholder="e.g., Kuis Teori Akuntansi Dasar"
-                    style={s.input}
-                  />
-                </div>
-                <div style={s.formGroup}>
-                  <label style={s.label}>Course (Pembelajaran) *</label>
-                  <select
-                    required
-                    value={manualCourse}
-                    onChange={(e) => { setManualCourse(e.target.value); setManualModule(''); }}
-                    style={s.select}
-                  >
-                    <option value="" style={{ background: '#191919', color: '#fff' }}>Select course...</option>
-                    {courses.map(c => (
-                      <option key={c.uuid_pembelajaran} value={c.uuid_pembelajaran} style={{ background: '#191919', color: '#fff' }}>{c.title}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
+              {/* STEP 1: DATA QUIZ */}
+              {modalStep === 1 && (
+                <div style={s.modalBody}>
+                  <div style={s.formGrid2Col}>
+                    <div style={s.formGroup}>
+                      <label style={s.label}>Quiz Title *</label>
+                      <input 
+                        type="text"
+                        required
+                        value={manualTitle}
+                        onChange={(e) => setManualTitle(e.target.value)}
+                        placeholder="e.g., Kuis Teori Akuntansi Dasar"
+                        style={s.input}
+                      />
+                    </div>
+                    <div style={s.formGroup}>
+                      <label style={s.label}>Course (Pembelajaran) *</label>
+                      <select
+                        required
+                        value={manualCourse}
+                        onChange={(e) => { setManualCourse(e.target.value); setManualModule(''); }}
+                        style={s.select}
+                      >
+                        <option value="" style={{ background: '#191919', color: '#fff' }}>Select course...</option>
+                        {courses.map(c => (
+                          <option key={c.uuid_pembelajaran} value={c.uuid_pembelajaran} style={{ background: '#191919', color: '#fff' }}>{c.title}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
 
-              <div style={s.formGrid3Col}>
-                <div style={s.formGroup}>
-                  <label style={s.label}>Module (Optional)</label>
-                  <select
-                    value={manualModule}
-                    onChange={(e) => setManualModule(e.target.value)}
-                    style={s.select}
-                  >
-                    <option value="" style={{ background: '#191919', color: '#fff' }}>Select module...</option>
-                    {(manualCourse ? modules.filter(m => m.uuid_pembelajaran === manualCourse) : modules).map(m => (
-                      <option key={m.uuid_modul} value={m.uuid_modul} style={{ background: '#191919', color: '#fff' }}>{m.title}</option>
-                    ))}
-                  </select>
-                </div>
-                <div style={s.formGroup}>
-                  <label style={s.label}>Difficulty</label>
-                  <select
-                    value={manualDifficulty}
-                    onChange={(e) => setManualDifficulty(e.target.value as any)}
-                    style={s.select}
-                  >
-                    <option value="Beginner" style={{ background: '#191919', color: '#fff' }}>Beginner</option>
-                    <option value="Intermediate" style={{ background: '#191919', color: '#fff' }}>Intermediate</option>
-                    <option value="Advanced" style={{ background: '#191919', color: '#fff' }}>Advanced</option>
-                  </select>
-                </div>
-                <div style={s.formGroup}>
-                  <label style={s.label}>Passing Score (0 - 100)</label>
-                  <input 
-                    type="number"
-                    min="0"
-                    max="100"
-                    value={manualPassingScore}
-                    onChange={(e) => setManualPassingScore(parseInt(e.target.value) || 0)}
-                    style={s.input}
-                  />
-                </div>
-              </div>
+                  <div style={{ ...s.formGrid2Col, marginTop: 16 }}>
+                    <div style={s.formGroup}>
+                      <label style={s.label}>Module (Optional)</label>
+                      <select
+                        value={manualModule}
+                        onChange={(e) => setManualModule(e.target.value)}
+                        style={s.select}
+                      >
+                        <option value="" style={{ background: '#191919', color: '#fff' }}>Select module...</option>
+                        {(manualCourse ? modules.filter(m => m.uuid_pembelajaran === manualCourse) : modules).map(m => (
+                          <option key={m.uuid_modul} value={m.uuid_modul} style={{ background: '#191919', color: '#fff' }}>{m.title}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div style={s.formGroup}>
+                      <label style={s.label}>Difficulty</label>
+                      <select
+                        value={manualDifficulty}
+                        onChange={(e) => setManualDifficulty(e.target.value as any)}
+                        style={s.select}
+                      >
+                        <option value="Beginner" style={{ background: '#191919', color: '#fff' }}>Beginner</option>
+                        <option value="Intermediate" style={{ background: '#191919', color: '#fff' }}>Intermediate</option>
+                        <option value="Advanced" style={{ background: '#191919', color: '#fff' }}>Advanced</option>
+                      </select>
+                    </div>
+                  </div>
 
-              <div style={s.formGrid2Col}>
-                <div style={s.formGroup}>
-                  <label style={s.label}>Max Attempts</label>
-                  <input 
-                    type="number"
-                    min="1"
-                    value={manualMaxAttempts}
-                    onChange={(e) => setManualMaxAttempts(parseInt(e.target.value) || 1)}
-                    style={s.input}
-                  />
-                </div>
-                <div style={s.formGroup}>
-                  <label style={s.label}>Time Limit (Minutes)</label>
-                  <input 
-                    type="number"
-                    min="1"
-                    value={manualTimeLimit}
-                    onChange={(e) => setManualTimeLimit(parseInt(e.target.value) || 1)}
-                    style={s.input}
-                  />
-                </div>
-              </div>
+                  <div style={{ ...s.formGrid2Col, marginTop: 16 }}>
+                    <div style={s.formGroup}>
+                      <label style={s.label}>Time Limit (Minutes)</label>
+                      <input 
+                        type="number"
+                        min="1"
+                        value={manualTimeLimit}
+                        onChange={(e) => setManualTimeLimit(parseInt(e.target.value) || 1)}
+                        style={s.input}
+                      />
+                    </div>
+                    <div style={s.formGroup}>
+                      <label style={s.label}>Deadline (Tenggat Waktu)</label>
+                      <input 
+                        type="datetime-local"
+                        value={manualDeadline}
+                        onChange={(e) => setManualDeadline(e.target.value)}
+                        style={s.input}
+                      />
+                    </div>
+                  </div>
 
-              {/* Manual Questions Builder Section */}
-              <div style={{ marginTop: 24, borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: 20 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-                  <h4 style={{ margin: 0, color: '#fff', fontSize: '1.05rem' }}>Questions List ({manualQuestions.length})</h4>
-                  <button type="button" onClick={handleAddManualQuestion} style={s.addQuestionBtn}>
-                    <PlusCircle size={14} />
-                    <span>Add Question</span>
-                  </button>
-                </div>
+                  <div style={{ ...s.formGroup, marginTop: 16 }}>
+                    <label style={s.label}>Description (Deskripsi Kuis)</label>
+                    <textarea 
+                      rows={3}
+                      value={manualDescription}
+                      onChange={(e) => setManualDescription(e.target.value)}
+                      placeholder="Tulis instruksi atau deskripsi kuis untuk siswa di sini..."
+                      style={{ ...s.input, resize: 'vertical' }}
+                    />
+                  </div>
 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 20, maxHeight: '400px', overflowY: 'auto', paddingRight: 8 }}>
-                  {manualQuestions.length === 0 ? (
-                    <div style={{ textAlign: 'center', padding: '32px 0', color: 'var(--grey-blue)', fontSize: '0.85rem', border: '1px dashed var(--border-color)', borderRadius: 8 }}>
-                      No questions added yet. Click "Add Question" above.
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 16 }}>
+                    <input 
+                      type="checkbox"
+                      id="manualIsPublished"
+                      checked={manualIsPublished}
+                      onChange={(e) => setManualIsPublished(e.target.checked)}
+                      style={{ width: 16, height: 16, accentColor: 'var(--azure)' }}
+                    />
+                    <label htmlFor="manualIsPublished" style={{ ...s.label, cursor: 'pointer', userSelect: 'none' }}>
+                      Publish langsung kuis ini (buat agar dapat dilihat oleh siswa)
+                    </label>
+                  </div>
+
+                  <div style={s.modalFooter}>
+                    <button type="button" onClick={() => setShowManualModal(false)} style={s.cancelBtn}>Batal</button>
+                    <button 
+                      type="button" 
+                      onClick={() => {
+                        if (!manualTitle || !manualCourse) {
+                          alert('Harap isi Judul Kuis dan pilih Kelas terlebih dahulu.');
+                          return;
+                        }
+                        setModalStep(2);
+                      }} 
+                      style={s.submitBtn}
+                    >
+                      Selanjutnya
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* STEP 2: SOAL */}
+              {modalStep === 2 && (
+                <div style={s.modalBody}>
+                  {/* Minimum 10 questions validation warning banner */}
+                  {manualQuestions.length < 10 ? (
+                    <div style={{ ...s.errorAlert, marginBottom: 20 }}>
+                      <AlertCircle size={20} color="#FF5252" />
+                      <span style={s.errorMsg}>
+                        <strong>Jumlah Soal Belum Memenuhi Syarat:</strong> Anda memerlukan minimal <strong>10 soal</strong> untuk membuat kuis. Saat ini baru terdapat <strong>{manualQuestions.length}</strong> soal.
+                      </span>
                     </div>
                   ) : (
-                    manualQuestions.map((q, qIdx) => (
-                      <div key={qIdx} style={s.manualQuestionCard}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, marginBottom: 12 }}>
-                          <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--azure)' }}>Question #{qIdx + 1}</span>
-                          <button type="button" onClick={() => handleRemoveManualQuestion(qIdx)} style={s.removeQBtn}>
-                            <Trash2 size={14} color="#FF5252" />
-                          </button>
-                        </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 18px', background: 'rgba(0, 200, 83, 0.08)', border: '1px solid rgba(0, 200, 83, 0.2)', borderRadius: 8, marginBottom: 20, color: '#00C853', fontSize: '0.85rem' }}>
+                      <CheckCircle size={20} color="#00C853" />
+                      <span>Syarat minimum 10 soal sudah terpenuhi! Kuis siap disimpan.</span>
+                    </div>
+                  )}
 
-                        <div style={s.formGroup} className="mb-4">
-                          <label style={s.label}>Question Text</label>
-                          <textarea
-                            required
-                            rows={2}
-                            value={q.question_text}
-                            onChange={(e) => handleQuestionChange(qIdx, 'question_text', e.target.value)}
-                            placeholder="Enter the question here..."
-                            style={s.input}
-                          />
-                        </div>
+                  {/* Manual Questions Builder Section */}
+                  <div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                      <h4 style={{ margin: 0, color: '#fff', fontSize: '1.05rem' }}>Daftar Soal ({manualQuestions.length})</h4>
+                      <button type="button" onClick={handleAddManualQuestion} style={s.addQuestionBtn}>
+                        <PlusCircle size={14} />
+                        <span>Tambah Soal</span>
+                      </button>
+                    </div>
 
-                        <div style={s.formGrid3Col}>
-                          <div style={s.formGroup}>
-                            <label style={s.label}>Type</label>
-                            <select
-                              value={q.type}
-                              onChange={(e) => handleQuestionChange(qIdx, 'type', e.target.value)}
-                              style={s.select}
-                            >
-                              <option value="MultipleChoice" style={{ background: '#191919', color: '#fff' }}>Multiple Choice</option>
-                              <option value="TrueFalse" style={{ background: '#191919', color: '#fff' }}>True / False</option>
-                              <option value="Essay" style={{ background: '#191919', color: '#fff' }}>Essay</option>
-                            </select>
-                          </div>
-                          <div style={s.formGroup}>
-                            <label style={s.label}>Difficulty</label>
-                            <select
-                              value={q.difficulty}
-                              onChange={(e) => handleQuestionChange(qIdx, 'difficulty', e.target.value)}
-                              style={s.select}
-                            >
-                              <option value="Beginner" style={{ background: '#191919', color: '#fff' }}>Beginner</option>
-                              <option value="Intermediate" style={{ background: '#191919', color: '#fff' }}>Intermediate</option>
-                              <option value="Advanced" style={{ background: '#191919', color: '#fff' }}>Advanced</option>
-                            </select>
-                          </div>
-                          <div style={s.formGroup}>
-                            <label style={s.label}>Weight (Poin)</label>
-                            <input 
-                              type="number"
-                              min="1"
-                              value={q.weight}
-                              onChange={(e) => handleQuestionChange(qIdx, 'weight', parseInt(e.target.value) || 1)}
-                              style={s.input}
-                            />
-                          </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 20, maxHeight: '420px', overflowY: 'auto', paddingRight: 8 }}>
+                      {manualQuestions.length === 0 ? (
+                        <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--grey-blue)', fontSize: '0.85rem', border: '1px dashed var(--border-color)', borderRadius: 8 }}>
+                          Belum ada soal. Klik tombol "Tambah Soal" di kanan atas untuk mulai membuat soal.
                         </div>
+                      ) : (
+                        manualQuestions.map((q, qIdx) => (
+                          <div key={qIdx} style={s.manualQuestionCard}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, marginBottom: 12 }}>
+                              <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--azure)' }}>Soal #{qIdx + 1}</span>
+                              <button type="button" onClick={() => handleRemoveManualQuestion(qIdx)} style={s.removeQBtn}>
+                                <Trash2 size={14} color="#FF5252" />
+                              </button>
+                            </div>
 
-                        {/* Options for MCQ / TF */}
-                        {(q.type === 'MultipleChoice' || q.type === 'TrueFalse') && (
-                          <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
-                            <label style={s.label}>Answer Options & Correct Indicator</label>
-                            {q.options.map((opt, oIdx) => (
-                              <div key={opt.id} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                            <div style={s.formGroup} className="mb-4">
+                              <label style={s.label}>Pertanyaan *</label>
+                              <textarea
+                                required
+                                rows={2}
+                                value={q.question_text}
+                                onChange={(e) => handleQuestionChange(qIdx, 'question_text', e.target.value)}
+                                placeholder="Tuliskan pertanyaan di sini..."
+                                style={s.input}
+                              />
+                            </div>
+
+                            <div style={s.formGrid3Col}>
+                              <div style={s.formGroup}>
+                                <label style={s.label}>Tipe Soal</label>
+                                <select
+                                  value={q.type}
+                                  onChange={(e) => handleQuestionChange(qIdx, 'type', e.target.value)}
+                                  style={s.select}
+                                >
+                                  <option value="MultipleChoice" style={{ background: '#191919', color: '#fff' }}>Pilihan Ganda</option>
+                                  <option value="TrueFalse" style={{ background: '#191919', color: '#fff' }}>Benar / Salah</option>
+                                  <option value="Essay" style={{ background: '#191919', color: '#fff' }}>Esai</option>
+                                </select>
+                              </div>
+                              <div style={s.formGroup}>
+                                <label style={s.label}>Tingkat Kesulitan</label>
+                                <select
+                                  value={q.difficulty}
+                                  onChange={(e) => handleQuestionChange(qIdx, 'difficulty', e.target.value)}
+                                  style={s.select}
+                                >
+                                  <option value="Beginner" style={{ background: '#191919', color: '#fff' }}>Beginner</option>
+                                  <option value="Intermediate" style={{ background: '#191919', color: '#fff' }}>Intermediate</option>
+                                  <option value="Advanced" style={{ background: '#191919', color: '#fff' }}>Advanced</option>
+                                </select>
+                              </div>
+                              <div style={s.formGroup}>
+                                <label style={s.label}>Bobot Nilai (Poin)</label>
                                 <input 
-                                  type="radio"
-                                  name={`correct-radio-${qIdx}`}
-                                  checked={opt.is_correct}
-                                  onChange={() => handleOptionCorrectChange(qIdx, oIdx)}
-                                  style={{ accentColor: 'var(--azure)', cursor: 'pointer' }}
-                                />
-                                <span style={{ color: 'var(--grey-blue)', fontWeight: 600, fontSize: '0.85rem' }}>{opt.id}</span>
-                                <input 
-                                  type="text"
-                                  required
-                                  disabled={q.type === 'TrueFalse'}
-                                  value={opt.text}
-                                  onChange={(e) => handleOptionTextChange(qIdx, oIdx, e.target.value)}
-                                  placeholder={`Option ${opt.id} text`}
+                                  type="number"
+                                  min="1"
+                                  value={q.weight}
+                                  onChange={(e) => handleQuestionChange(qIdx, 'weight', parseInt(e.target.value) || 1)}
                                   style={s.input}
                                 />
                               </div>
-                            ))}
-                          </div>
-                        )}
+                            </div>
 
-                        {/* Essay Expected Answer */}
-                        {q.type === 'Essay' && (
-                          <div style={{ ...s.formGroup, marginTop: 12 }}>
-                            <label style={s.label}>Expected Correct Answer</label>
-                            <textarea
-                              value={q.correct_answer || ''}
-                              onChange={(e) => handleQuestionChange(qIdx, 'correct_answer', e.target.value)}
-                              placeholder="Describe the expected correct response model..."
-                              style={s.input}
-                            />
-                          </div>
-                        )}
+                            {/* Options for MCQ / TF */}
+                            {(q.type === 'MultipleChoice' || q.type === 'TrueFalse') && (
+                              <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                                <label style={s.label}>Opsi Jawaban & Jawaban Benar</label>
+                                {q.options.map((opt, oIdx) => (
+                                  <div key={opt.id} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                                    <input 
+                                      type="radio"
+                                      name={`correct-radio-${qIdx}`}
+                                      checked={opt.is_correct}
+                                      onChange={() => handleOptionCorrectChange(qIdx, oIdx)}
+                                      style={{ accentColor: 'var(--azure)', cursor: 'pointer' }}
+                                    />
+                                    <span style={{ color: 'var(--grey-blue)', fontWeight: 600, fontSize: '0.85rem' }}>{opt.id}</span>
+                                    <input 
+                                      type="text"
+                                      required
+                                      disabled={q.type === 'TrueFalse'}
+                                      value={opt.text}
+                                      onChange={(e) => handleOptionTextChange(qIdx, oIdx, e.target.value)}
+                                      placeholder={`Teks Opsi ${opt.id}`}
+                                      style={s.input}
+                                    />
+                                  </div>
+                                ))}
+                              </div>
+                            )}
 
-                        <div style={{ ...s.formGroup, marginTop: 12 }}>
-                          <label style={s.label}>Explanation (Optional)</label>
-                          <input 
-                            type="text"
-                            value={q.explanation || ''}
-                            onChange={(e) => handleQuestionChange(qIdx, 'explanation', e.target.value)}
-                            placeholder="Why is this answer correct?"
-                            style={s.input}
-                          />
-                        </div>
-                      </div>
-                    ))
-                  )}
+                            {/* Essay Expected Answer */}
+                            {q.type === 'Essay' && (
+                              <div style={{ ...s.formGroup, marginTop: 12 }}>
+                                <label style={s.label}>Model Jawaban yang Benar</label>
+                                <textarea
+                                  value={q.correct_answer || ''}
+                                  onChange={(e) => handleQuestionChange(qIdx, 'correct_answer', e.target.value)}
+                                  placeholder="Deskripsikan jawaban esai yang benar..."
+                                  style={s.input}
+                                />
+                              </div>
+                            )}
+
+                            <div style={{ ...s.formGroup, marginTop: 12 }}>
+                              <label style={s.label}>Penjelasan Jawaban (Opsional)</label>
+                              <input 
+                                type="text"
+                                value={q.explanation || ''}
+                                onChange={(e) => handleQuestionChange(qIdx, 'explanation', e.target.value)}
+                                placeholder="Mengapa jawaban ini benar?"
+                                style={s.input}
+                              />
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+
+                  <div style={s.modalFooter}>
+                    <div style={{ marginRight: 'auto', display: 'flex', gap: 12 }}>
+                      <button type="button" onClick={() => setModalStep(1)} style={s.cancelBtn}>Sebelumnya</button>
+                    </div>
+                    <button type="button" onClick={() => setShowManualModal(false)} style={s.cancelBtn}>Batal</button>
+                    <button 
+                      type="submit" 
+                      disabled={savingManualQuiz || manualQuestions.length < 10} 
+                      style={{
+                        ...s.submitBtn,
+                        opacity: (savingManualQuiz || manualQuestions.length < 10) ? 0.6 : 1,
+                        cursor: (savingManualQuiz || manualQuestions.length < 10) ? 'not-allowed' : 'pointer'
+                      }}
+                    >
+                      {savingManualQuiz ? 'Menyimpan...' : 'Buat Quiz'}
+                    </button>
+                  </div>
                 </div>
-              </div>
-
-              <div style={s.modalFooter}>
-                <button type="button" onClick={() => setShowManualModal(false)} style={s.cancelBtn}>Cancel</button>
-                <button type="submit" disabled={savingManualQuiz} style={s.submitBtn}>
-                  {savingManualQuiz ? 'Saving...' : 'Save Quiz'}
-                </button>
-              </div>
+              )}
             </form>
           </div>
         </div>
@@ -1498,6 +1755,59 @@ const s: Record<string, React.CSSProperties> = {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
+    cursor: 'pointer',
+  },
+  draftPanel: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: '16px 20px',
+    background: 'rgba(65, 150, 240, 0.06)',
+    border: '1px solid rgba(65, 150, 240, 0.2)',
+    borderRadius: '12px',
+    marginBottom: '24px',
+    flexWrap: 'wrap',
+    gap: '16px',
+  },
+  iconWrapDraft: {
+    width: '36px',
+    height: '36px',
+    borderRadius: '8px',
+    background: 'rgba(65, 150, 240, 0.1)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  draftName: {
+    fontSize: '0.95rem',
+    fontWeight: 700,
+    color: '#ffffff',
+    margin: 0,
+  },
+  draftMeta: {
+    fontSize: '0.8rem',
+    color: 'var(--grey-blue)',
+    display: 'block',
+    marginTop: '2px',
+  },
+  resumeBtn: {
+    padding: '8px 16px',
+    borderRadius: '6px',
+    border: 'none',
+    background: 'linear-gradient(135deg, var(--navy), var(--m-blue))',
+    color: '#ffffff',
+    fontSize: '0.82rem',
+    fontWeight: 600,
+    cursor: 'pointer',
+  },
+  discardBtn: {
+    padding: '8px 16px',
+    borderRadius: '6px',
+    border: '1px solid rgba(244, 67, 54, 0.25)',
+    background: 'rgba(244, 67, 54, 0.05)',
+    color: '#FF5252',
+    fontSize: '0.82rem',
+    fontWeight: 600,
     cursor: 'pointer',
   }
 };
