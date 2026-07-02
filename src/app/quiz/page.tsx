@@ -10,16 +10,19 @@ import QuizTimer from '../../components/quiz/QuizTimer';
 import { Quiz, QuizQuestion, DifficultyLevel, QuestionType } from '../../types/quiz.types';
 import { apiGet, apiPost } from '../../lib/api';
 import { getStoredToken } from '../../services/auth';
-import { Loader2, AlertCircle } from 'lucide-react';
+import { Loader2, AlertCircle, Calendar, Clock, Award, ShieldAlert, CheckCircle, Brain, Play } from 'lucide-react';
 
 interface QuizContentProps {
   quiz: Quiz;
   questionsList: QuizQuestion[];
   onBack: () => void;
+  initialAttemptDetails: any;
 }
 
-function QuizContent({ quiz, questionsList, onBack }: QuizContentProps) {
+function QuizContent({ quiz, questionsList, onBack, initialAttemptDetails }: QuizContentProps) {
+  const router = useRouter();
   const [view, setView] = useState<'home' | 'quiz' | 'result'>('home');
+  const [attemptDetails, setAttemptDetails] = useState<any>(initialAttemptDetails);
   
   let userId = 'mock-user-123';
   if (typeof window !== 'undefined') {
@@ -38,14 +41,63 @@ function QuizContent({ quiz, questionsList, onBack }: QuizContentProps) {
     submitQuiz, tickTime, setRawState
   } = useQuiz({ quiz, questionsList, userId });
 
+  // Status Pengerjaan (Terlambat / Selesai / Ditugaskan)
+  const isFinished = !!attemptDetails;
+  const isOverdue = !isFinished && quiz.created_at && Date.now() > new Date(quiz.created_at).getTime(); 
+  // Wait, let's use the deadline/tenggat_pengerjaan if available
+  const deadlineTime = quiz.created_at ? new Date(quiz.created_at).getTime() : 0; // fallback to created_at if no deadline
+  const hasDeadlinePassed = deadlineTime > 0 && Date.now() > deadlineTime;
+  
+  let statusPengerjaan = 'Ditugaskan';
+  if (isFinished) {
+    statusPengerjaan = 'Selesai';
+  } else if (hasDeadlinePassed) {
+    statusPengerjaan = 'Terlambat';
+  }
+
+  // Timer Continuity logic
+  useEffect(() => {
+    if (view === 'quiz') {
+      const storageKey = `nalara_quiz_end_${quiz.id}`;
+      let endTime = localStorage.getItem(storageKey);
+      
+      if (!endTime) {
+        // Set new end time
+        const newEnd = Date.now() + quiz.time_limit_minutes * 60 * 1000;
+        localStorage.setItem(storageKey, String(newEnd));
+        endTime = String(newEnd);
+      }
+      
+      const updateTimer = () => {
+        const remaining = Math.max(0, Math.floor((Number(endTime) - Date.now()) / 1000));
+        setRawState(prev => ({
+          ...prev,
+          timeLeftSeconds: remaining
+        }));
+        
+        if (remaining <= 0) {
+          handleSubmit();
+        }
+      };
+      
+      updateTimer();
+      const interval = setInterval(updateTimer, 1000);
+      return () => clearInterval(interval);
+    }
+  }, [view]);
+
   const handleStart = async () => { 
+    if (statusPengerjaan === 'Terlambat') {
+      alert('Tenggat waktu kuis ini sudah lewat. Anda tidak dapat mengerjakan kuis ini.');
+      return;
+    }
     await startAttempt(); 
     setView('quiz'); 
   };
 
   const handleSubmit = async () => {
-    if (!state.attempt || state.isCompleted) return;
-
+    localStorage.removeItem(`nalara_quiz_end_${quiz.id}`);
+    
     setRawState((prev) => ({ ...prev, isSubmitting: true }));
     const submittedAt = new Date().toISOString();
     const timeSpent = Math.max(
@@ -56,6 +108,8 @@ function QuizContent({ quiz, questionsList, onBack }: QuizContentProps) {
     let localScore = 0;
     const maxScore = state.questions.reduce((acc, q) => acc + q.points, 0);
     const answersToSync: any[] = [];
+    let correctCount = 0;
+    let incorrectCount = 0;
 
     state.questions.forEach((question) => {
       const answer = state.answers[question.id];
@@ -75,6 +129,12 @@ function QuizContent({ quiz, questionsList, onBack }: QuizContentProps) {
         const standardCleanedValue = correctAnswerString.replace(/\./g, '').replace(/,/g, '.');
         const correctVal = parseFloat(standardCleanedValue);
         isCorrect = answer?.numeric_answer === correctVal;
+      }
+
+      if (isCorrect) {
+        correctCount++;
+      } else {
+        incorrectCount++;
       }
 
       const pointsAwarded = isCorrect ? question.points : 0;
@@ -126,12 +186,28 @@ function QuizContent({ quiz, questionsList, onBack }: QuizContentProps) {
         finalScore = Number(resData.score);
         finalPercentage = parseFloat(((finalScore / maxScore) * 100).toFixed(2));
       }
+      
+      // Update local attempt details
+      setAttemptDetails({
+        score: finalScore,
+        percentage: finalPercentage,
+        correct_count: resData.benar || correctCount,
+        incorrect_count: resData.salah || incorrectCount,
+        submitted_at: submittedAt
+      });
     } catch (err) {
       console.warn('API quiz submission failed, relying on client calculation:', err);
+      setAttemptDetails({
+        score: finalScore,
+        percentage: finalPercentage,
+        correct_count: correctCount,
+        incorrect_count: incorrectCount,
+        submitted_at: submittedAt
+      });
     }
 
     const finalAttempt = {
-      ...state.attempt,
+      ...state.attempt!,
       submitted_at: submittedAt,
       score: finalScore,
       percentage: finalPercentage,
@@ -148,41 +224,135 @@ function QuizContent({ quiz, questionsList, onBack }: QuizContentProps) {
     setView('result');
   };
 
+  const currentQuestion = state.questions[state.currentQuestionIndex];
+  const currentAnswer = state.answers[currentQuestion?.id] || {};
   const totalQuestions = state.questions.length;
-  const answeredQuestions = state.questions.filter((q) => {
-    const ans = state.answers[q.id];
-    if (!ans) return false;
-    return (
-      ans.selected_option_id !== undefined ||
-      (ans.selected_option_ids && ans.selected_option_ids.length > 0) ||
-      ans.numeric_answer !== undefined ||
-      (ans.text_answer !== undefined && ans.text_answer !== '')
-    );
-  }).length;
-  const progress = totalQuestions > 0 ? (answeredQuestions / totalQuestions) * 100 : 0;
+  const progress = ((state.currentQuestionIndex + 1) / totalQuestions) * 100;
 
   return (
-    <main style={{ padding: '2rem 1.5rem', maxWidth: '900px', margin: '0 auto' }}>
+    <main style={{ padding: '2rem 1.5rem', maxWidth: '900px', margin: '0 auto', fontFamily: 'Inter, system-ui, sans-serif' }}>
       <button onClick={onBack} style={{ background: 'none', border: 'none', display: 'inline-flex', alignItems: 'center', gap: '0.5rem', marginBottom: '2rem', color: 'var(--azure)', fontSize: '0.9rem', textDecoration: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>
         ← Kembali ke Kelas
       </button>
 
       {view === 'home' && (
-        <Card glow style={{ padding: '3rem', textAlign: 'center' }}>
-          <span className="badge-tech badge-tech-accent" style={{ marginBottom: '1rem', display: 'inline-flex' }}>Quiz Pembelajaran</span>
-          <h2 style={{ fontSize: '1.8rem', marginBottom: '1rem' }}>{quiz.title}</h2>
-          <p style={{ marginBottom: '2rem', maxWidth: '500px', margin: '0 auto 2rem auto' }}>{quiz.description || 'Selesaikan kuis ini untuk menguji pemahaman Anda.'}</p>
-          <Button id="btn-start-quiz" onClick={handleStart} variant="primary" style={{ padding: '0.85rem 2.5rem', fontSize: '1.05rem' }}>
-            Mulai Quiz
-          </Button>
-        </Card>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+          {/* Detail Quiz Card */}
+          <Card glow style={{ padding: '2.5rem', position: 'relative' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1.5rem', marginBottom: '2rem' }}>
+              <div>
+                <span className="badge-tech" style={{ background: 'rgba(65, 150, 240, 0.1)', color: 'var(--azure)', marginBottom: '0.75rem', display: 'inline-flex' }}>
+                  Detail Quiz
+                </span>
+                <h2 style={{ fontSize: '2rem', fontWeight: 800, color: '#fff', margin: '0 0 0.5rem 0' }}>{quiz.title}</h2>
+              </div>
+              <span className="badge-tech" style={{
+                background: statusPengerjaan === 'Selesai' ? 'rgba(0, 200, 83, 0.1)' : statusPengerjaan === 'Terlambat' ? 'rgba(255, 82, 82, 0.1)' : 'rgba(255, 168, 38, 0.1)',
+                color: statusPengerjaan === 'Selesai' ? '#00C853' : statusPengerjaan === 'Terlambat' ? '#FF5252' : '#FFA826',
+                fontWeight: 700,
+                fontSize: '0.9rem',
+                padding: '6px 16px',
+                borderRadius: '8px'
+              }}>
+                {statusPengerjaan}
+              </span>
+            </div>
+
+            {/* Quiz Specs Grid */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1.5rem', marginBottom: '2rem', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '2rem' }}>
+              <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                <Clock size={20} color="var(--grey-blue)" />
+                <div>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--grey)' }}>Waktu Pengerjaan</div>
+                  <strong style={{ color: '#fff' }}>{quiz.time_limit_minutes} Menit</strong>
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                <Calendar size={20} color="var(--grey-blue)" />
+                <div>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--grey)' }}>Tenggat Pengerjaan</div>
+                  <strong style={{ color: '#fff' }}>{quiz.created_at ? new Date(quiz.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—'}</strong>
+                </div>
+              </div>
+              {quiz.module_id && (
+                <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                  <Award size={20} color="var(--grey-blue)" />
+                  <div>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--grey)' }}>Modul Asal</div>
+                    <strong style={{ color: '#fff' }}>{quiz.module_id}</strong>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Preparation and Rules */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', marginBottom: '2.5rem' }}>
+              <div>
+                <h4 style={{ color: '#fff', fontSize: '1rem', fontWeight: 600, margin: '0 0 0.5rem 0' }}>Persiapan</h4>
+                <p style={{ color: 'var(--grey-blue)', fontSize: '0.9rem', lineHeight: 1.6, margin: 0 }}>
+                  Persiapkan diri Anda, pastikan koneksi internet stabil dan gunakan ruang belajar yang tenang agar dapat fokus.
+                </p>
+              </div>
+              <div>
+                <h4 style={{ color: '#fff', fontSize: '1rem', fontWeight: 600, margin: '0 0 0.5rem 0' }}>Aturan Kuis</h4>
+                <ul style={{ color: 'var(--grey-blue)', fontSize: '0.9rem', lineHeight: 1.7, margin: 0, paddingLeft: '1.2rem' }}>
+                  <li>Setiap kuis hanya dapat dikerjakan satu kali.</li>
+                  <li>Waktu pengerjaan akan terus berjalan setelah dimulai, meskipun Anda memuat ulang halaman atau keluar dari web.</li>
+                  <li>Pastikan Anda mengklik tombol "Selesai" sebelum batas waktu habis untuk menyimpan jawaban.</li>
+                </ul>
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div style={{ display: 'flex', justifyContent: 'center' }}>
+              {statusPengerjaan === 'Terlambat' && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(255, 82, 82, 0.1)', color: '#FF5252', padding: '12px 24px', borderRadius: '8px', fontSize: '0.9rem' }}>
+                  <ShieldAlert size={16} /> Anda sudah melewati batas waktu pengerjaan.
+                </div>
+              )}
+              {statusPengerjaan === 'Ditugaskan' && (
+                <Button id="btn-start-quiz" onClick={handleStart} variant="primary" style={{ padding: '1rem 3.5rem', fontSize: '1.1rem', gap: '8px' }}>
+                  <Play size={16} fill="#fff" /> Mulai Kerjakan Quiz
+                </Button>
+              )}
+            </div>
+          </Card>
+
+          {/* Rekap Hasil Quiz (Only visible if completed) */}
+          {isFinished && (
+            <Card style={{ padding: '2.5rem', textAlign: 'center', background: 'rgba(30,30,30,0.3)', border: '1px solid rgba(255,255,255,0.06)' }}>
+              <div style={{ width: 56, height: 56, borderRadius: '50%', background: 'rgba(0, 200, 83, 0.1)', display: 'flex', alignItems: 'center', justifyAll: 'center', margin: '0 auto 1.5rem', justifyContent: 'center' }}>
+                <CheckCircle size={28} color="#00C853" />
+              </div>
+              <h3 style={{ fontSize: '1.5rem', fontWeight: 700, color: '#fff', margin: '0 0 1.5rem 0' }}>Rekap Hasil Quiz</h3>
+              
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1.5rem', maxWidth: '500px', margin: '0 auto 1.5rem' }}>
+                <div style={{ background: 'rgba(255,255,255,0.02)', padding: '1.25rem', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.04)' }}>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--grey)', marginBottom: '0.5rem' }}>Nilai Quiz</div>
+                  <strong style={{ fontSize: '1.8rem', color: 'var(--lemon)', fontWeight: 800 }}>{attemptDetails?.percentage || attemptDetails?.score || 0}%</strong>
+                </div>
+                <div style={{ background: 'rgba(255,255,255,0.02)', padding: '1.25rem', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.04)' }}>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--grey)', marginBottom: '0.5rem' }}>Jumlah Benar</div>
+                  <strong style={{ fontSize: '1.8rem', color: '#00C853', fontWeight: 800 }}>{attemptDetails?.correct_count ?? 0}</strong>
+                </div>
+                <div style={{ background: 'rgba(255,255,255,0.02)', padding: '1.25rem', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.04)' }}>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--grey)', marginBottom: '0.5rem' }}>Jumlah Salah</div>
+                  <strong style={{ fontSize: '1.8rem', color: '#FF5252', fontWeight: 800 }}>{attemptDetails?.incorrect_count ?? 0}</strong>
+                </div>
+              </div>
+            </Card>
+          )}
+        </div>
       )}
 
-      {view === 'quiz' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '2rem', flexWrap: 'wrap', position: 'sticky', top: 0, zIndex: 10, background: 'var(--bg-main, #0f172a)', padding: '1rem 0', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+      {view === 'quiz' && currentQuestion && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+          {/* Header pengerjaan */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '2rem', flexWrap: 'wrap' }}>
             <div style={{ flex: 1 }}>
-              <div style={{ fontSize: '0.9rem', color: 'var(--grey-blue)', marginBottom: '0.5rem' }}>Progres Pengerjaan: {answeredQuestions}/{totalQuestions} Soal Terjawab</div>
+              <div style={{ fontSize: '0.9rem', color: 'var(--grey-blue)', marginBottom: '0.5rem' }}>
+                Soal {state.currentQuestionIndex + 1} dari {totalQuestions}
+              </div>
               <div style={{ height: '6px', borderRadius: '3px', background: 'rgba(255,255,255,0.05)', overflow: 'hidden' }}>
                 <div style={{ height: '100%', width: `${progress}%`, background: 'linear-gradient(90deg, var(--navy), var(--azure))', transition: 'width 0.3s ease' }} />
               </div>
@@ -190,54 +360,71 @@ function QuizContent({ quiz, questionsList, onBack }: QuizContentProps) {
             <QuizTimer secondsLeft={state.timeLeftSeconds} formattedTime={new Date(state.timeLeftSeconds * 1000).toISOString().substring(14, 19)} onTick={tickTime} isRunning={!state.isCompleted} />
           </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-            {state.questions.map((question, idx) => {
-              const answer = state.answers[question.id] || {};
-              return (
-                <QuestionCard 
-                  key={question.id}
-                  question={question} 
-                  index={idx} 
-                  totalQuestions={totalQuestions}
-                  selectedOptionId={answer.selected_option_id} 
-                  selectedOptionIds={answer.selected_option_ids}
-                  numericAnswer={answer.numeric_answer} 
-                  textAnswer={answer.text_answer}
-                  onMCQSelect={(id) => selectMCQOption(question.id, id)}
-                  onMultiSelect={(id) => selectMultiSelectOption(question.id, id)}
-                  onNumericChange={(v) => setNumericAnswer(question.id, v)}
-                  onTextChange={(v) => setShortAnswer(question.id, v)}
-                />
-              );
-            })}
-          </div>
+          {/* Question Card */}
+          <QuestionCard question={currentQuestion} index={state.currentQuestionIndex} totalQuestions={totalQuestions}
+            selectedOptionId={currentAnswer.selected_option_id} selectedOptionIds={currentAnswer.selected_option_ids}
+            numericAnswer={currentAnswer.numeric_answer} textAnswer={currentAnswer.text_answer}
+            onMCQSelect={(id) => selectMCQOption(currentQuestion.id, id)}
+            onMultiSelect={(id) => selectMultiSelectOption(currentQuestion.id, id)}
+            onNumericChange={(v) => setNumericAnswer(currentQuestion.id, v)}
+            onTextChange={(v) => setShortAnswer(currentQuestion.id, v)}
+          />
 
-          <div style={{ display: 'flex', justifyContent: 'center', marginTop: '1rem' }}>
-            <Button id="btn-submit" onClick={handleSubmit} variant="primary" style={{ padding: '1rem 3rem', fontSize: '1.1rem' }} disabled={state.isSubmitting}>
-              {state.isSubmitting ? 'Mengirim...' : 'Kirim Semua Jawaban ✓'}
+          {/* Navigation Buttons */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', marginTop: '1rem' }}>
+            <Button id="btn-prev" onClick={prevQuestion} variant={state.currentQuestionIndex === 0 ? 'disabled' : 'secondary'} disabled={state.currentQuestionIndex === 0}>
+              ← Sebelumnya
             </Button>
+            
+            <div style={{ display: 'flex', gap: '10px' }}>
+              {state.currentQuestionIndex === totalQuestions - 1 ? (
+                <Button id="btn-submit" onClick={handleSubmit} variant="primary" style={{ background: '#00C853', borderColor: '#00C853' }} disabled={state.isSubmitting}>
+                  {state.isSubmitting ? 'Mengirim...' : 'Selesai ✓'}
+                </Button>
+              ) : (
+                <Button id="btn-next" onClick={nextQuestion} variant="primary">
+                  Selanjutnya →
+                </Button>
+              )}
+            </div>
           </div>
         </div>
       )}
 
       {view === 'result' && state.attempt && (
-        <Card style={{ padding: '3rem', textAlign: 'center' }}>
-          <h2 style={{ fontSize: '1.8rem', marginBottom: '2rem' }}>Hasil Quiz</h2>
-          <div style={{ fontSize: '3.5rem', fontWeight: 800, marginBottom: '0.5rem' }}>{state.attempt.percentage}%</div>
-          <span className={`badge-tech ${state.attempt.percentage! >= quiz.passing_score ? '' : 'badge-tech-accent'}`}>
+        <Card style={{ padding: '3.5rem', textAlign: 'center' }}>
+          <div style={{ width: 64, height: 64, borderRadius: '50%', background: 'rgba(0, 200, 83, 0.1)', display: 'flex', alignItems: 'center', justifyAll: 'center', margin: '0 auto 1.5rem', justifyContent: 'center' }}>
+            <CheckCircle size={32} color="#00C853" />
+          </div>
+          <h2 style={{ fontSize: '2rem', fontWeight: 800, color: '#fff', margin: '0 0 1.5rem 0' }}>Quiz Selesai Dikirim!</h2>
+          
+          <div style={{ fontSize: '4rem', fontWeight: 900, color: 'var(--lemon)', marginBottom: '0.5rem', fontFamily: 'Georgia, serif' }}>
+            {state.attempt.percentage}%
+          </div>
+          
+          <span className="badge-tech" style={{
+            background: state.attempt.percentage! >= quiz.passing_score ? 'rgba(0, 200, 83, 0.1)' : 'rgba(255, 82, 82, 0.1)',
+            color: state.attempt.percentage! >= quiz.passing_score ? '#00C853' : '#FF5252',
+            fontWeight: 700,
+            fontSize: '0.9rem',
+            padding: '6px 18px'
+          }}>
             {state.attempt.percentage! >= quiz.passing_score ? '✅ LULUS' : '❌ TIDAK LULUS'}
           </span>
-          <p style={{ marginTop: '1.5rem', marginBottom: '2rem' }}>
-            Skor: {state.attempt.score} poin | Waktu: {Math.floor(state.attempt.time_spent_seconds! / 60)}m {state.attempt.time_spent_seconds! % 60}s
+
+          <p style={{ marginTop: '1.5rem', marginBottom: '2.5rem', color: 'var(--grey-blue)', fontSize: '0.95rem' }}>
+            Skor: {state.attempt.score} poin | Waktu Pengerjaan: {Math.floor(state.attempt.time_spent_seconds! / 60)}m {state.attempt.time_spent_seconds! % 60}s
           </p>
-          <Button id="btn-back" onClick={onBack} variant="secondary">Kembali ke Kelas</Button>
+          <Button id="btn-back" onClick={onBack} variant="secondary" style={{ padding: '0.75rem 2rem' }}>
+            Kembali ke Kelas
+          </Button>
         </Card>
       )}
     </main>
   );
 }
 
-function QuizPageContent() {
+export default function QuizPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const quizId = searchParams.get('id');
@@ -246,6 +433,7 @@ function QuizPageContent() {
   const [error, setError] = useState<string | null>(null);
   const [quiz, setQuiz] = useState<Quiz | null>(null);
   const [questions, setQuestions] = useState<QuizQuestion[]>([]);
+  const [initialAttemptDetails, setInitialAttemptDetails] = useState<any>(null);
 
   useEffect(() => {
     if (!quizId) {
@@ -285,7 +473,7 @@ function QuizPageContent() {
           difficulty_level: (quizData.difficulty?.toLowerCase() as DifficultyLevel) || 'beginner',
           is_published: quizData.is_published ?? true,
           created_by: quizData.created_by || null,
-          created_at: quizData.created_at || new Date().toISOString(),
+          created_at: quizData.deadline || quizData.tenggat_pengerjaan || quizData.created_at || new Date().toISOString(), // Use deadline as tenggat_pengerjaan
         };
 
         const mappedQuestions: QuizQuestion[] = (quizData.questions || []).map((q: any, idx: number) => {
@@ -323,6 +511,21 @@ function QuizPageContent() {
             })),
           };
         });
+
+        // Try to fetch quiz attempt rekap to see if already answered
+        try {
+          const rekapRes = await apiGet<any>('/api/quiz/rekap', {
+            token: token || undefined,
+            headers
+          });
+          const rekapList = Array.isArray(rekapRes) ? rekapRes : (rekapRes.data || []);
+          const match = rekapList.find((item: any) => item.uuid_quiz === quizId);
+          if (match) {
+            setInitialAttemptDetails(match);
+          }
+        } catch (rekapErr) {
+          console.warn('Failed to fetch initial attempt rekap:', rekapErr);
+        }
 
         setQuiz(mappedQuiz);
         setQuestions(mappedQuestions);
@@ -368,6 +571,7 @@ function QuizPageContent() {
     <QuizContent 
       quiz={quiz} 
       questionsList={questions} 
+      initialAttemptDetails={initialAttemptDetails}
       onBack={() => {
         if (quiz.module_id) {
           router.push(`/student/courses/detail?id=${quiz.module_id}`);
@@ -376,24 +580,5 @@ function QuizPageContent() {
         }
       }} 
     />
-  );
-}
-
-export default function QuizPage() {
-  return (
-    <Suspense fallback={
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '50vh', gap: '1rem' }}>
-        <Loader2 size={36} color="var(--azure)" style={{ animation: 'spin 1s linear infinite' }} />
-        <span style={{ color: 'var(--grey-blue)' }}>Loading...</span>
-        <style>{`
-          @keyframes spin {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(360deg); }
-          }
-        `}</style>
-      </div>
-    }>
-      <QuizPageContent />
-    </Suspense>
   );
 }
