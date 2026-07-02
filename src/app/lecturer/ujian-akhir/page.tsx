@@ -122,8 +122,8 @@ export default function UjianAkhirPage() {
 
         return {
           id: q.uuid_quiz || q.id,
-          title: q.title || 'Ujian Tanpa Judul',
-          courseTitle: course?.title || 'Kelas Nalara',
+          title: q.nama_quiz || q.title || 'Ujian Tanpa Judul',
+          courseTitle: q.asal_pembelajaran || course?.title || 'Kelas Nalara',
           courseId: q.uuid_pembelajaran || '',
           questionsCount,
           passingScore: q.passing_score || 70,

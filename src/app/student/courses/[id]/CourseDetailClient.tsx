@@ -3,7 +3,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { 
   BookOpen, Loader2, AlertCircle, ChevronRight, Video, 
-  BookOpenCheck, FlaskConical, PencilLine, ArrowLeft, Layers
+  BookOpenCheck, FlaskConical, PencilLine, ArrowLeft, Layers,
+  Brain
 } from 'lucide-react';
 import { useRouter, useParams } from 'next/navigation';
 import { apiGet } from '@/lib/api';
@@ -41,6 +42,7 @@ export default function CourseDetailClient() {
   const [course, setCourse] = useState<Pembelajaran | null>(null);
   const [moduls, setModuls] = useState<Modul[]>([]);
   const [tugasMap, setTugasMap] = useState<Record<string, Tugas[]>>({});
+  const [quizMap, setQuizMap] = useState<Record<string, any[]>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -90,6 +92,7 @@ export default function CourseDetailClient() {
 
       // Fetch tugas for each modul
       const newTugasMap: Record<string, Tugas[]> = {};
+      const newQuizMap: Record<string, any[]> = {};
       await Promise.all(
         modulList.map(async (m) => {
           const tugasRes = await apiGet<any>(
@@ -100,9 +103,23 @@ export default function CourseDetailClient() {
             : (tugasRes as any).data ?? [];
           tugasList = tugasList.map(t => ({ ...t, id: t.uuid_tugas || t.id }));
           newTugasMap[m.id] = tugasList;
+
+          try {
+            const quizRes = await apiGet<any>(
+              `/api/quiz?uuid_pembelajaran=${courseId}&uuid_modul=${m.id}`, opts
+            );
+            let quizList: any[] = Array.isArray(quizRes)
+              ? quizRes
+              : (quizRes as any).data ?? [];
+            newQuizMap[m.id] = quizList;
+          } catch (err) {
+            console.error(`Failed to fetch quiz for module ${m.id}:`, err);
+            newQuizMap[m.id] = [];
+          }
         })
       );
       setTugasMap(newTugasMap);
+      setQuizMap(newQuizMap);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Gagal memuat detail kelas.');
     } finally {
@@ -193,26 +210,46 @@ export default function CourseDetailClient() {
                     </div>
 
                     <div style={s.materiList}>
-                      {tugasList.length === 0 ? (
+                      {tugasList.length === 0 && (quizMap[modul.id] || []).length === 0 ? (
                         <p style={s.noMateri}>Belum ada materi atau tugas di modul ini.</p>
                       ) : (
-                        tugasList.map((t) => (
-                          <div 
-                            key={t.id} 
-                            style={s.materiItem} 
-                            onClick={() => handleTugasClick(t)}
-                            className="materi-item-hover"
-                          >
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                              {typeIcons[t.type]}
-                              <span style={s.materiTitle}>{t.title}</span>
+                        <>
+                          {tugasList.map((t) => (
+                            <div 
+                              key={t.id} 
+                              style={s.materiItem} 
+                              onClick={() => handleTugasClick(t)}
+                              className="materi-item-hover"
+                            >
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                                {typeIcons[t.type]}
+                                <span style={s.materiTitle}>{t.title}</span>
+                              </div>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                <span style={s.materiType}>{typeLabels[t.type]}</span>
+                                <ChevronRight size={14} color="var(--grey-blue)" />
+                              </div>
                             </div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                              <span style={s.materiType}>{typeLabels[t.type]}</span>
-                              <ChevronRight size={14} color="var(--grey-blue)" />
+                          ))}
+
+                          {(quizMap[modul.id] || []).map((q: any) => (
+                            <div 
+                              key={q.uuid_quiz || q.id} 
+                              style={s.materiItem} 
+                              onClick={() => router.push(`/quiz?id=${q.uuid_quiz || q.id}`)}
+                              className="materi-item-hover"
+                            >
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                                <Brain size={16} color="#FFD700" />
+                                <span style={s.materiTitle}>{q.nama_quiz || q.title || 'Kuis'}</span>
+                              </div>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                <span style={{ ...s.materiType, color: '#FFD700' }}>Kuis ({q.rasio_pengerjaan || '0.00%'})</span>
+                                <ChevronRight size={14} color="var(--grey-blue)" />
+                              </div>
                             </div>
-                          </div>
-                        ))
+                          ))}
+                        </>
                       )}
                     </div>
                   </div>

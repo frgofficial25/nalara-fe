@@ -180,8 +180,8 @@ export default function QuizzesPage() {
 
       setQuizzes(list.map((q: any) => ({
         id: q.uuid_quiz || q.id || q.uuid,
-        title: q.title || 'Untitled Quiz',
-        moduleTitle: q.modul?.title || q.pembelajaran?.title || '-',
+        title: q.nama_quiz || q.title || 'Untitled Quiz',
+        moduleTitle: q.asal_modul || q.modul?.title || q.asal_pembelajaran || q.pembelajaran?.title || '-',
         count: q.questions?.length || 0,
         difficulty: q.difficulty || 'Beginner'
       })));

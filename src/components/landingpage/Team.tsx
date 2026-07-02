@@ -12,7 +12,7 @@ interface Member {
 const commissioners: Member[] = [
   {
     name: "Athallah Anargya Mahardika",
-    role: "LEARNING & CURRICULUM ADVISOR",
+    role: "COMMISIONER",
     image: "/image/team/athalah.png"
   },
   {
@@ -23,7 +23,7 @@ const commissioners: Member[] = [
   },
   {
     name: "Aryan Zaky Prayogo",
-    role: "INDEPENDENT COMMISSIONER",
+    role: "COMMISSIONER",
     image: "/image/team/aryan.png"
   }
 ];
@@ -61,7 +61,7 @@ const cSuiteAndDeputies: Member[] = [
 
 const boardOfManagers: Member[] = [
   {
-    name: "Gerard Breunerd",
+    name: "Gerard Breunerd Pangaroan",
     role: "TECHNICAL PROJECT MANAGER",
     image: "/image/team/gerard.png"
   },
@@ -71,7 +71,7 @@ const boardOfManagers: Member[] = [
     image: "/image/team/rifky.png"
   },
   {
-    name: "Sayyid Hasher",
+    name: "Sayyid Hasher Ghneimsylmi",
     role: "CREATIVE DESIGN MANAGER",
     image: "/image/team/sayyid.png"
   },
