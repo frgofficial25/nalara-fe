@@ -148,9 +148,18 @@ function QuizContent({ quiz, questionsList, onBack }: QuizContentProps) {
     setView('result');
   };
 
-  const currentQuestion = state.questions[state.currentQuestionIndex];
-  const currentAnswer = state.answers[currentQuestion?.id] || {};
-  const progress = state.attempt ? ((state.currentQuestionIndex + 1) / state.questions.length) * 100 : 0;
+  const totalQuestions = state.questions.length;
+  const answeredQuestions = state.questions.filter((q) => {
+    const ans = state.answers[q.id];
+    if (!ans) return false;
+    return (
+      ans.selected_option_id !== undefined ||
+      (ans.selected_option_ids && ans.selected_option_ids.length > 0) ||
+      ans.numeric_answer !== undefined ||
+      (ans.text_answer !== undefined && ans.text_answer !== '')
+    );
+  }).length;
+  const progress = totalQuestions > 0 ? (answeredQuestions / totalQuestions) * 100 : 0;
 
   return (
     <main style={{ padding: '2rem 1.5rem', maxWidth: '900px', margin: '0 auto' }}>
@@ -169,11 +178,11 @@ function QuizContent({ quiz, questionsList, onBack }: QuizContentProps) {
         </Card>
       )}
 
-      {view === 'quiz' && currentQuestion && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '2rem', flexWrap: 'wrap' }}>
+      {view === 'quiz' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '2rem', flexWrap: 'wrap', position: 'sticky', top: 0, zIndex: 10, background: 'var(--bg-main, #0f172a)', padding: '1rem 0', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
             <div style={{ flex: 1 }}>
-              <div style={{ fontSize: '0.9rem', color: 'var(--grey-blue)', marginBottom: '0.5rem' }}>Progress: {state.currentQuestionIndex + 1}/{state.questions.length}</div>
+              <div style={{ fontSize: '0.9rem', color: 'var(--grey-blue)', marginBottom: '0.5rem' }}>Progres Pengerjaan: {answeredQuestions}/{totalQuestions} Soal Terjawab</div>
               <div style={{ height: '6px', borderRadius: '3px', background: 'rgba(255,255,255,0.05)', overflow: 'hidden' }}>
                 <div style={{ height: '100%', width: `${progress}%`, background: 'linear-gradient(90deg, var(--navy), var(--azure))', transition: 'width 0.3s ease' }} />
               </div>
@@ -181,20 +190,32 @@ function QuizContent({ quiz, questionsList, onBack }: QuizContentProps) {
             <QuizTimer secondsLeft={state.timeLeftSeconds} formattedTime={new Date(state.timeLeftSeconds * 1000).toISOString().substring(14, 19)} onTick={tickTime} isRunning={!state.isCompleted} />
           </div>
 
-          <QuestionCard question={currentQuestion} index={state.currentQuestionIndex} totalQuestions={state.questions.length}
-            selectedOptionId={currentAnswer.selected_option_id} selectedOptionIds={currentAnswer.selected_option_ids}
-            numericAnswer={currentAnswer.numeric_answer} textAnswer={currentAnswer.text_answer}
-            onMCQSelect={(id) => selectMCQOption(currentQuestion.id, id)}
-            onMultiSelect={(id) => selectMultiSelectOption(currentQuestion.id, id)}
-            onNumericChange={(v) => setNumericAnswer(currentQuestion.id, v)}
-            onTextChange={(v) => setShortAnswer(currentQuestion.id, v)}
-          />
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+            {state.questions.map((question, idx) => {
+              const answer = state.answers[question.id] || {};
+              return (
+                <QuestionCard 
+                  key={question.id}
+                  question={question} 
+                  index={idx} 
+                  totalQuestions={totalQuestions}
+                  selectedOptionId={answer.selected_option_id} 
+                  selectedOptionIds={answer.selected_option_ids}
+                  numericAnswer={answer.numeric_answer} 
+                  textAnswer={answer.text_answer}
+                  onMCQSelect={(id) => selectMCQOption(question.id, id)}
+                  onMultiSelect={(id) => selectMultiSelectOption(question.id, id)}
+                  onNumericChange={(v) => setNumericAnswer(question.id, v)}
+                  onTextChange={(v) => setShortAnswer(question.id, v)}
+                />
+              );
+            })}
+          </div>
 
-          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-            <Button id="btn-prev" onClick={prevQuestion} variant={state.currentQuestionIndex === 0 ? 'disabled' : 'secondary'} disabled={state.currentQuestionIndex === 0}>← Sebelumnya</Button>
-            {state.currentQuestionIndex === state.questions.length - 1
-              ? <Button id="btn-submit" onClick={handleSubmit} variant="primary" disabled={state.isSubmitting}>{state.isSubmitting ? 'Mengirim...' : 'Kirim Jawaban ✓'}</Button>
-              : <Button id="btn-next" onClick={nextQuestion} variant="primary">Selanjutnya →</Button>}
+          <div style={{ display: 'flex', justifyContent: 'center', marginTop: '1rem' }}>
+            <Button id="btn-submit" onClick={handleSubmit} variant="primary" style={{ padding: '1rem 3rem', fontSize: '1.1rem' }} disabled={state.isSubmitting}>
+              {state.isSubmitting ? 'Mengirim...' : 'Kirim Semua Jawaban ✓'}
+            </Button>
           </div>
         </div>
       )}

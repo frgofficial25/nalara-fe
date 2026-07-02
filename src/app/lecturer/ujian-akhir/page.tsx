@@ -473,7 +473,13 @@ export default function UjianAkhirPage() {
                 </div>
               </div>
 
-              <h3 style={s.examTitle}>{exam.title}</h3>
+              <h3 
+                style={{ ...s.examTitle, cursor: 'pointer' }}
+                onClick={() => window.open(`/quiz?id=${exam.id}`, '_blank')}
+                title="Klik untuk preview soal ujian"
+              >
+                {exam.title}
+              </h3>
               <p style={s.examCourse}>{exam.courseTitle}</p>
 
               <div style={s.examMetrics}>

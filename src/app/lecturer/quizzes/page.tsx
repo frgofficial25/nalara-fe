@@ -757,7 +757,11 @@ export default function QuizzesPage() {
           <div style={s.quizGrid}>
             {quizzes.map((quiz) => (
               <div key={quiz.id} className="glass-panel" style={s.quizCard}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <div 
+                  style={{ display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer', flex: 1 }}
+                  onClick={() => window.open(`/quiz?id=${quiz.id}`, '_blank')}
+                  title="Klik untuk melihat detail / preview soal"
+                >
                   <div style={s.iconWrap}>
                     <Brain size={18} color="var(--lemon)" />
                   </div>
