@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { apiGet, apiPost, apiPut, apiDelete } from '@/lib/api';
 import { getStoredToken } from '@/services/auth';
+import { useRouter } from 'next/navigation';
 
 interface Course {
   uuid_pembelajaran: string;
@@ -49,6 +50,7 @@ interface QuizListItem {
 }
 
 export default function QuizzesPage() {
+  const router = useRouter();
   const [courses, setCourses] = useState<Course[]>([]);
   const [modules, setModules] = useState<Module[]>([]);
   const [loading, setLoading] = useState(true);
@@ -759,7 +761,7 @@ export default function QuizzesPage() {
               <div key={quiz.id} className="glass-panel" style={s.quizCard}>
                 <div 
                   style={{ display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer', flex: 1 }}
-                  onClick={() => window.open(`/quiz?id=${quiz.id}`, '_blank')}
+                  onClick={() => router.push(`/quiz?id=${quiz.id}`)}
                   title="Klik untuk melihat detail / preview soal"
                 >
                   <div style={s.iconWrap}>

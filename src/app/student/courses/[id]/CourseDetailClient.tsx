@@ -236,7 +236,7 @@ export default function CourseDetailClient() {
                             <div 
                               key={q.uuid_quiz || q.id} 
                               style={s.materiItem} 
-                              onClick={() => window.open(`/quiz?id=${q.uuid_quiz || q.id}`, '_blank')}
+                              onClick={() => router.push(`/quiz?id=${q.uuid_quiz || q.id}`)}
                               className="materi-item-hover"
                             >
                               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>

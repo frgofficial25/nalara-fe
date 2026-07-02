@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { apiGet, apiPost, apiPut, apiDelete } from '@/lib/api';
 import { getStoredToken } from '@/services/auth';
+import { useRouter } from 'next/navigation';
 
 interface Exam {
   id: string;
@@ -55,6 +56,7 @@ function getAuthHeaders() {
 }
 
 export default function UjianAkhirPage() {
+  const router = useRouter();
   const [exams, setExams] = useState<Exam[]>([]);
   const [courses, setCourses] = useState<Course[]>([]);
   const [modules, setModules] = useState<Module[]>([]);
@@ -475,7 +477,7 @@ export default function UjianAkhirPage() {
 
               <h3 
                 style={{ ...s.examTitle, cursor: 'pointer' }}
-                onClick={() => window.open(`/quiz?id=${exam.id}`, '_blank')}
+                onClick={() => router.push(`/quiz?id=${exam.id}`)}
                 title="Klik untuk preview soal ujian"
               >
                 {exam.title}
