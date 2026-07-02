@@ -9,21 +9,11 @@ import { apiGet } from '@/lib/api';
 import { getStoredToken } from '@/services/auth';
 
 interface DashboardData {
-  // Metriks Utama
-  dau: number;
-  new_enrolled_students: number;
-  
-  // Log Eror Otomatisasi (Alerts)
-  gagal_generate_kredensial: number;
-  akun_belum_aktif: number;
-  gagal_enroll_kelas: number;
-  gagal_kirim_email: number;
-
-  // Metrik Akumulasi
   total_users: number;
   total_students: number;
   total_lecturers: number;
   total_tentors: number;
+  signed_in_users: number;
   inactive_users: number;
 }
 
@@ -63,32 +53,22 @@ export default function SuperadminDashboard() {
       // If response is valid, map it. Otherwise use mock data conforming to PRD.
       if (responseData && typeof responseData === 'object') {
         setData({
-          dau: responseData.dau ?? responseData.signed_in_users ?? 342,
-          new_enrolled_students: responseData.new_enrolled_students ?? responseData.total_students ?? 128,
-          gagal_generate_kredensial: responseData.gagal_generate_kredensial ?? 4,
-          akun_belum_aktif: responseData.akun_belum_aktif ?? responseData.inactive_users ?? 42,
-          gagal_enroll_kelas: responseData.gagal_enroll_kelas ?? 2,
-          gagal_kirim_email: responseData.gagal_kirim_email ?? 1,
-          total_users: responseData.total_users ?? 850,
-          total_students: responseData.total_students ?? 620,
-          total_lecturers: responseData.total_lecturers ?? 15,
-          total_tentors: responseData.total_tentors ?? responseData.total_tentors ?? 8,
-          inactive_users: responseData.inactive_users ?? 42
+          total_users: responseData.total_users ?? 6,
+          total_students: responseData.total_students ?? 3,
+          total_lecturers: responseData.total_lecturers ?? 1,
+          total_tentors: responseData.total_tentors ?? 1,
+          signed_in_users: responseData.signed_in_users ?? 2,
+          inactive_users: responseData.inactive_users ?? 1
         });
       } else {
         // Mock fallback statistics matching constraints
         setData({
-          dau: 312,
-          new_enrolled_students: 145,
-          gagal_generate_kredensial: 5,
-          akun_belum_aktif: 27,
-          gagal_enroll_kelas: 3,
-          gagal_kirim_email: 2,
-          total_users: 120500, // Will be formatted to 120.5 Ribu or 120500
-          total_students: 110200,
-          total_lecturers: 45,
-          total_tentors: 25,
-          inactive_users: 32
+          total_users: 6,
+          total_students: 3,
+          total_lecturers: 1,
+          total_tentors: 1,
+          signed_in_users: 2,
+          inactive_users: 1
         });
       }
     } catch (err) {
@@ -119,18 +99,11 @@ export default function SuperadminDashboard() {
 
   const primaryMetrics = [
     {
-      title: "Daily Active Users (DAU)",
-      value: data?.dau ?? 0,
+      title: "Signed In Users",
+      value: data?.signed_in_users ?? 0,
       icon: Activity,
       color: "#0671E0",
-      desc: "Pengguna aktif hari ini (semua role)"
-    },
-    {
-      title: "Peserta Baru Ter-enroll",
-      value: data?.new_enrolled_students ?? 0,
-      icon: GraduationCap,
-      color: "#10b981",
-      desc: "Student sukses otomatisasi masuk Level Dasar"
+      desc: "Pengguna yang sedang aktif/masuk hari ini"
     }
   ];
 
@@ -211,82 +184,7 @@ export default function SuperadminDashboard() {
         </div>
       )}
 
-      {/* TIER 1: AUTOMATION ALERTS LOG PANEL */}
-      <div style={s.alertsPanel}>
-        <div style={s.alertsHeader}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <AlertTriangle color="#FFA826" size={20} />
-            <h3 style={s.panelTitle}>Log Eror Sistem Otomatisasi (Alerts)</h3>
-          </div>
-          <span style={s.panelBadge}>Onboarding Monitor</span>
-        </div>
 
-        <div style={s.alertsGrid}>
-          {/* Card 1: Gagal Generate Kredensial */}
-          <div style={s.alertItem}>
-            <div style={s.alertLeft}>
-              <div style={{ ...s.alertIconWrap, background: 'rgba(239, 68, 68, 0.1)', borderColor: 'rgba(239, 68, 68, 0.2)' }}>
-                <Key size={18} color="#ef4444" />
-              </div>
-              <div style={s.alertTextGroup}>
-                <span style={s.alertLabel}>Gagal Generate Kredensial</span>
-                <span style={s.alertDesc}>Data spreadsheet gagal diolah menjadi akun di database</span>
-              </div>
-            </div>
-            <span style={{ ...s.alertValue, color: '#ef4444' }}>
-              {loading ? "..." : formatNumber(data?.gagal_generate_kredensial ?? 0)}
-            </span>
-          </div>
-
-          {/* Card 2: Gagal Kirim Email Kredensial */}
-          <div style={s.alertItem}>
-            <div style={s.alertLeft}>
-              <div style={{ ...s.alertIconWrap, background: 'rgba(239, 68, 68, 0.1)', borderColor: 'rgba(239, 68, 68, 0.2)' }}>
-                <Mail size={18} color="#ef4444" />
-              </div>
-              <div style={s.alertTextGroup}>
-                <span style={s.alertLabel}>Gagal Kirim Email Kredensial</span>
-                <span style={s.alertDesc}>Server SMTP bermasalah saat mengirim password ke peserta</span>
-              </div>
-            </div>
-            <span style={{ ...s.alertValue, color: '#ef4444' }}>
-              {loading ? "..." : formatNumber(data?.gagal_kirim_email ?? 0)}
-            </span>
-          </div>
-
-          {/* Card 3: Akun Belum Aktif */}
-          <div style={s.alertItem}>
-            <div style={s.alertLeft}>
-              <div style={{ ...s.alertIconWrap, background: 'rgba(255, 168, 38, 0.1)', borderColor: 'rgba(255, 168, 38, 0.2)' }}>
-                <UserCheck size={18} color="#FFA826" />
-              </div>
-              <div style={s.alertTextGroup}>
-                <span style={s.alertLabel}>Akun Belum Aktif</span>
-                <span style={s.alertDesc}>Akun sukses dibuat di DB tapi belum pernah melakukan login</span>
-              </div>
-            </div>
-            <span style={{ ...s.alertValue, color: '#FFA826' }}>
-              {loading ? "..." : formatNumber(data?.akun_belum_aktif ?? 0)}
-            </span>
-          </div>
-
-          {/* Card 4: Gagal Enroll Kelas */}
-          <div style={s.alertItem}>
-            <div style={s.alertLeft}>
-              <div style={{ ...s.alertIconWrap, background: 'rgba(239, 68, 68, 0.1)', borderColor: 'rgba(239, 68, 68, 0.2)' }}>
-                <GraduationCap size={18} color="#ef4444" />
-              </div>
-              <div style={s.alertTextGroup}>
-                <span style={s.alertLabel}>Gagal Enroll Kelas</span>
-                <span style={s.alertDesc}>Gagal auto-enroll ke Level Dasar (Kendala transaksi DB)</span>
-              </div>
-            </div>
-            <span style={{ ...s.alertValue, color: '#ef4444' }}>
-              {loading ? "..." : formatNumber(data?.gagal_enroll_kelas ?? 0)}
-            </span>
-          </div>
-        </div>
-      </div>
 
       {/* TIER 2: PRIMARY METRICS GRID (DAILY ACTIVITY) */}
       <h3 style={s.sectionHeader}>Metriks Utama</h3>
