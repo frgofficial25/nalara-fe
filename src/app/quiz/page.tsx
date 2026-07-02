@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useQuiz } from '../../hooks/useQuiz';
 import Card from '../../components/quiz/Card';
@@ -237,7 +237,7 @@ function QuizContent({ quiz, questionsList, onBack }: QuizContentProps) {
   );
 }
 
-export default function QuizPage() {
+function QuizPageContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const quizId = searchParams.get('id');
@@ -376,5 +376,24 @@ export default function QuizPage() {
         }
       }} 
     />
+  );
+}
+
+export default function QuizPage() {
+  return (
+    <Suspense fallback={
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '50vh', gap: '1rem' }}>
+        <Loader2 size={36} color="var(--azure)" style={{ animation: 'spin 1s linear infinite' }} />
+        <span style={{ color: 'var(--grey-blue)' }}>Loading...</span>
+        <style>{`
+          @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+          }
+        `}</style>
+      </div>
+    }>
+      <QuizPageContent />
+    </Suspense>
   );
 }
