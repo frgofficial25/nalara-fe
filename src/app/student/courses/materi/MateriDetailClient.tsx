@@ -5,7 +5,7 @@ import {
   ArrowLeft, ChevronRight, FileText, Download, Eye, Loader2,
   AlertCircle, BookOpen, Video, BookMarked, FlaskConical
 } from 'lucide-react';
-import { useRouter, useParams } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { apiGet } from '@/lib/api';
 import { getStoredToken } from '@/services/auth';
 
@@ -15,12 +15,29 @@ interface TugasDetail {
   title: string;
   type?: 'Reading' | 'Video' | 'CaseStudy' | 'Practice';
   slug?: string;
-  content?: Record<string, unknown> | null;
+  content?: any;
   youtube_link?: string;
   file_url?: string;
   createdAt?: string;
   pembelajaran?: { title: string };
   modul?: { title: string };
+}
+
+function getFileExtension(url?: string) {
+  if (!url) return '';
+  const cleanUrl = url.split('?')[0];
+  const match = cleanUrl.match(/\.([a-z0-9]+)$/i);
+  return match ? `.${match[1].toLowerCase()}` : '';
+}
+
+function buildDocumentPreviewUrl(url?: string) {
+  if (!url) return null;
+  const ext = getFileExtension(url);
+  if (ext === '.pdf') return url;
+  if (['.docx', '.ppt', '.pptx'].includes(ext)) {
+    return `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(url)}`;
+  }
+  return null;
 }
 
 function getAuth() {
@@ -45,9 +62,9 @@ function TypeIcon({ type }: { type?: string }) {
 
 export default function MateriDetailClient() {
   const router = useRouter();
-  const params = useParams();
-  const courseId = params.id as string;
-  const tugasId = params.tugasId as string;
+  const searchParams = useSearchParams();
+  const courseId = searchParams.get('courseId') || '';
+  const tugasId = searchParams.get('tugasId') || '';
 
   const [tugas, setTugas] = useState<TugasDetail | null>(null);
   const [loading, setLoading] = useState(true);
@@ -58,13 +75,13 @@ export default function MateriDetailClient() {
       setLoading(true);
       setError(null);
       const auth = getAuth();
-      const res = await apiGet<TugasDetail | { data?: TugasDetail }>(
+      const res = await apiGet<any>(
         `/api/tugas/${tugasId}`,
         { token: auth.token, headers: auth.headers }
       );
-      const data: TugasDetail = ('data' in res && (res as any).data)
-        ? { ...(res as any).data, id: (res as any).data.uuid_tugas || (res as any).data.id }
-        : { ...(res as TugasDetail), id: (res as any).uuid_tugas || (res as TugasDetail).id };
+      const data: TugasDetail = (res && 'data' in res && res.data)
+        ? { ...res.data, id: res.data.uuid_tugas || res.data.id }
+        : { ...res, id: res.uuid_tugas || res.id };
       setTugas(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Gagal memuat detail materi.');
@@ -73,11 +90,37 @@ export default function MateriDetailClient() {
     }
   }, [tugasId]);
 
-  useEffect(() => { fetchTugas(); }, [fetchTugas]);
+  useEffect(() => {
+    fetchTugas();
+  }, [fetchTugas]);
 
   const handleDownload = () => {
     if (!tugas?.file_url) return;
     window.open(tugas.file_url, '_blank');
+  };
+
+  const previewUrl = buildDocumentPreviewUrl(tugas?.file_url);
+  const isPdf = getFileExtension(tugas?.file_url) === '.pdf';
+
+  const renderContent = (content: any) => {
+    if (!content) return null;
+    if (typeof content === 'string') return content;
+    
+    // Check if rich text JSON structure from editor
+    if (content.type === 'doc' && Array.isArray(content.content)) {
+      return content.content.map((block: any, idx: number) => {
+        if (block.type === 'paragraph' && Array.isArray(block.content)) {
+          return (
+            <p key={idx} style={{ margin: '0 0 12px 0', lineHeight: 1.6 }}>
+              {block.content.map((span: any, sIdx: number) => span.text || '')}
+            </p>
+          );
+        }
+        return null;
+      });
+    }
+    
+    return JSON.stringify(content, null, 2);
   };
 
   if (loading) {
@@ -98,19 +141,18 @@ export default function MateriDetailClient() {
 
       {/* Breadcrumb */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 24, flexWrap: 'wrap' }}>
-        <button onClick={() => router.push('/lecturer/courses')} style={backBtn}>
+        <button onClick={() => router.push('/student/courses')} style={backBtn}>
           <ArrowLeft size={15} />
         </button>
-        <span style={crumb} onClick={() => router.push('/lecturer/courses')}>Courses</span>
+        <span style={crumb} onClick={() => router.push('/student/courses')}>Courses</span>
         <ChevronRight size={13} color="#475569" />
-        <span style={crumb} onClick={() => router.push(`/lecturer/courses/${courseId}`)}>
+        <span style={crumb} onClick={() => router.push(`/student/courses/detail?id=${courseId}`)}>
           {tugas?.pembelajaran?.title ?? 'Detail Kelas'}
         </span>
         <ChevronRight size={13} color="#475569" />
         <span style={{ ...crumb, color: '#e2e8f0', cursor: 'default' }}>{tugas?.title ?? 'Detail Materi'}</span>
       </div>
 
-      {/* Error */}
       {error && (
         <div style={errBox}>
           <AlertCircle size={16} />
@@ -121,7 +163,7 @@ export default function MateriDetailClient() {
       {tugas && (
         <>
           {/* Header Card */}
-          <div style={headerCard}>
+          <div style={headerCard} className="glass-panel">
             <div style={{ display: 'flex', alignItems: 'flex-start', gap: 16 }}>
               <div style={typeIconBox}>
                 <TypeIcon type={tugas.type} />
@@ -144,20 +186,20 @@ export default function MateriDetailClient() {
 
             {/* Actions */}
             <div style={{ display: 'flex', gap: 10, marginTop: 20 }}>
-              <button onClick={() => router.push(`/lecturer/courses/${courseId}`)} style={secondaryBtn}>
+              <button onClick={() => router.push(`/student/courses/detail?id=${courseId}`)} style={secondaryBtn}>
                 <ArrowLeft size={14} /> Kembali ke Kelas
               </button>
               {tugas.file_url && (
                 <button onClick={handleDownload} style={primaryBtn}>
-                  <Download size={14} /> Download / Export
+                  <Download size={14} /> Download Lampiran
                 </button>
               )}
             </div>
           </div>
 
           {/* Content Preview */}
-          <div style={contentCard}>
-            <h2 style={sectionTitle}>Preview Materi</h2>
+          <div style={contentCard} className="glass-panel">
+            <h2 style={sectionTitle}>Konten Materi</h2>
 
             {/* Video */}
             {tugas.type === 'Video' && tugas.youtube_link && (
@@ -174,27 +216,41 @@ export default function MateriDetailClient() {
             {/* Reading / Content */}
             {tugas.type === 'Reading' && tugas.content && (
               <div style={readingContent}>
-                <pre style={{ margin: 0, whiteSpace: 'pre-wrap', wordBreak: 'break-word', fontFamily: 'inherit', fontSize: '0.9rem', color: '#cbd5e1', lineHeight: 1.7 }}>
-                  {JSON.stringify(tugas.content, null, 2)}
-                </pre>
+                <div style={{ margin: 0, fontFamily: 'inherit', fontSize: '0.9rem', color: '#cbd5e1', lineHeight: 1.7 }}>
+                  {renderContent(tugas.content)}
+                </div>
               </div>
             )}
 
             {/* File */}
             {tugas.file_url && (
-              <div style={filePreview}>
-                <FileText size={32} color="#6366f1" />
-                <div>
-                  <p style={{ color: '#e2e8f0', fontWeight: 600, margin: 0 }}>File Terlampir</p>
-                  <p style={{ color: '#64748b', fontSize: '0.82rem', margin: '4px 0 0' }}>
-                    <a href={tugas.file_url} target="_blank" rel="noopener noreferrer" style={{ color: '#a5b4fc' }}>
-                      {tugas.file_url}
-                    </a>
-                  </p>
+              <div style={{ ...filePreview, flexDirection: 'column', alignItems: 'stretch' }}>
+                {previewUrl ? (
+                  <div style={{ width: '100%', marginBottom: 12 }}>
+                    <iframe
+                      src={previewUrl}
+                      title={tugas.title}
+                      style={{ width: '100%', minHeight: 520, borderRadius: 12, border: 'none', background: '#fff' }}
+                    />
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <FileText size={32} color="#6366f1" />
+                    <div>
+                      <p style={{ color: '#e2e8f0', fontWeight: 600, margin: 0 }}>File Terlampir</p>
+                      <p style={{ color: '#64748b', fontSize: '0.82rem', margin: '4px 0 0' }}>
+                        <a href={tugas.file_url} target="_blank" rel="noopener noreferrer" style={{ color: '#a5b4fc' }}>
+                          {tugas.file_url}
+                        </a>
+                      </p>
+                    </div>
+                  </div>
+                )}
+                <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 8 }}>
+                  <button onClick={handleDownload} style={{ ...primaryBtn }}>
+                    <Download size={13} /> {isPdf ? 'Buka PDF' : 'Download'}
+                  </button>
                 </div>
-                <button onClick={handleDownload} style={{ ...primaryBtn, marginLeft: 'auto' }}>
-                  <Download size={13} /> Download
-                </button>
               </div>
             )}
 
@@ -212,7 +268,6 @@ export default function MateriDetailClient() {
   );
 }
 
-// ─── Styles ─────────────────────────────────────────────────────────────────
 const pageWrap: React.CSSProperties = {
   padding: '4px 0',
   fontFamily: "'Inter', 'Outfit', sans-serif",
@@ -237,9 +292,8 @@ const errBox: React.CSSProperties = {
 };
 
 const headerCard: React.CSSProperties = {
-  background: 'rgba(255,255,255,0.03)',
-  border: '1px solid rgba(255,255,255,0.07)',
-  borderRadius: 16, padding: '24px', marginBottom: 20,
+  padding: '24px', marginBottom: 20,
+  borderRadius: 16,
 };
 
 const typeIconBox: React.CSSProperties = {
@@ -277,8 +331,6 @@ const secondaryBtn: React.CSSProperties = {
 };
 
 const contentCard: React.CSSProperties = {
-  background: 'rgba(255,255,255,0.03)',
-  border: '1px solid rgba(255,255,255,0.07)',
   borderRadius: 16, padding: '24px',
 };
 

@@ -125,7 +125,7 @@ export default function StudentCoursesPage() {
               key={course.id} 
               style={s.card} 
               className="glass-panel hover-card"
-              onClick={() => router.push(`/student/courses/${course.id}`)}
+              onClick={() => router.push(`/student/courses/detail?id=${course.id}`)}
             >
               <div style={s.cardBody}>
                 <div style={s.iconWrapper}>

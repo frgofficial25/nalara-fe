@@ -370,7 +370,7 @@ function QuizPageContent() {
       questionsList={questions} 
       onBack={() => {
         if (quiz.module_id) {
-          router.push(`/student/courses/${quiz.module_id}`);
+          router.push(`/student/courses/detail?id=${quiz.module_id}`);
         } else {
           router.push('/student/courses');
         }

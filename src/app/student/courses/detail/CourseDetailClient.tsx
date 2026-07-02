@@ -6,7 +6,7 @@ import {
   BookOpenCheck, FlaskConical, PencilLine, ArrowLeft, Layers,
   Brain
 } from 'lucide-react';
-import { useRouter, useParams } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { apiGet } from '@/lib/api';
 import { getStoredToken } from '@/services/auth';
 
@@ -36,8 +36,8 @@ interface Tugas {
 
 export default function CourseDetailClient() {
   const router = useRouter();
-  const params = useParams();
-  const courseId = params.id as string;
+  const searchParams = useSearchParams();
+  const courseId = searchParams.get('id') || '';
 
   const [course, setCourse] = useState<Pembelajaran | null>(null);
   const [moduls, setModuls] = useState<Modul[]>([]);
@@ -149,7 +149,7 @@ export default function CourseDetailClient() {
     if (tugas.type === 'CaseStudy' || tugas.type === 'Practice') {
       router.push('/student/study-case-submissions');
     } else {
-      router.push(`/student/courses/${courseId}/materi/${tugas.id}`);
+      router.push(`/student/courses/materi?courseId=${courseId}&tugasId=${tugas.id}`);
     }
   };
 
@@ -416,8 +416,8 @@ const s: Record<string, React.CSSProperties> = {
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
-    background: 'rgba(255,255,255,0.01)',
-    border: '1px solid rgba(255,255,255,0.04)',
+    background: 'rgba(255, 255, 255, 0.01)',
+    border: '1px solid rgba(255, 255, 255, 0.04)',
     borderRadius: 8,
     padding: '10px 12px',
   },
