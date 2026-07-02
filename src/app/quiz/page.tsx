@@ -321,7 +321,7 @@ function QuizContent({ quiz, questionsList, onBack, initialAttemptDetails }: Qui
           {/* Rekap Hasil Quiz (Only visible if completed) */}
           {isFinished && (
             <Card style={{ padding: '2.5rem', textAlign: 'center', background: 'rgba(30,30,30,0.3)', border: '1px solid rgba(255,255,255,0.06)' }}>
-              <div style={{ width: 56, height: 56, borderRadius: '50%', background: 'rgba(0, 200, 83, 0.1)', display: 'flex', alignItems: 'center', justifyAll: 'center', margin: '0 auto 1.5rem', justifyContent: 'center' }}>
+              <div style={{ width: 56, height: 56, borderRadius: '50%', background: 'rgba(0, 200, 83, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.5rem' }}>
                 <CheckCircle size={28} color="#00C853" />
               </div>
               <h3 style={{ fontSize: '1.5rem', fontWeight: 700, color: '#fff', margin: '0 0 1.5rem 0' }}>Rekap Hasil Quiz</h3>
