@@ -393,7 +393,7 @@ function QuizContent({ quiz, questionsList, onBack, initialAttemptDetails }: Qui
 
       {view === 'result' && state.attempt && (
         <Card style={{ padding: '3.5rem', textAlign: 'center' }}>
-          <div style={{ width: 64, height: 64, borderRadius: '50%', background: 'rgba(0, 200, 83, 0.1)', display: 'flex', alignItems: 'center', justifyAll: 'center', margin: '0 auto 1.5rem', justifyContent: 'center' }}>
+          <div style={{ width: 64, height: 64, borderRadius: '50%', background: 'rgba(0, 200, 83, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.5rem' }}>
             <CheckCircle size={32} color="#00C853" />
           </div>
           <h2 style={{ fontSize: '2rem', fontWeight: 800, color: '#fff', margin: '0 0 1.5rem 0' }}>Quiz Selesai Dikirim!</h2>
@@ -424,7 +424,7 @@ function QuizContent({ quiz, questionsList, onBack, initialAttemptDetails }: Qui
   );
 }
 
-export default function QuizPage() {
+function QuizPageInner() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const quizId = searchParams.get('id');
@@ -580,5 +580,24 @@ export default function QuizPage() {
         }
       }} 
     />
+  );
+}
+
+export default function QuizPage() {
+  return (
+    <Suspense fallback={
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '50vh', gap: '1rem' }}>
+        <Loader2 size={36} color="var(--azure)" style={{ animation: 'spin 1s linear infinite' }} />
+        <span style={{ color: 'var(--grey-blue)' }}>Loading...</span>
+        <style>{`
+          @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+          }
+        `}</style>
+      </div>
+    }>
+      <QuizPageInner />
+    </Suspense>
   );
 }
