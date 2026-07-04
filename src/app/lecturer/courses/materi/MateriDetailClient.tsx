@@ -6,7 +6,7 @@ import {
   AlertCircle, BookOpen, Video, BookMarked, FlaskConical
 } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { apiGet } from '@/lib/api';
+import { apiGet, apiUploadPost, apiDelete } from '@/lib/api';
 import { getStoredToken } from '@/services/auth';
 
 interface TugasDetail {
@@ -72,6 +72,8 @@ export default function MateriDetailClient() {
   const [tugas, setTugas] = useState<TugasDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
   const fetchTugas = useCallback(async () => {
     if (!tugasId) return;
@@ -79,8 +81,9 @@ export default function MateriDetailClient() {
       setLoading(true);
       setError(null);
       const auth = getAuth();
+      // Try `/api/materi` first based on the swagger docs, fallback to `/api/tugas` if not supported here but we know the swagger uses `/api/materi` for this.
       const res = await apiGet<TugasDetail | { data?: TugasDetail }>(
-        `/api/tugas/${tugasId}`,
+        `/api/materi/${tugasId}`,
         { token: auth.token, headers: auth.headers }
       );
       const data: TugasDetail = ('data' in res && (res as any).data)
@@ -99,6 +102,46 @@ export default function MateriDetailClient() {
   const handleDownload = () => {
     if (!tugas?.file_url) return;
     window.open(tugas.file_url, '_blank');
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      setSelectedFile(e.target.files[0]);
+    }
+  };
+
+  const handleUploadFile = async () => {
+    if (!selectedFile || !tugasId) return;
+    setUploading(true);
+    try {
+      const auth = getAuth();
+      const formData = new FormData();
+      formData.append('file', selectedFile);
+
+      await apiUploadPost(
+        `/api/materi/${tugasId}/upload`,
+        formData,
+        { token: auth.token, headers: auth.headers }
+      );
+      
+      setSelectedFile(null);
+      await fetchTugas();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Gagal upload file');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleDeleteFile = async () => {
+    if (!confirm('Apakah Anda yakin ingin menghapus file ini?')) return;
+    try {
+      const auth = getAuth();
+      await apiDelete(`/api/materi/${tugasId}/file`, { token: auth.token, headers: auth.headers });
+      await fetchTugas();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Gagal menghapus file');
+    }
   };
 
   const previewUrl = buildDocumentPreviewUrl(tugas?.file_url);
@@ -228,9 +271,29 @@ export default function MateriDetailClient() {
                     </div>
                   </div>
                 )}
-                <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 8 }}>
+                <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 8, gap: 8 }}>
                   <button onClick={handleDownload} style={{ ...primaryBtn }}>
                     <Download size={13} /> {isPdf ? 'Buka PDF' : 'Download'}
+                  </button>
+                  <button onClick={handleDeleteFile} style={{ ...primaryBtn, background: '#FF5252' }}>
+                    Hapus File
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Upload File Section if no file exists */}
+            {!tugas.file_url && (tugas.type === 'Reading' || tugas.type === 'Video') && (
+              <div style={{ ...filePreview, flexDirection: 'column', alignItems: 'stretch', marginTop: 16 }}>
+                <p style={{ color: '#e2e8f0', fontWeight: 600, margin: '0 0 8px' }}>Upload File Materi</p>
+                <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+                  <input type="file" onChange={handleFileChange} style={{ color: '#cbd5e1' }} />
+                  <button 
+                    onClick={handleUploadFile} 
+                    disabled={!selectedFile || uploading} 
+                    style={{ ...primaryBtn, opacity: (!selectedFile || uploading) ? 0.5 : 1 }}
+                  >
+                    {uploading ? <Loader2 size={13} style={{ animation: 'spin 1s linear infinite' }} /> : 'Upload'}
                   </button>
                 </div>
               </div>

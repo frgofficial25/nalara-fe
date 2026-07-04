@@ -147,27 +147,27 @@ export default function UjianAkhirPage() {
     setLoadingGrades(true);
     try {
       const auth = getAuthHeaders();
-      const enrollRes = await apiGet<any>('/api/enroll', { token: auth.token, headers: auth.headers });
-      const students = Array.isArray(enrollRes) ? enrollRes : (enrollRes?.data || []);
+      // Fetch actual grades from the API
+      const gradesRes = await apiGet<any>(`/api/grade-center/students?uuid_quiz=${exam.id}`, { token: auth.token, headers: auth.headers });
+      const gradesData = Array.isArray(gradesRes) ? gradesRes : (gradesRes?.data || []);
       
       // Map to students with scores
-      const grades: StudentGrade[] = students.map((s: any, idx: number) => {
-        const isBudi = s.username === 'student_budi' || s.email === 'budi@student.com';
-        const score = isBudi ? 100 : (70 + ((idx * 7) % 29));
+      const mappedGrades: StudentGrade[] = gradesData.map((s: any) => {
+        // Try to find the specific attempt for this exam, or use the aggregated score
+        const attempt = s.attempts?.find((a: any) => a.quizTitle === exam.title || a.uuid_quiz === exam.id);
+        const score = attempt ? attempt.score : (s.score || s.averageScore || 0);
         
         return {
-          name: s.full_name || s.username || 'Mahasiswa',
-          email: s.email || 'mahasiswa@nalara.com',
+          name: s.name || s.studentName || s.full_name || s.username || 'Mahasiswa',
+          email: s.email || s.studentEmail || 'mahasiswa@nalara.com',
           score,
           status: score >= exam.passingScore ? 'Lulus' : 'Tidak Lulus',
-          date: new Date(Date.now() - idx * 24 * 60 * 60 * 1000).toLocaleDateString('id-ID', {
-            day: 'numeric',
-            month: 'short',
-            year: 'numeric'
-          })
+          date: attempt?.date 
+            ? new Date(attempt.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })
+            : new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })
         };
       });
-      setStudentGrades(grades);
+      setStudentGrades(mappedGrades);
     } catch (e) {
       console.error(e);
       setError(e instanceof Error ? e.message : 'Gagal memuat nilai mahasiswa.');

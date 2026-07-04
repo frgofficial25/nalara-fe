@@ -103,18 +103,35 @@ export default function GradeCenterPage() {
       }
       setQuizzes(quizList);
 
-      // 3. Fetch eligible enrolled students
-      const studentsRes = await apiGet<Student[] | { success: boolean; data: Student[] }>('/api/enroll', {
+      // 3. Fetch grade center students directly
+      const gradesRes = await apiGet<any>('/api/grade-center/students', {
         token: auth.token,
         headers: auth.headers
       });
-      let studentList: Student[] = [];
-      if (Array.isArray(studentsRes)) {
-        studentList = studentsRes;
-      } else if (studentsRes && 'data' in studentsRes) {
-        studentList = studentsRes.data;
+      let gradeList: any[] = [];
+      if (Array.isArray(gradesRes)) {
+        gradeList = gradesRes;
+      } else if (gradesRes && 'data' in gradesRes) {
+        gradeList = gradesRes.data;
       }
-      setStudents(studentList);
+      
+      // Transform gradeList to match the expected StudentGradeDetail interface
+      const mappedGrades: StudentGradeDetail[] = gradeList.map((g: any) => ({
+        studentName: g.studentName || g.name || g.full_name || 'Unknown',
+        studentEmail: g.studentEmail || g.email || 'No email',
+        completedCount: g.completedCount || g.attempts?.length || 0,
+        averageScore: g.averageScore || g.score || 0,
+        status: g.status === 'Lulus' || g.status === 'Passed' ? 'Passed' : 'Failed',
+        attempts: (g.attempts || []).map((a: any) => ({
+          quizTitle: a.quizTitle || a.title || 'Unknown Quiz',
+          courseTitle: a.courseTitle || 'Unknown Course',
+          score: a.score || 0,
+          passingScore: a.passingScore || 70,
+          isPassed: a.isPassed || a.status === 'Passed' || a.status === 'Lulus',
+          date: a.date ? new Date(a.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Unknown'
+        }))
+      }));
+      setStudents(mappedGrades as any); // Storing the mapped grades directly in state 
 
     } catch (err) {
       console.error(err);
@@ -134,64 +151,8 @@ export default function GradeCenterPage() {
     fetchData();
   };
 
-  // Generate realistic student grade mapping (including Budi's real backend test score of 100)
-  const getStudentGrades = (): StudentGradeDetail[] => {
-    return students.map((student, idx) => {
-      const studentId = student.uuid_user || student.id;
-
-      // Hardcoded mapping for budi's real backend quiz attempt
-      if (student.username === 'student_budi' || student.email === 'budi@student.com') {
-        return {
-          studentName: student.full_name,
-          studentEmail: student.email,
-          completedCount: 1,
-          averageScore: 100,
-          status: 'Passed',
-          attempts: [
-            {
-              quizTitle: 'Quiz Reading - Pengenalan Dasar untuk Desain Sistem Modern dengan PostgreSQL',
-              courseTitle: 'Desain Sistem Modern dengan PostgreSQL',
-              score: 100,
-              passingScore: 75,
-              isPassed: true,
-              date: new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })
-            }
-          ]
-        };
-      }
-
-      // Generate realistic scores for other mock accounts so the table is fully filled
-      const scoreSeed = idx % 2 === 0 ? 85 : 55;
-      const passState = scoreSeed >= 60 ? 'Passed' : 'Failed';
-      return {
-        studentName: student.full_name,
-        studentEmail: student.email,
-        completedCount: idx % 3 === 0 ? 0 : 2,
-        averageScore: idx % 3 === 0 ? 0 : scoreSeed,
-        status: idx % 3 === 0 ? 'Failed' : passState,
-        attempts: idx % 3 === 0 ? [] : [
-          {
-            quizTitle: 'Quiz Evaluasi - Basic TypeScript',
-            courseTitle: 'Belajar TypeScript dan Node.js dari Awal',
-            score: scoreSeed,
-            passingScore: 70,
-            isPassed: scoreSeed >= 70,
-            date: '20 Jun 2026'
-          },
-          {
-            quizTitle: 'Quiz Evaluasi - PostgreSQL Query Optimization',
-            courseTitle: 'Desain Sistem Modern dengan PostgreSQL',
-            score: scoreSeed + 5 > 100 ? 100 : scoreSeed + 5,
-            passingScore: 75,
-            isPassed: (scoreSeed + 5) >= 75,
-            date: '21 Jun 2026'
-          }
-        ]
-      };
-    });
-  };
-
-  const allGrades = getStudentGrades();
+  // We're already fetching the grades directly from backend and mapped to `students` state variable above
+  const allGrades = (students as unknown as StudentGradeDetail[]) || [];
 
   // Filters calculation
   const filteredGrades = allGrades.filter(g => {

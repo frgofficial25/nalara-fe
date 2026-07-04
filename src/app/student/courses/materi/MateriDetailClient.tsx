@@ -42,9 +42,12 @@ function buildDocumentPreviewUrl(url?: string) {
 
 function getAuth() {
   const token = getStoredToken();
+  const apiKey = process.env.NEXT_PUBLIC_API_KEY;
   const headers: Record<string, string> = {};
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
+  if (apiKey) {
+    headers['x-api-key'] = apiKey;
+  } else if (token) {
+    headers['x-api-key'] = token;
   }
   return { token: token ?? undefined, headers };
 }
@@ -76,7 +79,7 @@ export default function MateriDetailClient() {
       setError(null);
       const auth = getAuth();
       const res = await apiGet<any>(
-        `/api/tugas/${tugasId}`,
+        `/api/materi/${tugasId}`,
         { token: auth.token, headers: auth.headers }
       );
       const data: TugasDetail = (res && 'data' in res && res.data)

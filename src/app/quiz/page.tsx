@@ -234,7 +234,7 @@ function InfoItem({ icon, label, value }: { icon: React.ReactNode; label: string
 
 function RekapCard({ label, value, color }: { label: string; value: string; color: string }) {
   return (
-    <div style={{ background: 'linear-gradient(180deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.01) 100%)', padding: '1.75rem', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.06)', textAlign: 'center', boxShadow: '0 4px 16px rgba(0,0,0,0.2)', transition: 'transform 0.2s', cursor: 'default', ':hover': { transform: 'translateY(-2px)' } as any }}>
+    <div style={{ background: 'linear-gradient(180deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.01) 100%)', padding: '1.75rem', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.06)', textAlign: 'center', boxShadow: '0 4px 16px rgba(0,0,0,0.2)', transition: 'transform 0.2s', cursor: 'default' }}>
       <div style={{ fontSize: '0.75rem', color: 'var(--grey)', marginBottom: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 600 }}>{label}</div>
       <strong style={{ fontSize: '2.5rem', color, fontWeight: 900, textShadow: `0 4px 20px ${color}30` }}>{value}</strong>
     </div>
@@ -426,7 +426,7 @@ function QuizWorkView({
           const isCurrent = idx === currentIdx;
           return (
             <button key={idx} 
-              onClick={() => onNext && currentIdx !== idx && onPrev && setCurrentIdx && undefined} // Opt: could make dots clickable
+              onClick={() => undefined} // Non-interactive dot indicator
               style={{
               width: '34px', height: '34px', borderRadius: '10px',
               display: 'flex', alignItems: 'center', justifyContent: 'center',

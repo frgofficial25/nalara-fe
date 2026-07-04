@@ -474,7 +474,7 @@ export default function QuizzesPage() {
     try {
       setLoading(true);
       const auth = getAuthHeaders();
-      const res = await apiGet<any>(`/api/quiz/${quizId}/rekap`, {
+      const res = await apiGet<any>(`/api/quiz/${quizId}`, {
         token: auth.token,
         headers: auth.headers
       });

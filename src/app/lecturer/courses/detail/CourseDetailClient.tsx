@@ -108,7 +108,7 @@ function AddMateriModal({
     setError(null);
     try {
       const auth = getAuth();
-      await apiPost('/api/tugas', {
+      await apiPost('/api/materi', {
         title,
         type,
         uuid_pembelajaran: pembelajaranId,
@@ -315,13 +315,26 @@ export default function CourseDetailClient() {
       const newTugasMap: Record<string, Tugas[]> = {};
       await Promise.all(
         modulList.map(async (m) => {
-          const tugasRes = await apiGet<Tugas[] | { data?: Tugas[] }>(
-            `/api/tugas?uuid_pembelajaran=${courseId}&uuid_modul=${m.id}`, opts
+          const tugasRes = await apiGet<any>(
+            `/api/materi?uuid_modul=${m.id}`, opts
           );
-          let tugasList: Tugas[] = Array.isArray(tugasRes)
-            ? tugasRes
-            : (tugasRes as any).data ?? [];
-          tugasList = tugasList.map(t => ({ ...t, id: t.uuid_tugas || t.id }));
+          let rawList: any[] = [];
+          if (tugasRes && tugasRes.data && Array.isArray(tugasRes.data.materi)) {
+            rawList = tugasRes.data.materi;
+          } else if (Array.isArray(tugasRes)) {
+            rawList = tugasRes;
+          } else if (tugasRes && 'data' in tugasRes && Array.isArray(tugasRes.data)) {
+            rawList = tugasRes.data;
+          }
+
+          const tugasList: Tugas[] = rawList.map((t: any) => ({
+            id: t.uuid_tugas || t.id,
+            title: t.nama_materi || t.title || '',
+            type: t.tipe || t.type || 'Reading',
+            file_url: t.file?.url || t.file_url || '',
+            order: t.nomor_urut || t.order,
+            createdAt: t.tanggal_dibuat || t.createdAt
+          }));
           newTugasMap[m.id] = tugasList;
         })
       );
@@ -353,7 +366,7 @@ export default function CourseDetailClient() {
     if (!deleteTugas) return;
     try {
       const auth = getAuth();
-      await apiDelete(`/api/tugas/${deleteTugas.tugas.id}`, { token: auth.token, headers: auth.headers });
+      await apiDelete(`/api/materi/${deleteTugas.tugas.id}`, { token: auth.token, headers: auth.headers });
       setDeleteTugas(null);
       fetchAll();
     } catch (err) {
