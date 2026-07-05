@@ -22,23 +22,12 @@ interface Module {
   uuid_pembelajaran?: string;
 }
 
-interface Question {
-  type: 'mcq' | 'true_false' | 'multi_select' | 'numeric' | 'essay';
-  question: string;
-  options?: string[];
-  answer: string | boolean | string[] | number;
-}
+
 
 interface QuizQuestionInput {
   question_text: string;
-  type: 'MultipleChoice' | 'TrueFalse' | 'Essay';
-  difficulty: 'Beginner' | 'Intermediate' | 'Advanced';
-  weight: number;
-  explanation: string;
-  // MultipleChoice
+  type: 'MultipleChoice' | 'TrueFalse' | 'Checkbox';
   options: { id: string; text: string; is_correct: boolean }[];
-  // Essay
-  correct_answer?: string;
 }
 
 interface QuizListItem {
@@ -46,7 +35,6 @@ interface QuizListItem {
   title: string;
   moduleTitle: string;
   count: number;
-  difficulty?: string;
 }
 
 export default function QuizzesPage() {
@@ -63,17 +51,22 @@ export default function QuizzesPage() {
   const [selectedModule, setSelectedModule] = useState('');
   const [promptText, setPromptText] = useState('');
   const [readingMaterial, setReadingMaterial] = useState('');
-  const [difficulty, setDifficulty] = useState<'easy' | 'medium' | 'hard'>('medium');
   const [counts, setCounts] = useState({
-    mcq: 3,
-    true_false: 2,
-    multi_select: 0,
-    numeric: 0,
-    essay: 1
+    MultipleChoice: 3,
+    TrueFalse: 2,
+    Checkbox: 1
   });
   
   const [aiGenerating, setAiGenerating] = useState(false);
-  const [generatedQuestions, setGeneratedQuestions] = useState<Question[]>([]);
+  const [generatedQuestions, setGeneratedQuestions] = useState<QuizQuestionInput[]>([]);
+  const [savingAiQuiz, setSavingAiQuiz] = useState(false);
+
+  // AI Quiz metadata fields (for save to bank)
+  const [aiTitle, setAiTitle] = useState('');
+  const [aiDescription, setAiDescription] = useState('');
+  const [aiTimeLimit, setAiTimeLimit] = useState(30);
+  const [aiDeadline, setAiDeadline] = useState('');
+  const [aiIsPublished, setAiIsPublished] = useState(true);
 
   // Manual Modal and Inputs (CRUD)
   const [showManualModal, setShowManualModal] = useState(false);
@@ -81,9 +74,6 @@ export default function QuizzesPage() {
   const [manualTitle, setManualTitle] = useState('');
   const [manualCourse, setManualCourse] = useState('');
   const [manualModule, setManualModule] = useState('');
-  const [manualDifficulty, setManualDifficulty] = useState<'Beginner' | 'Intermediate' | 'Advanced'>('Beginner');
-  const [manualPassingScore, setManualPassingScore] = useState(70);
-  const [manualMaxAttempts, setManualMaxAttempts] = useState(3);
   const [manualTimeLimit, setManualTimeLimit] = useState(30);
   const [manualQuestions, setManualQuestions] = useState<QuizQuestionInput[]>([]);
   const [savingManualQuiz, setSavingManualQuiz] = useState(false);
@@ -184,8 +174,7 @@ export default function QuizzesPage() {
         id: q.uuid_quiz || q.id || q.uuid,
         title: q.nama_quiz || q.title || 'Untitled Quiz',
         moduleTitle: q.asal_modul || q.modul?.title || q.asal_pembelajaran || q.pembelajaran?.title || '-',
-        count: q.questions?.length || 0,
-        difficulty: q.difficulty || 'Beginner'
+        count: q.questions?.length || 0
       })));
     } catch (err) {
       console.error(err);
@@ -245,9 +234,6 @@ export default function QuizzesPage() {
         title: manualTitle,
         course: manualCourse,
         module: manualModule,
-        difficulty: manualDifficulty,
-        passingScore: manualPassingScore,
-        maxAttempts: manualMaxAttempts,
         timeLimit: manualTimeLimit,
         deadline: manualDeadline,
         description: manualDescription,
@@ -262,9 +248,6 @@ export default function QuizzesPage() {
     manualTitle,
     manualCourse,
     manualModule,
-    manualDifficulty,
-    manualPassingScore,
-    manualMaxAttempts,
     manualTimeLimit,
     manualDeadline,
     manualDescription,
@@ -277,6 +260,16 @@ export default function QuizzesPage() {
   const handleGenerateQuestions = async () => {
     if (!readingMaterial) {
       alert("Harap masukkan Reading Material sebagai landasan pembuatan kuis.");
+      return;
+    }
+
+    const totalCount = counts.MultipleChoice + counts.TrueFalse + counts.Checkbox;
+    if (totalCount === 0) {
+      alert("Masukkan jumlah soal minimal 1 untuk setiap tipe yang diinginkan.");
+      return;
+    }
+    if (totalCount > 25) {
+      alert("Total soal tidak boleh melebihi 25. Harap kurangi jumlah soal.");
       return;
     }
     
@@ -303,7 +296,6 @@ export default function QuizzesPage() {
           readingMaterial,
           lessonTitle: modules.find(m => m.uuid_modul === selectedModule)?.title || "Lesson",
           counts,
-          difficulty,
         }),
       });
 
@@ -317,7 +309,7 @@ export default function QuizzesPage() {
       }
 
       const data = await res.json();
-      const list: Question[] = data.questions || data.data || [];
+      const list: QuizQuestionInput[] = data.questions || data.data || [];
       if (list.length > 0) {
         setGeneratedQuestions(list);
       } else {
@@ -327,27 +319,34 @@ export default function QuizzesPage() {
       console.warn('[AI Generate] Gagal dari API, menggunakan data contoh:', err instanceof Error ? err.message : err);
       // Fallback ke contoh soal berdasarkan reading material yang diinput
       const lessonName = modules.find(m => m.uuid_modul === selectedModule)?.title || 'Materi';
-      const mockList: Question[] = [
+      const mockList: QuizQuestionInput[] = [
         {
-          type: 'mcq',
-          question: `Berdasarkan materi "${lessonName}", manakah pernyataan berikut yang paling tepat?`,
+          type: 'MultipleChoice',
+          question_text: `Berdasarkan materi "${lessonName}", manakah pernyataan berikut yang paling tepat?`,
           options: [
-            'Semua konsep dalam materi bersifat teoritis dan tidak dapat diterapkan',
-            'Materi ini mencakup konsep-konsep dasar yang fundamental',
-            'Hanya bagian tertentu dari materi yang relevan',
-            'Materi ini tidak berhubungan dengan praktik nyata'
-          ],
-          answer: 'Materi ini mencakup konsep-konsep dasar yang fundamental'
+            { id: 'A', text: 'Semua konsep dalam materi bersifat teoritis dan tidak dapat diterapkan', is_correct: false },
+            { id: 'B', text: 'Materi ini mencakup konsep-konsep dasar yang fundamental', is_correct: true },
+            { id: 'C', text: 'Hanya bagian tertentu dari materi yang relevan', is_correct: false },
+            { id: 'D', text: 'Materi ini tidak berhubungan dengan praktik nyata', is_correct: false }
+          ]
         },
         {
-          type: 'true_false',
-          question: `Pemahaman mendalam terhadap materi "${lessonName}" penting untuk pengembangan kompetensi.`,
-          answer: true
+          type: 'TrueFalse',
+          question_text: `Pemahaman mendalam terhadap materi "${lessonName}" penting untuk pengembangan kompetensi.`,
+          options: [
+            { id: 'A', text: 'Benar', is_correct: true },
+            { id: 'B', text: 'Salah', is_correct: false }
+          ]
         },
         {
-          type: 'essay',
-          question: `Jelaskan konsep utama yang terdapat dalam materi "${lessonName}" beserta penerapannya dalam praktik!`,
-          answer: 'Jawaban bervariasi sesuai pemahaman mahasiswa terhadap materi.'
+          type: 'Checkbox',
+          question_text: `Pilih poin-poin yang relevan dengan materi "${lessonName}":`,
+          options: [
+            { id: 'A', text: 'Poin relevan 1', is_correct: true },
+            { id: 'B', text: 'Poin tidak relevan', is_correct: false },
+            { id: 'C', text: 'Poin relevan 2', is_correct: true },
+            { id: 'D', text: 'Poin keliru', is_correct: false }
+          ]
         }
       ];
       setGeneratedQuestions(mockList);
@@ -358,44 +357,35 @@ export default function QuizzesPage() {
 
   const handleSaveAiQuiz = async () => {
     if (generatedQuestions.length === 0 || !selectedCourse) {
-      alert('Please select a course and generate questions first.');
+      alert('Harap pilih Course dan generate soal terlebih dahulu.');
       return;
     }
+    if (!aiTitle.trim()) {
+      alert('Harap isi Judul Kuis sebelum menyimpan.');
+      return;
+    }
+    setSavingAiQuiz(true);
     try {
       const auth = getAuthHeaders();
       const apiQuestions = generatedQuestions.map((q) => {
-        const base: any = {
-          question_text: q.question,
-          difficulty: difficulty === 'easy' ? 'Beginner' : difficulty === 'medium' ? 'Intermediate' : 'Advanced',
-          weight: 1,
+        const formattedQ: any = {
+          question_text: q.question_text,
+          type: q.type,
         };
-        if (q.type === 'mcq') {
-          base.type = 'MultipleChoice';
-          base.options = (q.options || []).map((opt, i) => ({
-            id: String.fromCharCode(65 + i),
-            text: opt,
-            is_correct: opt === q.answer
-          }));
-        } else if (q.type === 'true_false') {
-          base.type = 'TrueFalse';
-          base.options = [
-            { id: 'A', text: 'True', is_correct: q.answer === true },
-            { id: 'B', text: 'False', is_correct: q.answer === false }
-          ];
-        } else if (q.type === 'essay') {
-          base.type = 'Essay';
-          base.correct_answer = String(q.answer);
-        } else {
-          base.type = 'MultipleChoice';
-        }
-        return base;
+        formattedQ.options = (q.options || []).map((opt) => ({
+          id: opt.id,
+          text: opt.text,
+          is_correct: opt.is_correct
+        }));
+        return formattedQ;
       });
 
       await apiPost('/api/quiz', {
-        title: `Kuis ${modules.find(m => m.uuid_modul === selectedModule)?.title || 'Baru'} (AI)`,
-        difficulty: difficulty === 'easy' ? 'Beginner' : difficulty === 'medium' ? 'Intermediate' : 'Advanced',
-        passing_score: 70,
-        max_attempts: 3,
+        title: aiTitle.trim(),
+        description: aiDescription || undefined,
+        time_limit: Number(aiTimeLimit),
+        deadline: aiDeadline ? new Date(aiDeadline).toISOString() : undefined,
+        is_published: aiIsPublished,
         uuid_pembelajaran: selectedCourse,
         uuid_modul: selectedModule || undefined,
         questions: apiQuestions,
@@ -408,9 +398,18 @@ export default function QuizzesPage() {
       setGeneratedQuestions([]);
       setPromptText('');
       setReadingMaterial('');
+      setSelectedCourse('');
+      setSelectedModule('');
+      setAiTitle('');
+      setAiDescription('');
+      setAiTimeLimit(30);
+      setAiDeadline('');
+      setAiIsPublished(true);
       fetchQuizzes();
     } catch (err) {
       alert(err instanceof Error ? err.message : 'Gagal menyimpan quiz ke server.');
+    } finally {
+      setSavingAiQuiz(false);
     }
   };
 
@@ -420,9 +419,6 @@ export default function QuizzesPage() {
     setManualTitle('');
     setManualCourse('');
     setManualModule('');
-    setManualDifficulty('Beginner');
-    setManualPassingScore(70);
-    setManualMaxAttempts(3);
     setManualTimeLimit(30);
     setManualDeadline('');
     setManualDescription('');
@@ -448,9 +444,6 @@ export default function QuizzesPage() {
         }
 
         setManualModule(draft.module || '');
-        setManualDifficulty(draft.difficulty || 'Beginner');
-        setManualPassingScore(draft.passingScore ?? 70);
-        setManualMaxAttempts(draft.maxAttempts ?? 3);
         setManualTimeLimit(draft.timeLimit ?? 30);
         setManualDeadline(draft.deadline || '');
         setManualDescription(draft.description || '');
@@ -484,9 +477,6 @@ export default function QuizzesPage() {
       setManualTitle(quizData.title || '');
       setManualCourse(quizData.uuid_pembelajaran || '');
       setManualModule(quizData.uuid_modul || '');
-      setManualDifficulty(quizData.difficulty || 'Beginner');
-      setManualPassingScore(quizData.passing_score ?? 70);
-      setManualMaxAttempts(quizData.max_attempts ?? 3);
       setManualTimeLimit(quizData.time_limit ?? 30);
       
       if (quizData.deadline) {
@@ -502,7 +492,7 @@ export default function QuizzesPage() {
 
       // Map questions
       const mappedQuestions: QuizQuestionInput[] = (quizData.questions || []).map((q: any) => {
-        const qType: 'MultipleChoice' | 'TrueFalse' | 'Essay' = q.type || 'MultipleChoice';
+        const qType: 'MultipleChoice' | 'TrueFalse' | 'Checkbox' = q.type || 'MultipleChoice';
         const optionsList = (q.options || []).map((o: any) => ({
           id: o.id || '',
           text: o.text || '',
@@ -512,11 +502,7 @@ export default function QuizzesPage() {
         return {
           question_text: q.question_text || '',
           type: qType,
-          difficulty: q.difficulty || 'Beginner',
-          weight: q.weight ?? 1,
-          explanation: q.explanation || '',
-          options: optionsList,
-          correct_answer: q.correct_answer || ''
+          options: optionsList
         };
       });
 
@@ -540,9 +526,6 @@ export default function QuizzesPage() {
     const newQ: QuizQuestionInput = {
       question_text: '',
       type: 'MultipleChoice',
-      difficulty: 'Beginner',
-      weight: 1,
-      explanation: '',
       options: [
         { id: 'A', text: '', is_correct: false },
         { id: 'B', text: '', is_correct: false },
@@ -561,22 +544,20 @@ export default function QuizzesPage() {
   const handleQuestionChange = (index: number, field: keyof QuizQuestionInput, value: any) => {
     const updated = [...manualQuestions];
     if (field === 'type') {
-      const type = value as 'MultipleChoice' | 'TrueFalse' | 'Essay';
+      const type = value as 'MultipleChoice' | 'TrueFalse' | 'Checkbox';
       updated[index].type = type;
       if (type === 'TrueFalse') {
         updated[index].options = [
           { id: 'A', text: 'True', is_correct: true },
           { id: 'B', text: 'False', is_correct: false }
         ];
-      } else if (type === 'MultipleChoice') {
+      } else {
         updated[index].options = [
           { id: 'A', text: '', is_correct: false },
           { id: 'B', text: '', is_correct: false },
           { id: 'C', text: '', is_correct: false },
           { id: 'D', text: '', is_correct: false }
         ];
-      } else {
-        updated[index].options = [];
       }
     } else {
       (updated[index] as any)[field] = value;
@@ -592,10 +573,14 @@ export default function QuizzesPage() {
 
   const handleOptionCorrectChange = (qIdx: number, oIdx: number) => {
     const updated = [...manualQuestions];
-    updated[qIdx].options = updated[qIdx].options.map((opt, idx) => ({
-      ...opt,
-      is_correct: idx === oIdx
-    }));
+    if (updated[qIdx].type === 'Checkbox') {
+      updated[qIdx].options[oIdx].is_correct = !updated[qIdx].options[oIdx].is_correct;
+    } else {
+      updated[qIdx].options = updated[qIdx].options.map((opt, idx) => ({
+        ...opt,
+        is_correct: idx === oIdx
+      }));
+    }
     setManualQuestions(updated);
   };
 
@@ -619,23 +604,13 @@ export default function QuizzesPage() {
         const formattedQ: any = {
           question_text: q.question_text,
           type: q.type,
-          difficulty: q.difficulty,
-          weight: Number(q.weight),
         };
 
-        if (q.explanation) {
-          formattedQ.explanation = q.explanation;
-        }
-
-        if (q.type === 'MultipleChoice' || q.type === 'TrueFalse') {
-          formattedQ.options = q.options.map((opt) => ({
-            id: opt.id,
-            text: opt.text,
-            is_correct: opt.is_correct
-          }));
-        } else if (q.type === 'Essay') {
-          formattedQ.correct_answer = q.correct_answer || '';
-        }
+        formattedQ.options = q.options.map((opt) => ({
+          id: opt.id,
+          text: opt.text,
+          is_correct: opt.is_correct
+        }));
 
         return formattedQ;
       });
@@ -761,15 +736,15 @@ export default function QuizzesPage() {
               <div key={quiz.id} className="glass-panel" style={s.quizCard}>
                 <div 
                   style={{ display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer', flex: 1 }}
-                  onClick={() => router.push(`/quiz?id=${quiz.id}`)}
-                  title="Klik untuk melihat detail / preview soal"
+                  onClick={() => router.push(`/lecturer/quizzes/detail?id=${quiz.id}`)}
+                  title="Klik untuk melihat detail soal kuis"
                 >
                   <div style={s.iconWrap}>
                     <Brain size={18} color="var(--lemon)" />
                   </div>
                   <div>
                     <h4 style={s.quizName}>{quiz.title}</h4>
-                    <span style={s.quizMeta}>{quiz.moduleTitle} • {quiz.count} Questions • {quiz.difficulty}</span>
+                    <span style={s.quizMeta}>{quiz.moduleTitle} • {quiz.count} Questions</span>
                   </div>
                 </div>
                 <div style={{ display: 'flex', gap: 8 }}>
@@ -800,13 +775,17 @@ export default function QuizzesPage() {
               </button>
             </div>
             <div style={s.modalBody}>
-              <div style={s.aiGrid}>
-                {/* Inputs Left */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', alignItems: 'start' }}>
+                {/* Left Panel — AI Settings */}
                 <div style={s.aiInputs}>
+                  <div style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--azure)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4 }}>
+                    ① Generate Soal
+                  </div>
+
                   <div style={s.formGroup}>
-                    <label style={s.label}>Target Course (Required)</label>
-                    <select 
-                      value={selectedCourse} 
+                    <label style={s.label}>Course (Pembelajaran) *</label>
+                    <select
+                      value={selectedCourse}
                       onChange={(e) => { setSelectedCourse(e.target.value); setSelectedModule(''); }}
                       style={s.select}
                     >
@@ -816,10 +795,11 @@ export default function QuizzesPage() {
                       ))}
                     </select>
                   </div>
+
                   <div style={s.formGroup}>
-                    <label style={s.label}>Target Module (Optional)</label>
-                    <select 
-                      value={selectedModule} 
+                    <label style={s.label}>Module (Optional)</label>
+                    <select
+                      value={selectedModule}
                       onChange={(e) => setSelectedModule(e.target.value)}
                       style={s.select}
                     >
@@ -829,91 +809,97 @@ export default function QuizzesPage() {
                       ))}
                     </select>
                   </div>
+
                   <div style={s.formGroup}>
-                    <label style={s.label}>Difficulty</label>
-                    <div style={{ display: 'flex', gap: 8 }}>
-                      {(['easy', 'medium', 'hard'] as const).map((diff) => (
-                        <button
-                          key={diff}
-                          type="button"
-                          onClick={() => setDifficulty(diff)}
-                          style={{
-                            ...s.diffBtn,
-                            ...(difficulty === diff ? s.diffBtnActive : {}),
-                            textTransform: 'capitalize'
-                          }}
-                        >
-                          {diff}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                  <div style={s.formGroup}>
-                    <label style={s.label}>Reading Material / Context (Required)</label>
+                    <label style={s.label}>Reading Material / Context *</label>
                     <textarea
                       value={readingMaterial}
                       onChange={(e) => setReadingMaterial(e.target.value)}
-                      placeholder="Paste lesson reading content here..."
-                      style={{ ...s.input, minHeight: 120, resize: 'vertical' }}
+                      placeholder="Paste materi bacaan di sini sebagai sumber soal..."
+                      style={{ ...s.input, minHeight: 100, resize: 'vertical' }}
                     />
                   </div>
+
                   <div style={s.formGroup}>
                     <label style={s.label}>Topic Guidance (Optional)</label>
                     <input
                       type="text"
                       value={promptText}
                       onChange={(e) => setPromptText(e.target.value)}
-                      placeholder="e.g., Fokus pada pengakuan liabilitas jangka pendek..."
+                      placeholder="e.g., Fokus pada konsep utama materi ini..."
                       style={s.input}
                     />
                   </div>
+
                   <div style={s.formGroup}>
-                    <label style={s.label}>Question Counts</label>
+                    <label style={s.label}>Jumlah Soal Per Tipe <span style={{ color: 'var(--grey)', fontWeight: 400 }}>(Maks. 25 total)</span></label>
                     <div style={s.counterRow}>
                       <div style={s.counterBox}>
-                        <span>MCQ</span>
+                        <div>
+                          <div style={{ fontWeight: 700, fontSize: '0.82rem' }}>MCQ</div>
+                          <div style={{ fontSize: '0.7rem', color: 'var(--grey)', marginTop: 2 }}>Pilihan Ganda</div>
+                        </div>
                         <input
                           type="number"
                           min="0"
-                          value={counts.mcq}
-                          onChange={(e) => setCounts({ ...counts, mcq: parseInt(e.target.value) || 0 })}
+                          max="25"
+                          value={counts.MultipleChoice}
+                          onChange={(e) => setCounts({ ...counts, MultipleChoice: parseInt(e.target.value) || 0 })}
                           style={s.counterInput}
                         />
                       </div>
                       <div style={s.counterBox}>
-                        <span>T/F</span>
+                        <div>
+                          <div style={{ fontWeight: 700, fontSize: '0.82rem' }}>T/F</div>
+                          <div style={{ fontSize: '0.7rem', color: 'var(--grey)', marginTop: 2 }}>Benar / Salah</div>
+                        </div>
                         <input
                           type="number"
                           min="0"
-                          value={counts.true_false}
-                          onChange={(e) => setCounts({ ...counts, true_false: parseInt(e.target.value) || 0 })}
+                          max="25"
+                          value={counts.TrueFalse}
+                          onChange={(e) => setCounts({ ...counts, TrueFalse: parseInt(e.target.value) || 0 })}
                           style={s.counterInput}
                         />
                       </div>
                       <div style={s.counterBox}>
-                        <span>Essay</span>
+                        <div>
+                          <div style={{ fontWeight: 700, fontSize: '0.82rem' }}>Checkbox</div>
+                          <div style={{ fontSize: '0.7rem', color: 'var(--grey)', marginTop: 2 }}>Multi Jawaban</div>
+                        </div>
                         <input
                           type="number"
                           min="0"
-                          value={counts.essay}
-                          onChange={(e) => setCounts({ ...counts, essay: parseInt(e.target.value) || 0 })}
+                          max="25"
+                          value={counts.Checkbox}
+                          onChange={(e) => setCounts({ ...counts, Checkbox: parseInt(e.target.value) || 0 })}
                           style={s.counterInput}
                         />
                       </div>
                     </div>
+                    {(() => {
+                      const total = counts.MultipleChoice + counts.TrueFalse + counts.Checkbox;
+                      return (
+                        <div style={{ fontSize: '0.75rem', color: 'var(--grey-blue)', marginTop: 6 }}>
+                          Total: <strong style={{ color: total > 25 ? '#FF5252' : '#fff' }}>{total}</strong> soal
+                          {total > 25 && <span style={{ color: '#FF5252', marginLeft: 6 }}>— melebihi batas maksimum 25!</span>}
+                        </div>
+                      );
+                    })()}
                   </div>
+
                   <button
                     onClick={handleGenerateQuestions}
-                    disabled={aiGenerating || !readingMaterial}
+                    disabled={aiGenerating || !readingMaterial || !selectedCourse}
                     style={{
                       ...s.generateBtn,
-                      opacity: (aiGenerating || !readingMaterial) ? 0.6 : 1
+                      opacity: (aiGenerating || !readingMaterial || !selectedCourse) ? 0.6 : 1
                     }}
                   >
                     {aiGenerating ? (
                       <>
                         <Loader2 size={16} style={{ animation: 'spin 1s linear infinite' }} />
-                        <span>Generating Quiz...</span>
+                        <span>Generating Soal...</span>
                       </>
                     ) : (
                       <>
@@ -924,42 +910,125 @@ export default function QuizzesPage() {
                   </button>
                 </div>
 
-                {/* Preview Right */}
-                <div style={s.aiPreview}>
-                  <h4 style={s.previewLabel}>Questions Preview ({generatedQuestions.length})</h4>
-                  <div style={s.previewArea}>
+                {/* Right Panel — Quiz Metadata + Preview */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 16, borderLeft: '1px solid rgba(255,255,255,0.08)', paddingLeft: 24 }}>
+                  <div style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--lemon)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4 }}>
+                    ② Data Kuis
+                  </div>
+
+                  <div style={s.formGroup}>
+                    <label style={s.label}>Judul Kuis *</label>
+                    <input
+                      type="text"
+                      value={aiTitle}
+                      onChange={(e) => setAiTitle(e.target.value)}
+                      placeholder="e.g., Kuis JavaScript Dasar (AI)"
+                      style={s.input}
+                    />
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                    <div style={s.formGroup}>
+                      <label style={s.label}>Time Limit (Menit)</label>
+                      <input
+                        type="number"
+                        min="1"
+                        value={aiTimeLimit}
+                        onChange={(e) => setAiTimeLimit(parseInt(e.target.value) || 1)}
+                        style={s.input}
+                      />
+                    </div>
+                    <div style={s.formGroup}>
+                      <label style={s.label}>Deadline (Optional)</label>
+                      <input
+                        type="datetime-local"
+                        value={aiDeadline}
+                        onChange={(e) => setAiDeadline(e.target.value)}
+                        style={s.input}
+                      />
+                    </div>
+                  </div>
+
+                  <div style={s.formGroup}>
+                    <label style={s.label}>Deskripsi (Optional)</label>
+                    <textarea
+                      rows={2}
+                      value={aiDescription}
+                      onChange={(e) => setAiDescription(e.target.value)}
+                      placeholder="Tulis instruksi atau deskripsi kuis untuk siswa..."
+                      style={{ ...s.input, resize: 'vertical' }}
+                    />
+                  </div>
+
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <input
+                      type="checkbox"
+                      id="aiIsPublished"
+                      checked={aiIsPublished}
+                      onChange={(e) => setAiIsPublished(e.target.checked)}
+                      style={{ width: 16, height: 16, accentColor: 'var(--azure)', cursor: 'pointer' }}
+                    />
+                    <label htmlFor="aiIsPublished" style={{ ...s.label, cursor: 'pointer', userSelect: 'none' }}>
+                      Publish langsung kuis ini
+                    </label>
+                  </div>
+
+                  {/* Questions Preview */}
+                  <div style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--grey-blue)', textTransform: 'uppercase', letterSpacing: '0.05em', marginTop: 4 }}>
+                    ③ Preview Soal ({generatedQuestions.length})
+                  </div>
+                  <div style={{ ...s.previewArea, minHeight: 200, maxHeight: 260 }}>
                     {generatedQuestions.length > 0 ? (
                       <div style={s.questionsList}>
                         {generatedQuestions.map((q, idx) => (
                           <div key={idx} style={s.questionItem}>
                             <div style={s.qHeader}>
-                              <span style={s.qBadge}>{q.type.replace('_', ' ').toUpperCase()}</span>
-                              <span style={s.qNum}>Question {idx + 1}</span>
+                              <span style={s.qBadge}>{q.type}</span>
+                              <span style={s.qNum}>Soal {idx + 1}</span>
                             </div>
-                            <p style={s.qText}>{q.question}</p>
+                            <p style={s.qText}>{q.question_text}</p>
                             {q.options && (
                               <ul style={s.optionsList}>
                                 {q.options.map((opt, oIdx) => (
-                                  <li key={oIdx} style={s.optionItem}>{opt}</li>
+                                  <li key={oIdx} style={{ ...s.optionItem, color: opt.is_correct ? 'var(--lemon)' : 'inherit' }}>
+                                    <strong>{opt.id}.</strong> {opt.text} {opt.is_correct && '✓'}
+                                  </li>
                                 ))}
                               </ul>
                             )}
-                            <div style={s.answerBox}>
-                              <strong>Answer:</strong> {String(q.answer)}
-                            </div>
                           </div>
                         ))}
                       </div>
                     ) : (
                       <div style={s.previewPlaceholder}>
-                        {aiGenerating ? 'AI is crafting questions from the reading material...' : 'Generate questions to see them here.'}
+                        {aiGenerating
+                          ? 'AI sedang membuat soal dari materi bacaan...'
+                          : 'Klik "Generate Questions" untuk melihat preview soal di sini.'}
                       </div>
                     )}
                   </div>
+
                   {generatedQuestions.length > 0 && (
-                    <button onClick={handleSaveAiQuiz} style={s.saveQuizBtn}>
-                      <CheckCircle size={16} />
-                      <span>Save Quiz to Bank</span>
+                    <button
+                      onClick={handleSaveAiQuiz}
+                      disabled={savingAiQuiz || !aiTitle.trim() || !selectedCourse}
+                      style={{
+                        ...s.saveQuizBtn,
+                        opacity: (savingAiQuiz || !aiTitle.trim() || !selectedCourse) ? 0.6 : 1,
+                        cursor: (savingAiQuiz || !aiTitle.trim() || !selectedCourse) ? 'not-allowed' : 'pointer'
+                      }}
+                    >
+                      {savingAiQuiz ? (
+                        <>
+                          <Loader2 size={16} style={{ animation: 'spin 1s linear infinite' }} />
+                          <span>Menyimpan...</span>
+                        </>
+                      ) : (
+                        <>
+                          <CheckCircle size={16} />
+                          <span>Save Quiz to Bank</span>
+                        </>
+                      )}
                     </button>
                   )}
                 </div>
@@ -1032,18 +1101,6 @@ export default function QuizzesPage() {
                         {(manualCourse ? modules.filter(m => m.uuid_pembelajaran === manualCourse) : modules).map(m => (
                           <option key={m.uuid_modul} value={m.uuid_modul} style={{ background: '#191919', color: '#fff' }}>{m.title}</option>
                         ))}
-                      </select>
-                    </div>
-                    <div style={s.formGroup}>
-                      <label style={s.label}>Difficulty</label>
-                      <select
-                        value={manualDifficulty}
-                        onChange={(e) => setManualDifficulty(e.target.value as any)}
-                        style={s.select}
-                      >
-                        <option value="Beginner" style={{ background: '#191919', color: '#fff' }}>Beginner</option>
-                        <option value="Intermediate" style={{ background: '#191919', color: '#fff' }}>Intermediate</option>
-                        <option value="Advanced" style={{ background: '#191919', color: '#fff' }}>Advanced</option>
                       </select>
                     </div>
                   </div>
@@ -1178,83 +1235,34 @@ export default function QuizzesPage() {
                                 >
                                   <option value="MultipleChoice" style={{ background: '#191919', color: '#fff' }}>Pilihan Ganda</option>
                                   <option value="TrueFalse" style={{ background: '#191919', color: '#fff' }}>Benar / Salah</option>
-                                  <option value="Essay" style={{ background: '#191919', color: '#fff' }}>Esai</option>
+                                  <option value="Checkbox" style={{ background: '#191919', color: '#fff' }}>Checkbox (Multi Correct)</option>
                                 </select>
-                              </div>
-                              <div style={s.formGroup}>
-                                <label style={s.label}>Tingkat Kesulitan</label>
-                                <select
-                                  value={q.difficulty}
-                                  onChange={(e) => handleQuestionChange(qIdx, 'difficulty', e.target.value)}
-                                  style={s.select}
-                                >
-                                  <option value="Beginner" style={{ background: '#191919', color: '#fff' }}>Beginner</option>
-                                  <option value="Intermediate" style={{ background: '#191919', color: '#fff' }}>Intermediate</option>
-                                  <option value="Advanced" style={{ background: '#191919', color: '#fff' }}>Advanced</option>
-                                </select>
-                              </div>
-                              <div style={s.formGroup}>
-                                <label style={s.label}>Bobot Nilai (Poin)</label>
-                                <input 
-                                  type="number"
-                                  min="1"
-                                  value={q.weight}
-                                  onChange={(e) => handleQuestionChange(qIdx, 'weight', parseInt(e.target.value) || 1)}
-                                  style={s.input}
-                                />
                               </div>
                             </div>
-
-                            {/* Options for MCQ / TF */}
-                            {(q.type === 'MultipleChoice' || q.type === 'TrueFalse') && (
-                              <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
-                                <label style={s.label}>Opsi Jawaban & Jawaban Benar</label>
-                                {q.options.map((opt, oIdx) => (
-                                  <div key={opt.id} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                                    <input 
-                                      type="radio"
-                                      name={`correct-radio-${qIdx}`}
-                                      checked={opt.is_correct}
-                                      onChange={() => handleOptionCorrectChange(qIdx, oIdx)}
-                                      style={{ accentColor: 'var(--azure)', cursor: 'pointer' }}
-                                    />
-                                    <span style={{ color: 'var(--grey-blue)', fontWeight: 600, fontSize: '0.85rem' }}>{opt.id}</span>
-                                    <input 
-                                      type="text"
-                                      required
-                                      disabled={q.type === 'TrueFalse'}
-                                      value={opt.text}
-                                      onChange={(e) => handleOptionTextChange(qIdx, oIdx, e.target.value)}
-                                      placeholder={`Teks Opsi ${opt.id}`}
-                                      style={s.input}
-                                    />
-                                  </div>
-                                ))}
-                              </div>
-                            )}
-
-                            {/* Essay Expected Answer */}
-                            {q.type === 'Essay' && (
-                              <div style={{ ...s.formGroup, marginTop: 12 }}>
-                                <label style={s.label}>Model Jawaban yang Benar</label>
-                                <textarea
-                                  value={q.correct_answer || ''}
-                                  onChange={(e) => handleQuestionChange(qIdx, 'correct_answer', e.target.value)}
-                                  placeholder="Deskripsikan jawaban esai yang benar..."
-                                  style={s.input}
-                                />
-                              </div>
-                            )}
-
-                            <div style={{ ...s.formGroup, marginTop: 12 }}>
-                              <label style={s.label}>Penjelasan Jawaban (Opsional)</label>
-                              <input 
-                                type="text"
-                                value={q.explanation || ''}
-                                onChange={(e) => handleQuestionChange(qIdx, 'explanation', e.target.value)}
-                                placeholder="Mengapa jawaban ini benar?"
-                                style={s.input}
-                              />
+                            {/* Options for MCQ / TF / Checkbox */}
+                            <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                              <label style={s.label}>Opsi Jawaban & Jawaban Benar</label>
+                              {q.options.map((opt, oIdx) => (
+                                <div key={opt.id} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                                  <input 
+                                    type={q.type === 'Checkbox' ? "checkbox" : "radio"}
+                                    name={`correct-choice-${qIdx}-${q.type === 'Checkbox' ? oIdx : 'radio'}`}
+                                    checked={opt.is_correct}
+                                    onChange={() => handleOptionCorrectChange(qIdx, oIdx)}
+                                    style={{ accentColor: 'var(--azure)', cursor: 'pointer', width: 16, height: 16 }}
+                                  />
+                                  <span style={{ color: 'var(--grey-blue)', fontWeight: 600, fontSize: '0.85rem' }}>{opt.id}</span>
+                                  <input 
+                                    type="text"
+                                    required
+                                    disabled={q.type === 'TrueFalse'}
+                                    value={opt.text}
+                                    onChange={(e) => handleOptionTextChange(qIdx, oIdx, e.target.value)}
+                                    placeholder={`Teks Opsi ${opt.id}`}
+                                    style={s.input}
+                                  />
+                                </div>
+                              ))}
                             </div>
                           </div>
                         ))

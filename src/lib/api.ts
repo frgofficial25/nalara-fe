@@ -12,8 +12,25 @@ const API_BASE_URL =
 interface RequestOptions {
   /** Bearer token untuk endpoint yang memerlukan autentikasi */
   token?: string;
-  /** Override headers tambahan */
+/** Override headers tambahan */
   headers?: Record<string, string>;
+}
+
+function handleApiError(response: Response, data: any) {
+  if (response.status === 401) {
+    if (typeof window !== 'undefined') {
+      sessionStorage.removeItem('nalara_auth_token');
+      localStorage.removeItem('nalara_auth_token');
+      if (window.location.pathname !== '/login') {
+        window.location.href = '/login';
+      }
+    }
+  }
+  const errorMessage =
+    (data as { message?: string; error?: string }).message ||
+    (data as { message?: string; error?: string }).error ||
+    `Request gagal dengan status ${response.status}`;
+  throw new Error(errorMessage);
 }
 
 /**
@@ -54,12 +71,7 @@ export async function apiPost<TResponse>(
   }
 
   if (!response.ok) {
-    // Ambil pesan dari body jika ada, fallback ke status HTTP
-    const errorMessage =
-      (data as { message?: string; error?: string }).message ||
-      (data as { message?: string; error?: string }).error ||
-      `Request gagal dengan status ${response.status}`;
-    throw new Error(errorMessage);
+    handleApiError(response, data);
   }
 
   return data;
@@ -98,11 +110,7 @@ export async function apiGet<TResponse>(
   }
 
   if (!response.ok) {
-    const errorMessage =
-      (data as { message?: string; error?: string }).message ||
-      (data as { message?: string; error?: string }).error ||
-      `Request gagal dengan status ${response.status}`;
-    throw new Error(errorMessage);
+    handleApiError(response, data);
   }
 
   return data;
@@ -144,11 +152,7 @@ export async function apiPut<TResponse>(
   }
 
   if (!response.ok) {
-    const errorMessage =
-      (data as { message?: string; error?: string }).message ||
-      (data as { message?: string; error?: string }).error ||
-      `Request gagal dengan status ${response.status}`;
-    throw new Error(errorMessage);
+    handleApiError(response, data);
   }
 
   return data;
@@ -186,11 +190,7 @@ export async function apiDelete<TResponse>(
   }
 
   if (!response.ok) {
-    const errorMessage =
-      (data as { message?: string; error?: string }).message ||
-      (data as { message?: string; error?: string }).error ||
-      `Request gagal dengan status ${response.status}`;
-    throw new Error(errorMessage);
+    handleApiError(response, data);
   }
 
   return data;
@@ -232,10 +232,7 @@ export async function apiUpload<TResponse>(
   }
 
   if (!response.ok) {
-    const errorMessage =
-      (data as { message?: string }).message ||
-      `Request gagal dengan status ${response.status}`;
-    throw new Error(errorMessage);
+    handleApiError(response, data);
   }
 
   return data;
@@ -277,11 +274,7 @@ export async function apiUploadPost<TResponse>(
   }
 
   if (!response.ok) {
-    const errorMessage =
-      (data as { message?: string; error?: string }).message ||
-      (data as { message?: string; error?: string }).error ||
-      `Request gagal dengan status ${response.status}`;
-    throw new Error(errorMessage);
+    handleApiError(response, data);
   }
 
   return data;

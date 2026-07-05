@@ -162,17 +162,27 @@ export default function CoursesPage() {
       
       setDetailModuls(modulList);
 
-      // Fetch tugas for each modul
+      // Fetch materi for each modul
       const newTugasMap: Record<string, any[]> = {};
       await Promise.all(
         modulList.map(async (m) => {
-          const tugasRes = await apiGet<any[] | { data?: any[] }>(
-            `/api/tugas?uuid_pembelajaran=${course.id}&uuid_modul=${m.id}`, opts
+          const materiRes = await apiGet<any>(
+            `/api/materi?uuid_modul=${m.id}`, opts
           );
-          let tugasList: any[] = Array.isArray(tugasRes)
-            ? tugasRes
-            : (tugasRes as any).data ?? [];
-          tugasList = tugasList.map(t => ({ ...t, id: t.uuid_tugas || t.id }));
+          let materiList: any[] = [];
+          if (materiRes && materiRes.data && Array.isArray(materiRes.data.materi)) {
+            materiList = materiRes.data.materi;
+          } else if (Array.isArray(materiRes)) {
+            materiList = materiRes;
+          } else if (materiRes && 'data' in materiRes && Array.isArray(materiRes.data)) {
+            materiList = materiRes.data;
+          }
+          const tugasList = materiList.map((t: any) => ({
+            ...t,
+            id: t.uuid_materi || t.id,
+            title: t.nama_materi || t.title || '',
+            type: t.tipe || t.type || 'Reading',
+          }));
           newTugasMap[m.id] = tugasList;
         })
       );

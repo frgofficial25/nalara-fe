@@ -328,7 +328,7 @@ export default function CourseDetailClient() {
           }
 
           const tugasList: Tugas[] = rawList.map((t: any) => ({
-            id: t.uuid_tugas || t.id,
+            id: t.uuid_materi || t.id,
             title: t.nama_materi || t.title || '',
             type: t.tipe || t.type || 'Reading',
             file_url: t.file?.url || t.file_url || '',

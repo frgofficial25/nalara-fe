@@ -2,42 +2,48 @@
 
 import React, { useEffect, useState, useCallback } from 'react';
 import {
-  ArrowLeft, ChevronRight, FileText, Download, Eye, Loader2,
-  AlertCircle, BookOpen, Video, BookMarked, FlaskConical
+  ArrowLeft, ChevronRight, FileText, Download, Loader2,
+  AlertCircle, BookOpen, Video, Trash2, Upload, File,
+  ExternalLink, RefreshCw, ZoomIn
 } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { apiGet, apiUploadPost, apiDelete } from '@/lib/api';
 import { getStoredToken } from '@/services/auth';
 
-interface TugasDetail {
+interface MateriFile {
+  nama_file?: string;
+  format_file?: string;
+  ukuran_file?: number | null;
+  preview_url?: string;
+  export_url?: string;
+  url?: string;
+}
+
+interface MateriDetail {
   id: string;
-  uuid_tugas?: string;
-  title: string;
-  type?: 'Reading' | 'Video' | 'CaseStudy' | 'Practice';
-  slug?: string;
-  content?: Record<string, unknown> | null;
-  youtube_link?: string;
-  file_url?: string;
-  createdAt?: string;
-  pembelajaran?: { title: string };
-  modul?: { title: string };
+  nama_materi: string;
+  tipe?: 'Reading' | 'Video';
+  nomor_urut?: number;
+  nama_pembelajaran?: string;
+  nama_modul?: string;
+  file?: MateriFile | null;
+  video_url?: string | null;
+  tanggal_dibuat?: string;
+  terakhir_diperbarui?: string;
 }
 
 function getFileExtension(url?: string) {
   if (!url) return '';
   const cleanUrl = url.split('?')[0];
   const match = cleanUrl.match(/\.([a-z0-9]+)$/i);
-  return match ? `.${match[1].toLowerCase()}` : '';
+  return match ? match[1].toLowerCase() : '';
 }
 
-function buildDocumentPreviewUrl(url?: string) {
-  if (!url) return null;
-  const ext = getFileExtension(url);
-  if (ext === '.pdf') return url;
-  if (['.docx', '.ppt', '.pptx'].includes(ext)) {
-    return `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(url)}`;
-  }
-  return null;
+function formatFileSize(bytes?: number | null) {
+  if (!bytes) return '';
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
 function getAuth() {
@@ -52,44 +58,296 @@ function getAuth() {
   return { token: token ?? undefined, headers };
 }
 
-function TypeIcon({ type }: { type?: string }) {
-  const props = { size: 20, color: '#a5b4fc' };
-  switch (type) {
-    case 'Reading': return <BookOpen {...props} />;
-    case 'Video': return <Video {...props} />;
-    case 'CaseStudy': return <FlaskConical {...props} />;
-    case 'Practice': return <BookMarked {...props} />;
-    default: return <FileText {...props} />;
+// ─── File Preview Component ───────────────────────────────────────────────────
+function FilePreviewSection({ file, tipe }: { file: MateriFile; tipe?: string }) {
+  const [fullscreen, setFullscreen] = useState(false);
+  const [viewMode, setViewMode] = useState<'google' | 'direct'>('google');
+  const url = file.preview_url || file.export_url || file.url || '';
+  const urlExt = getFileExtension(url);
+  const ext = urlExt || (file.format_file || '').toLowerCase();
+
+  // PDF — Google Docs Viewer (handles cross-origin PDFs + built-in scrolling)
+  if (ext === 'pdf') {
+    const googleDocsUrl = `https://docs.google.com/viewer?url=${encodeURIComponent(url)}&embedded=true`;
+    const directUrl = `${url}#toolbar=1&navpanes=0&scrollbar=1&view=FitH`;
+    const iframeSrc = viewMode === 'google' ? googleDocsUrl : directUrl;
+    const previewHeight = fullscreen ? '88vh' : '700px';
+
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column' }}>
+        {/* Toolbar */}
+        <div style={previewToolbar}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <File size={14} color="#a5b4fc" />
+            <span style={{ fontSize: '0.8rem', color: '#94a3b8', fontWeight: 600 }}>
+              {file.nama_file || 'file.pdf'}
+            </span>
+            {file.ukuran_file && (
+              <span style={fileSizeBadge}>{formatFileSize(file.ukuran_file)}</span>
+            )}
+            <span style={{ ...fileSizeBadge, background: 'rgba(239,68,68,0.1)', color: '#f87171', borderColor: 'rgba(239,68,68,0.2)' }}>PDF</span>
+          </div>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            {/* Toggle viewer */}
+            <button
+              onClick={() => setViewMode(v => v === 'google' ? 'direct' : 'google')}
+              style={{ ...toolbarBtn, fontSize: '0.65rem', width: 'auto', padding: '0 8px', gap: 4, display: 'flex', alignItems: 'center' }}
+              title={viewMode === 'google' ? 'Coba preview langsung' : 'Gunakan Google Viewer'}
+            >
+              {viewMode === 'google' ? '⚡ Direct' : '🔍 Google'}
+            </button>
+            <button onClick={() => setFullscreen(!fullscreen)} style={toolbarBtn} title="Toggle tinggi preview">
+              <ZoomIn size={13} />
+            </button>
+            <a href={url} target="_blank" rel="noopener noreferrer" style={toolbarBtn} title="Buka di tab baru">
+              <ExternalLink size={13} />
+            </a>
+            <a href={url} download style={toolbarBtn} title="Download">
+              <Download size={13} />
+            </a>
+          </div>
+        </div>
+
+        {/* Preview iframe — scrolling handled inside iframe by Google Docs / browser PDF viewer */}
+        <div style={{
+          width: '100%',
+          height: previewHeight,
+          borderRadius: '0 0 14px 14px',
+          background: '#fff',
+          transition: 'height 0.35s ease',
+          position: 'relative',
+        }}>
+          <iframe
+            key={`${iframeSrc}-${fullscreen}`}
+            src={iframeSrc}
+            title={file.nama_file || 'PDF Preview'}
+            style={{
+              width: '100%',
+              height: '100%',
+              border: 'none',
+              display: 'block',
+            }}
+            allow="fullscreen"
+          />
+        </div>
+
+        <p style={{ fontSize: '0.72rem', color: '#475569', margin: '6px 0 0', textAlign: 'center' }}>
+          {viewMode === 'google'
+            ? '🔍 Menggunakan Google Docs Viewer — jika tidak muncul, klik "⚡ Direct" atau "Buka di tab baru"'
+            : '⚡ Preview langsung — jika tidak muncul, klik "🔍 Google" atau "Buka di tab baru"'
+          }
+        </p>
+      </div>
+    );
   }
+
+  // DOCX / PPT / PPTX — Office Online viewer (handles scrolling internally)
+  if (['docx', 'doc', 'ppt', 'pptx'].includes(ext)) {
+    const officeUrl = `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(url)}`;
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column' }}>
+        <div style={previewToolbar}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <File size={14} color="#a5b4fc" />
+            <span style={{ fontSize: '0.8rem', color: '#94a3b8', fontWeight: 600 }}>
+              {file.nama_file || `file.${ext}`}
+            </span>
+            {file.ukuran_file && (
+              <span style={fileSizeBadge}>{formatFileSize(file.ukuran_file)}</span>
+            )}
+            <span style={{ ...fileSizeBadge, background: 'rgba(59,130,246,0.1)', color: '#93c5fd', borderColor: 'rgba(59,130,246,0.2)' }}>
+              {ext.toUpperCase()}
+            </span>
+          </div>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <a href={url} target="_blank" rel="noopener noreferrer" style={toolbarBtn}><ExternalLink size={13} /></a>
+            <a href={url} download style={toolbarBtn}><Download size={13} /></a>
+          </div>
+        </div>
+        {/* Office Online viewer — scroll handled internally */}
+        <div style={{ width: '100%', height: '700px', borderRadius: '0 0 14px 14px', background: '#fff', position: 'relative' }}>
+          <iframe
+            src={officeUrl}
+            title={file.nama_file || 'Document Preview'}
+            style={{ width: '100%', height: '100%', border: 'none', display: 'block' }}
+          />
+        </div>
+      </div>
+    );
+  }
+
+  // Video file — native HTML5 player with controls + scrollable page
+  if (['mp4', 'webm', 'mov', 'avi'].includes(ext) || tipe === 'Video') {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column' }}>
+        <div style={previewToolbar}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <Video size={14} color="#a5b4fc" />
+            <span style={{ fontSize: '0.8rem', color: '#94a3b8', fontWeight: 600 }}>
+              {file.nama_file || `video.${ext}`}
+            </span>
+            {file.ukuran_file && <span style={fileSizeBadge}>{formatFileSize(file.ukuran_file)}</span>}
+            <span style={{ ...fileSizeBadge, background: 'rgba(139,92,246,0.1)', color: '#c4b5fd', borderColor: 'rgba(139,92,246,0.2)' }}>VIDEO</span>
+          </div>
+          <a href={url} download style={toolbarBtn}><Download size={13} /></a>
+        </div>
+        <div style={{ width: '100%', borderRadius: '0 0 14px 14px', overflow: 'hidden', background: '#000' }}>
+          <video
+            src={url}
+            controls
+            controlsList="nodownload"
+            style={{ width: '100%', display: 'block', maxHeight: 560 }}
+          />
+        </div>
+      </div>
+    );
+  }
+
+
+  // Generic fallback
+  return (
+    <div style={genericFileCard}>
+      <div style={{ width: 52, height: 52, borderRadius: 12, background: 'rgba(99,102,241,0.12)', border: '1px solid rgba(99,102,241,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+        <FileText size={26} color="#a5b4fc" />
+      </div>
+      <div style={{ flex: 1 }}>
+        <p style={{ color: '#e2e8f0', fontWeight: 600, margin: 0, fontSize: '0.95rem' }}>
+          {file.nama_file || 'File Terlampir'}
+        </p>
+        <div style={{ display: 'flex', gap: 8, marginTop: 6, flexWrap: 'wrap' }}>
+          {file.format_file && <span style={fileSizeBadge}>{file.format_file}</span>}
+          {file.ukuran_file && <span style={fileSizeBadge}>{formatFileSize(file.ukuran_file)}</span>}
+        </div>
+      </div>
+      <a href={url} download style={downloadBigBtn}><Download size={14} /> Download</a>
+    </div>
+  );
 }
 
+// ─── Upload Section ───────────────────────────────────────────────────────────
+function UploadSection({ tugasId, onSuccess }: { tugasId: string; onSuccess: () => void }) {
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [dragging, setDragging] = useState(false);
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setDragging(false);
+    if (e.dataTransfer.files.length > 0) setSelectedFile(e.dataTransfer.files[0]);
+  };
+
+  const handleUpload = async () => {
+    if (!selectedFile) return;
+    setUploading(true);
+    setError(null);
+    try {
+      const auth = getAuth();
+      const formData = new FormData();
+      formData.append('file', selectedFile);
+      await apiUploadPost(`/api/materi/${tugasId}/upload`, formData, { token: auth.token, headers: auth.headers });
+      setSelectedFile(null);
+      onSuccess();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Upload gagal');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  return (
+    <div>
+      {error && (
+        <div style={{ ...errBoxSmall, marginBottom: 12 }}>
+          <AlertCircle size={14} /> {error}
+        </div>
+      )}
+      <div
+        onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
+        onDragLeave={() => setDragging(false)}
+        onDrop={handleDrop}
+        onClick={() => document.getElementById('materi-file-input')?.click()}
+        style={{
+          border: `2px dashed ${dragging ? '#6366f1' : 'rgba(99,102,241,0.3)'}`,
+          borderRadius: 12,
+          padding: '32px 20px',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          gap: 10,
+          cursor: 'pointer',
+          background: dragging ? 'rgba(99,102,241,0.08)' : 'rgba(99,102,241,0.03)',
+          transition: 'all 0.2s ease',
+        }}
+      >
+        <Upload size={30} color={dragging ? '#6366f1' : '#475569'} />
+        <p style={{ color: '#94a3b8', fontSize: '0.85rem', margin: 0, textAlign: 'center' }}>
+          {selectedFile
+            ? <span style={{ color: '#a5b4fc', fontWeight: 600 }}>✅ {selectedFile.name} ({formatFileSize(selectedFile.size)})</span>
+            : <>Drag & drop file atau <span style={{ color: '#a5b4fc', fontWeight: 600 }}>klik untuk pilih</span></>
+          }
+        </p>
+        <p style={{ color: '#475569', fontSize: '0.75rem', margin: 0 }}>
+          PDF, DOCX, PPT, PPTX, MP4, WEBM • Maks. 100MB
+        </p>
+        <input
+          id="materi-file-input"
+          type="file"
+          onChange={(e) => { if (e.target.files?.[0]) setSelectedFile(e.target.files[0]); }}
+          accept=".pdf,.doc,.docx,.ppt,.pptx,.mp4,.webm,.mov,.avi"
+          style={{ display: 'none' }}
+        />
+      </div>
+      {selectedFile && (
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 12 }}>
+          <button onClick={() => setSelectedFile(null)} style={secondaryBtnSm}>Batal</button>
+          <button onClick={handleUpload} disabled={uploading} style={{ ...primaryBtnSm, opacity: uploading ? 0.7 : 1 }}>
+            {uploading
+              ? <><Loader2 size={13} style={{ animation: 'spin 1s linear infinite' }} /> Uploading...</>
+              : <><Upload size={13} /> Upload File</>
+            }
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Main Component ───────────────────────────────────────────────────────────
 export default function MateriDetailClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const courseId = searchParams.get('courseId') || '';
   const tugasId = searchParams.get('tugasId') || '';
 
-  const [tugas, setTugas] = useState<TugasDetail | null>(null);
+  const [materi, setMateri] = useState<MateriDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [uploading, setUploading] = useState(false);
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [deletingFile, setDeletingFile] = useState(false);
+  const [showUpload, setShowUpload] = useState(false);
 
-  const fetchTugas = useCallback(async () => {
+  const fetchMateri = useCallback(async () => {
     if (!tugasId) return;
     try {
       setLoading(true);
       setError(null);
       const auth = getAuth();
-      // Try `/api/materi` first based on the swagger docs, fallback to `/api/tugas` if not supported here but we know the swagger uses `/api/materi` for this.
-      const res = await apiGet<TugasDetail | { data?: TugasDetail }>(
-        `/api/materi/${tugasId}`,
-        { token: auth.token, headers: auth.headers }
-      );
-      const data: TugasDetail = ('data' in res && (res as any).data)
-        ? { ...(res as any).data, id: (res as any).data.uuid_tugas || (res as any).data.id }
-        : { ...(res as TugasDetail), id: (res as any).uuid_tugas || (res as TugasDetail).id };
-      setTugas(data);
+      const res = await apiGet<any>(`/api/materi/${tugasId}`, { token: auth.token, headers: auth.headers });
+      // Backend: { success, data: { id, nama_materi, tipe, file: { preview_url, ... }, ... } }
+      const raw = res?.data ?? res;
+      const data: MateriDetail = {
+        id: raw.id || raw.uuid_materi || tugasId,
+        nama_materi: raw.nama_materi || raw.title || '',
+        tipe: raw.tipe || raw.type,
+        nomor_urut: raw.nomor_urut,
+        nama_pembelajaran: raw.nama_pembelajaran,
+        nama_modul: raw.nama_modul,
+        file: raw.file ?? null,
+        video_url: raw.video_url ?? null,
+        tanggal_dibuat: raw.tanggal_dibuat,
+        terakhir_diperbarui: raw.terakhir_diperbarui,
+      };
+      setMateri(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Gagal memuat detail materi.');
     } finally {
@@ -97,223 +355,203 @@ export default function MateriDetailClient() {
     }
   }, [tugasId]);
 
-  useEffect(() => { fetchTugas(); }, [fetchTugas]);
-
-  const handleDownload = () => {
-    if (!tugas?.file_url) return;
-    window.open(tugas.file_url, '_blank');
-  };
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files.length > 0) {
-      setSelectedFile(e.target.files[0]);
-    }
-  };
-
-  const handleUploadFile = async () => {
-    if (!selectedFile || !tugasId) return;
-    setUploading(true);
-    try {
-      const auth = getAuth();
-      const formData = new FormData();
-      formData.append('file', selectedFile);
-
-      await apiUploadPost(
-        `/api/materi/${tugasId}/upload`,
-        formData,
-        { token: auth.token, headers: auth.headers }
-      );
-      
-      setSelectedFile(null);
-      await fetchTugas();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Gagal upload file');
-    } finally {
-      setUploading(false);
-    }
-  };
+  useEffect(() => { fetchMateri(); }, [fetchMateri]);
 
   const handleDeleteFile = async () => {
-    if (!confirm('Apakah Anda yakin ingin menghapus file ini?')) return;
+    if (!confirm('Hapus file ini? Materi tetap ada, hanya filenya yang dihapus.')) return;
+    setDeletingFile(true);
     try {
       const auth = getAuth();
       await apiDelete(`/api/materi/${tugasId}/file`, { token: auth.token, headers: auth.headers });
-      await fetchTugas();
+      await fetchMateri();
+      setShowUpload(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Gagal menghapus file');
+    } finally {
+      setDeletingFile(false);
     }
   };
-
-  const previewUrl = buildDocumentPreviewUrl(tugas?.file_url);
-  const isPdf = getFileExtension(tugas?.file_url) === '.pdf';
 
   if (loading) {
     return (
       <div style={pageWrap}>
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: 300, gap: 12 }}>
-          <Loader2 size={36} color="#6366f1" style={{ animation: 'spin 1s linear infinite' }} />
+        <style>{`@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}`}</style>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: 360, gap: 14 }}>
+          <div style={{ width: 56, height: 56, borderRadius: '50%', background: 'rgba(99,102,241,0.1)', border: '1px solid rgba(99,102,241,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Loader2 size={26} color="#6366f1" style={{ animation: 'spin 1s linear infinite' }} />
+          </div>
           <span style={{ color: '#64748b', fontSize: '0.9rem' }}>Memuat detail materi...</span>
         </div>
-        <style>{`@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}`}</style>
       </div>
     );
   }
 
+  const file = materi?.file;
+  const fileUrl = file?.preview_url || file?.export_url || file?.url;
+  const hasFile = !!fileUrl;
+
   return (
     <div style={pageWrap}>
-      <style>{`@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}`}</style>
+      <style>{`
+        @keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+        @keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+        .materi-card{animation:fadeIn 0.3s ease both}
+      `}</style>
 
       {/* Breadcrumb */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 24, flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 28, flexWrap: 'wrap' }}>
         <button onClick={() => router.push('/lecturer/courses')} style={backBtn}>
           <ArrowLeft size={15} />
         </button>
         <span style={crumb} onClick={() => router.push('/lecturer/courses')}>Courses</span>
         <ChevronRight size={13} color="#475569" />
         <span style={crumb} onClick={() => router.push(`/lecturer/courses/detail?id=${courseId}`)}>
-          {tugas?.pembelajaran?.title ?? 'Detail Kelas'}
+          {materi?.nama_pembelajaran ?? 'Detail Kelas'}
         </span>
         <ChevronRight size={13} color="#475569" />
-        <span style={{ ...crumb, color: '#e2e8f0', cursor: 'default' }}>{tugas?.title ?? 'Detail Materi'}</span>
+        <span style={{ ...crumb, color: '#e2e8f0', cursor: 'default' }}>{materi?.nama_materi ?? 'Detail Materi'}</span>
       </div>
 
-      {/* Error */}
       {error && (
         <div style={errBox}>
           <AlertCircle size={16} />
           <span>{error}</span>
+          <button onClick={() => setError(null)} style={{ marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer', color: '#f87171', fontSize: 16 }}>✕</button>
         </div>
       )}
 
-      {tugas && (
-        <>
-          {/* Header Card */}
+      {materi && (
+        <div className="materi-card" style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+
+          {/* ── Header Card ── */}
           <div style={headerCard}>
             <div style={{ display: 'flex', alignItems: 'flex-start', gap: 16 }}>
               <div style={typeIconBox}>
-                <TypeIcon type={tugas.type} />
+                {materi.tipe === 'Video' ? <Video size={22} color="#a5b4fc" /> : <BookOpen size={22} color="#a5b4fc" />}
               </div>
               <div style={{ flex: 1 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-                  <h1 style={mainTitle}>{tugas.title}</h1>
-                  {tugas.type && <span style={typeBadge}>{tugas.type}</span>}
-                </div>
-                <div style={{ display: 'flex', gap: 16, marginTop: 8, flexWrap: 'wrap' }}>
-                  {tugas.pembelajaran?.title && (
-                    <span style={metaItem}>📚 {tugas.pembelajaran.title}</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 6 }}>
+                  <h1 style={mainTitle}>{materi.nama_materi}</h1>
+                  {materi.tipe && <span style={typeBadge}>{materi.tipe}</span>}
+                  {materi.nomor_urut !== undefined && (
+                    <span style={{ ...typeBadge, background: 'rgba(16,185,129,0.1)', color: '#34d399', border: '1px solid rgba(16,185,129,0.25)' }}>
+                      Materi #{materi.nomor_urut}
+                    </span>
                   )}
-                  {tugas.modul?.title && (
-                    <span style={metaItem}>📦 {tugas.modul.title}</span>
+                  {hasFile && (
+                    <span style={{ ...typeBadge, background: 'rgba(0,200,83,0.08)', color: '#4ade80', border: '1px solid rgba(0,200,83,0.2)' }}>
+                      ✓ File Tersedia
+                    </span>
+                  )}
+                </div>
+                <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
+                  {materi.nama_pembelajaran && <span style={metaItem}>📚 {materi.nama_pembelajaran}</span>}
+                  {materi.nama_modul && <span style={metaItem}>📦 {materi.nama_modul}</span>}
+                  {materi.tanggal_dibuat && (
+                    <span style={metaItem}>🕐 {new Date(materi.tanggal_dibuat).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
                   )}
                 </div>
               </div>
             </div>
 
-            {/* Actions */}
-            <div style={{ display: 'flex', gap: 10, marginTop: 20 }}>
+            <div style={{ display: 'flex', gap: 10, marginTop: 20, flexWrap: 'wrap' }}>
               <button onClick={() => router.push(`/lecturer/courses/detail?id=${courseId}`)} style={secondaryBtn}>
                 <ArrowLeft size={14} /> Kembali ke Kelas
               </button>
-              {tugas.file_url && (
-                <button onClick={handleDownload} style={primaryBtn}>
-                  <Download size={14} /> Download / Export
+              {hasFile && !showUpload && (
+                <>
+                  <button onClick={() => setShowUpload(true)} style={secondaryBtn}>
+                    <RefreshCw size={14} /> Ganti File
+                  </button>
+                  <button
+                    onClick={handleDeleteFile}
+                    disabled={deletingFile}
+                    style={{ ...secondaryBtn, color: '#f87171', borderColor: 'rgba(239,68,68,0.3)' }}
+                  >
+                    {deletingFile
+                      ? <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} />
+                      : <Trash2 size={14} />
+                    }
+                    Hapus File
+                  </button>
+                  <a href={fileUrl} download style={{ ...primaryBtn, textDecoration: 'none' }}>
+                    <Download size={14} /> Download
+                  </a>
+                </>
+              )}
+              {!hasFile && !showUpload && (
+                <button onClick={() => setShowUpload(true)} style={primaryBtn}>
+                  <Upload size={14} /> Upload File
+                </button>
+              )}
+              {showUpload && (
+                <button onClick={() => setShowUpload(false)} style={secondaryBtn}>
+                  Batal Upload
                 </button>
               )}
             </div>
           </div>
 
-          {/* Content Preview */}
+          {/* ── Preview Card ── */}
           <div style={contentCard}>
-            <h2 style={sectionTitle}>Preview Materi</h2>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20, paddingBottom: 14, borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
+              <h2 style={sectionTitle}>Preview Materi</h2>
+              {hasFile && file?.format_file && (
+                <span style={{ fontSize: '0.72rem', fontWeight: 700, padding: '3px 10px', borderRadius: 6, background: 'rgba(99,102,241,0.12)', color: '#a5b4fc', border: '1px solid rgba(99,102,241,0.2)' }}>
+                  {file.format_file}
+                </span>
+              )}
+            </div>
 
-            {/* Video */}
-            {tugas.type === 'Video' && tugas.youtube_link && (
-              <div style={videoWrap}>
+            {/* File Preview */}
+            {hasFile && !showUpload && (
+              <div style={{ borderRadius: 14, overflow: 'hidden', border: '1px solid rgba(99,102,241,0.15)' }}>
+                <FilePreviewSection file={file!} tipe={materi.tipe} />
+              </div>
+            )}
+
+            {/* YouTube / Video URL embed */}
+            {materi.tipe === 'Video' && materi.video_url && !hasFile && !showUpload && (
+              <div style={{ width: '100%', aspectRatio: '16/9', borderRadius: 12, overflow: 'hidden', background: '#000' }}>
                 <iframe
-                  src={tugas.youtube_link.replace('watch?v=', 'embed/')}
-                  style={{ width: '100%', height: '100%', border: 'none', borderRadius: 10 }}
+                  src={materi.video_url.replace('watch?v=', 'embed/')}
+                  style={{ width: '100%', height: '100%', border: 'none' }}
                   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                   allowFullScreen
                 />
               </div>
             )}
 
-            {/* Reading / Content */}
-            {tugas.type === 'Reading' && tugas.content && (
-              <div style={readingContent}>
-                <pre style={{ margin: 0, whiteSpace: 'pre-wrap', wordBreak: 'break-word', fontFamily: 'inherit', fontSize: '0.9rem', color: '#cbd5e1', lineHeight: 1.7 }}>
-                  {JSON.stringify(tugas.content, null, 2)}
-                </pre>
-              </div>
-            )}
-
-            {/* File */}
-            {tugas.file_url && (
-              <div style={{ ...filePreview, flexDirection: 'column', alignItems: 'stretch' }}>
-                {previewUrl ? (
-                  <div style={{ width: '100%', marginBottom: 12 }}>
-                    <iframe
-                      src={previewUrl}
-                      title={tugas.title}
-                      style={{ width: '100%', minHeight: 520, borderRadius: 12, border: 'none', background: '#fff' }}
-                    />
-                  </div>
-                ) : (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                    <FileText size={32} color="#6366f1" />
-                    <div>
-                      <p style={{ color: '#e2e8f0', fontWeight: 600, margin: 0 }}>File Terlampir</p>
-                      <p style={{ color: '#64748b', fontSize: '0.82rem', margin: '4px 0 0' }}>
-                        <a href={tugas.file_url} target="_blank" rel="noopener noreferrer" style={{ color: '#a5b4fc' }}>
-                          {tugas.file_url}
-                        </a>
-                      </p>
-                    </div>
-                  </div>
-                )}
-                <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 8, gap: 8 }}>
-                  <button onClick={handleDownload} style={{ ...primaryBtn }}>
-                    <Download size={13} /> {isPdf ? 'Buka PDF' : 'Download'}
-                  </button>
-                  <button onClick={handleDeleteFile} style={{ ...primaryBtn, background: '#FF5252' }}>
-                    Hapus File
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {/* Upload File Section if no file exists */}
-            {!tugas.file_url && (tugas.type === 'Reading' || tugas.type === 'Video') && (
-              <div style={{ ...filePreview, flexDirection: 'column', alignItems: 'stretch', marginTop: 16 }}>
-                <p style={{ color: '#e2e8f0', fontWeight: 600, margin: '0 0 8px' }}>Upload File Materi</p>
-                <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-                  <input type="file" onChange={handleFileChange} style={{ color: '#cbd5e1' }} />
-                  <button 
-                    onClick={handleUploadFile} 
-                    disabled={!selectedFile || uploading} 
-                    style={{ ...primaryBtn, opacity: (!selectedFile || uploading) ? 0.5 : 1 }}
-                  >
-                    {uploading ? <Loader2 size={13} style={{ animation: 'spin 1s linear infinite' }} /> : 'Upload'}
-                  </button>
-                </div>
-              </div>
+            {/* Upload Section */}
+            {(showUpload || !hasFile) && !materi.video_url && (
+              <UploadSection
+                tugasId={tugasId}
+                onSuccess={async () => {
+                  setShowUpload(false);
+                  await fetchMateri();
+                }}
+              />
             )}
 
             {/* Empty state */}
-            {!tugas.content && !tugas.file_url && !tugas.youtube_link && (
+            {!hasFile && !materi.video_url && !showUpload && (
               <div style={emptyContent}>
-                <Eye size={32} color="#4a5568" />
-                <p style={{ color: '#64748b', marginTop: 12 }}>Belum ada konten untuk materi ini.</p>
+                <div style={{ width: 64, height: 64, borderRadius: '50%', background: 'rgba(99,102,241,0.06)', border: '1px solid rgba(99,102,241,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 16 }}>
+                  <FileText size={28} color="#4a5568" />
+                </div>
+                <p style={{ color: '#475569', fontSize: '0.9rem', margin: 0 }}>Belum ada file untuk materi ini.</p>
+                <p style={{ color: '#334155', fontSize: '0.8rem', margin: '6px 0 0' }}>Klik "Upload File" untuk menambahkan konten.</p>
               </div>
             )}
           </div>
-        </>
+
+        </div>
       )}
     </div>
   );
 }
 
-// ─── Styles ─────────────────────────────────────────────────────────────────
+// ─── Styles ──────────────────────────────────────────────────────────────────
 const pageWrap: React.CSSProperties = {
   padding: '4px 0',
   fontFamily: "'Inter', 'Outfit', sans-serif",
@@ -322,8 +560,8 @@ const pageWrap: React.CSSProperties = {
 
 const backBtn: React.CSSProperties = {
   background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)',
-  borderRadius: 8, width: 32, height: 32, display: 'flex', alignItems: 'center',
-  justifyContent: 'center', cursor: 'pointer', color: '#e2e8f0',
+  borderRadius: 8, width: 34, height: 34, display: 'flex', alignItems: 'center',
+  justifyContent: 'center', cursor: 'pointer', color: '#e2e8f0', flexShrink: 0,
 };
 
 const crumb: React.CSSProperties = {
@@ -337,20 +575,27 @@ const errBox: React.CSSProperties = {
   color: '#f87171', fontSize: '0.82rem', marginBottom: 20,
 };
 
+const errBoxSmall: React.CSSProperties = {
+  display: 'flex', alignItems: 'center', gap: 8,
+  padding: '8px 12px', borderRadius: 7,
+  background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)',
+  color: '#f87171', fontSize: '0.78rem',
+};
+
 const headerCard: React.CSSProperties = {
   background: 'rgba(255,255,255,0.03)',
   border: '1px solid rgba(255,255,255,0.07)',
-  borderRadius: 16, padding: '24px', marginBottom: 20,
+  borderRadius: 16, padding: '24px',
 };
 
 const typeIconBox: React.CSSProperties = {
-  width: 48, height: 48, borderRadius: 12, flexShrink: 0,
+  width: 50, height: 50, borderRadius: 12, flexShrink: 0,
   background: 'rgba(99,102,241,0.1)', border: '1px solid rgba(99,102,241,0.2)',
   display: 'flex', alignItems: 'center', justifyContent: 'center',
 };
 
 const mainTitle: React.CSSProperties = {
-  fontSize: '1.4rem', fontWeight: 700, color: '#fff', margin: 0,
+  fontSize: '1.35rem', fontWeight: 700, color: '#fff', margin: 0,
 };
 
 const typeBadge: React.CSSProperties = {
@@ -370,11 +615,25 @@ const primaryBtn: React.CSSProperties = {
   color: '#fff', fontSize: '0.83rem', fontWeight: 600, cursor: 'pointer',
 };
 
+const primaryBtnSm: React.CSSProperties = {
+  display: 'flex', alignItems: 'center', gap: 6,
+  padding: '8px 16px', borderRadius: 8, border: 'none',
+  background: 'linear-gradient(135deg,#6366f1,#8b5cf6)',
+  color: '#fff', fontSize: '0.82rem', fontWeight: 600, cursor: 'pointer',
+};
+
 const secondaryBtn: React.CSSProperties = {
   display: 'flex', alignItems: 'center', gap: 7,
   padding: '9px 18px', borderRadius: 9,
   background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)',
   color: '#e2e8f0', fontSize: '0.83rem', fontWeight: 600, cursor: 'pointer',
+};
+
+const secondaryBtnSm: React.CSSProperties = {
+  display: 'flex', alignItems: 'center', gap: 6,
+  padding: '8px 14px', borderRadius: 8,
+  background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)',
+  color: '#94a3b8', fontSize: '0.82rem', fontWeight: 600, cursor: 'pointer',
 };
 
 const contentCard: React.CSSProperties = {
@@ -384,32 +643,45 @@ const contentCard: React.CSSProperties = {
 };
 
 const sectionTitle: React.CSSProperties = {
-  fontSize: '1rem', fontWeight: 700, color: '#e2e8f0',
-  margin: '0 0 18px',
-  paddingBottom: 14, borderBottom: '1px solid rgba(255,255,255,0.07)',
+  fontSize: '1rem', fontWeight: 700, color: '#e2e8f0', margin: 0,
 };
 
-const videoWrap: React.CSSProperties = {
-  width: '100%', aspectRatio: '16/9',
-  borderRadius: 10, overflow: 'hidden',
-  background: '#000',
+const previewToolbar: React.CSSProperties = {
+  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+  padding: '10px 16px',
+  background: 'rgba(15,15,30,0.85)',
+  borderRadius: '14px 14px 0 0',
 };
 
-const readingContent: React.CSSProperties = {
-  background: 'rgba(0,0,0,0.2)',
-  border: '1px solid rgba(255,255,255,0.07)',
-  borderRadius: 10, padding: 18,
-  maxHeight: 500, overflowY: 'auto',
+const toolbarBtn: React.CSSProperties = {
+  display: 'flex', alignItems: 'center', justifyContent: 'center',
+  width: 30, height: 30, borderRadius: 7,
+  background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.1)',
+  color: '#94a3b8', cursor: 'pointer', textDecoration: 'none',
 };
 
-const filePreview: React.CSSProperties = {
+const fileSizeBadge: React.CSSProperties = {
+  fontSize: '0.7rem', fontWeight: 600, padding: '2px 7px', borderRadius: 4,
+  background: 'rgba(99,102,241,0.12)', color: '#a5b4fc',
+  border: '1px solid rgba(99,102,241,0.18)',
+};
+
+const genericFileCard: React.CSSProperties = {
   display: 'flex', alignItems: 'center', gap: 16,
-  padding: '16px 18px', borderRadius: 10,
-  background: 'rgba(99,102,241,0.05)',
-  border: '1px solid rgba(99,102,241,0.15)',
+  padding: '20px', borderRadius: 12,
+  background: 'rgba(99,102,241,0.05)', border: '1px solid rgba(99,102,241,0.15)',
+};
+
+const downloadBigBtn: React.CSSProperties = {
+  display: 'flex', alignItems: 'center', gap: 6,
+  padding: '9px 16px', borderRadius: 9, border: 'none',
+  background: 'linear-gradient(135deg,#6366f1,#8b5cf6)',
+  color: '#fff', fontSize: '0.83rem', fontWeight: 600, cursor: 'pointer',
+  textDecoration: 'none', flexShrink: 0,
 };
 
 const emptyContent: React.CSSProperties = {
   display: 'flex', flexDirection: 'column', alignItems: 'center',
-  justifyContent: 'center', padding: '48px 24px', textAlign: 'center',
+  justifyContent: 'center', padding: '52px 24px', textAlign: 'center',
 };
+
