@@ -51,7 +51,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       // Middleware guard check
       if (pathname.startsWith('/superadmin') && role !== 'superadmin') {
         redirectToCorrectDashboard(role);
-      } else if (pathname.startsWith('/lecturer') && role !== 'lecture' && role !== 'lecturer') {
+      } else if (pathname.startsWith('/lecturer') && role !== 'lecture' && role !== 'lecturer' && role !== 'mentor' && role !== 'tentor') {
         redirectToCorrectDashboard(role);
       } else if (pathname.startsWith('/tentor') && role !== 'mentor' && role !== 'tentor') {
         redirectToCorrectDashboard(role);

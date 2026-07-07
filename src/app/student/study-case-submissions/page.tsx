@@ -101,12 +101,20 @@ export default function StudyCaseSubmissionsPage() {
       setTasks(filteredTasks);
 
       // Fetch submissions
-      const subsRes = await apiGet<{ success: boolean; data: Submission[] } | Submission[]>(
+      const subsRes = await apiGet<any>(
         '/api/study-case-submissions/me',
         { token: auth.token, headers: auth.headers }
       );
-      const rawSubs = Array.isArray(subsRes) ? subsRes : (subsRes as any).data || [];
-      setSubmissions(rawSubs);
+      const rawSubs = subsRes.data || subsRes;
+      const mappedSubs = (Array.isArray(rawSubs) ? rawSubs : []).map((sub: any) => ({
+        ...sub,
+        id: sub.uuid_submission || sub.id,
+        lecturer_verified: sub.lecture_status === 'Verified',
+        mentor_verified: sub.mentor_status === 'Verified',
+        final_score: sub.score,
+        tanggal_dikumpulkan: sub.submitted_at
+      }));
+      setSubmissions(mappedSubs);
 
     } catch (err) {
       console.error(err);

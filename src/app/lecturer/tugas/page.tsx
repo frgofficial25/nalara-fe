@@ -65,7 +65,15 @@ export default function TugasPage() {
         headers: auth.headers
       });
       const raw = response.data || response;
-      setSubmissions(Array.isArray(raw) ? raw : []);
+      const mapped = (Array.isArray(raw) ? raw : []).map((sub: any) => ({
+        ...sub,
+        id: sub.uuid_submission || sub.id,
+        lecturer_verified: sub.lecture_status === 'Verified',
+        mentor_verified: sub.mentor_status === 'Verified',
+        final_score: sub.released_score ?? sub.ai_score,
+        tanggal_dikumpulkan: sub.submitted_at
+      }));
+      setSubmissions(mapped);
     } catch (err: any) {
       console.error('Failed to fetch review queue:', err);
       // Fallback Mock Data for 403 Forbidden backend bug
@@ -128,7 +136,11 @@ export default function TugasPage() {
       const res = await fetch(`${API_BASE_URL}/api/study-case-submissions/${id}/verify`, {
         method: 'PATCH',
         headers,
-        body: JSON.stringify({ score: Number(score) })
+        body: JSON.stringify({ 
+          score_override: Number(score),
+          notes: "Verified by reviewer",
+          reason_override: "Verified by reviewer"
+        })
       });
 
       if (!res.ok) throw new Error('Gagal memverifikasi nilai.');

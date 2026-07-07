@@ -16,7 +16,8 @@ import {
   Inbox,
   FileText,
   User,
-  Layers
+  Layers,
+  Users
 } from 'lucide-react';
 import { logoutApi } from '@/services/auth';
 
@@ -29,6 +30,7 @@ export const getMenuForRole = (role?: string) => {
         group: 'OVERVIEW',
         items: [
           { label: 'Dashboard', href: '/superadmin/dashboard', icon: LayoutDashboard },
+          { label: 'Manage Users', href: '/superadmin/users', icon: Users },
         ],
       },
     ];
@@ -48,6 +50,17 @@ export const getMenuForRole = (role?: string) => {
         group: 'ACCOUNT',
         items: [
           { label: 'Profile', href: '/lecturer/profile', icon: User },
+        ],
+      },
+    ];
+  } else if (cleanRole === 'mentor' || cleanRole === 'tentor') {
+    return [
+      {
+        group: 'OVERVIEW',
+        items: [
+          { label: 'Dashboard', href: '/tentor/dashboard', icon: LayoutDashboard },
+          { label: 'Tugas (Review)', href: '/lecturer/tugas', icon: FileText },
+          { label: 'Grade Center', href: '/lecturer/grades', icon: TrendingUp },
         ],
       },
     ];
