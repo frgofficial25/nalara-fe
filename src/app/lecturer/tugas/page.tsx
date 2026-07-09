@@ -24,6 +24,7 @@ export default function TugasPage() {
   const [loadingSubs, setLoadingSubs] = useState(false);
   const [gradingScore, setGradingScore] = useState<Record<string, string>>({});
   const [gradingSubmitting, setGradingSubmitting] = useState<Record<string, boolean>>({});
+  const [userRole, setUserRole] = useState<string>('');
 
   // Filters
   const [filterCourseId, setFilterCourseId] = useState('');
@@ -65,19 +66,45 @@ export default function TugasPage() {
         headers: auth.headers
       });
       const raw = response.data || response;
-      const mapped = (Array.isArray(raw) ? raw : []).map((sub: any) => ({
-        ...sub,
-        id: sub.uuid_submission || sub.id,
-        lecturer_verified: sub.lecture_status === 'Verified',
-        mentor_verified: sub.mentor_status === 'Verified',
-        final_score: sub.released_score ?? sub.ai_score,
-        tanggal_dikumpulkan: sub.submitted_at
-      }));
+
+      const dataInfo = localStorage.getItem('nalara_user_info') || sessionStorage.getItem('nalara_user_info');
+      let role = userRole;
+      if (!role && dataInfo) {
+        try {
+          role = JSON.parse(dataInfo).role?.toLowerCase() || '';
+        } catch {}
+      }
+      const isMentorRole = role === 'mentor' || role === 'tentor';
+
+      const mapped = (Array.isArray(raw) ? raw : []).map((sub: any) => {
+        const isVerified = isMentorRole 
+          ? sub.mentor_status === 'Verified' 
+          : sub.lecture_status === 'Verified';
+
+        return {
+          ...sub,
+          id: sub.uuid_submission || sub.id,
+          lecturer_verified: sub.lecture_status === 'Verified',
+          mentor_verified: sub.mentor_status === 'Verified',
+          is_verified_by_me: isVerified,
+          final_score: sub.released_score ?? sub.ai_score,
+          tanggal_dikumpulkan: sub.submitted_at
+        };
+      });
       setSubmissions(mapped);
     } catch (err: any) {
       console.error('Failed to fetch review queue:', err);
       // Fallback Mock Data for 403 Forbidden backend bug
-      setSubmissions([
+      const dataInfo = localStorage.getItem('nalara_user_info') || sessionStorage.getItem('nalara_user_info');
+      let role = userRole;
+      if (!role && dataInfo) {
+        try {
+          role = JSON.parse(dataInfo).role?.toLowerCase() || '';
+        } catch {}
+      }
+      const isMentorRole = role === 'mentor' || role === 'tentor';
+
+      const mockData = [
         {
           id: "sub-1",
           student: { full_name: "Budi Santoso", email: "budi@student.com" },
@@ -108,7 +135,12 @@ export default function TugasPage() {
           final_score: null,
           tanggal_dikumpulkan: new Date().toISOString()
         }
-      ]);
+      ];
+
+      setSubmissions(mockData.map((sub: any) => ({
+        ...sub,
+        is_verified_by_me: isMentorRole ? sub.mentor_verified : sub.lecturer_verified
+      })));
     } finally {
       setLoadingSubs(false);
     }
@@ -133,13 +165,24 @@ export default function TugasPage() {
         headers['Authorization'] = `Bearer ${auth.token}`;
       }
 
+      const dataInfo = localStorage.getItem('nalara_user_info') || sessionStorage.getItem('nalara_user_info');
+      let role = userRole;
+      if (!role && dataInfo) {
+        try {
+          role = JSON.parse(dataInfo).role?.toLowerCase() || '';
+        } catch {}
+      }
+      const isMentorRole = role === 'mentor' || role === 'tentor';
+      const verifier_role = isMentorRole ? 'Mentor' : 'Lecturer';
+
       const res = await fetch(`${API_BASE_URL}/api/study-case-submissions/${id}/verify`, {
         method: 'PATCH',
         headers,
         body: JSON.stringify({ 
           score_override: Number(score),
           notes: "Verified by reviewer",
-          reason_override: "Verified by reviewer"
+          reason_override: "Verified by reviewer",
+          verifier_role: verifier_role
         })
       });
 
@@ -150,7 +193,7 @@ export default function TugasPage() {
     } catch (err) {
       console.error(err);
       alert("Verifikasi tersimpan (Local Fallback Success)!");
-      setSubmissions(prev => prev.map(s => s.id === id ? { ...s, lecturer_verified: true, final_score: Number(score) } : s));
+      setSubmissions(prev => prev.map(s => s.id === id ? { ...s, is_verified_by_me: true, final_score: Number(score) } : s));
     } finally {
       setGradingSubmitting(prev => ({ ...prev, [id]: false }));
     }
@@ -242,6 +285,16 @@ export default function TugasPage() {
     const moduleId = params.get('module_id');
     if (courseId) setFilterCourseId(courseId);
     if (moduleId) setFilterModuleId(moduleId);
+
+    const data = localStorage.getItem('nalara_user_info') || sessionStorage.getItem('nalara_user_info');
+    if (data) {
+      try {
+        const userObj = JSON.parse(data);
+        setUserRole(userObj.role?.toLowerCase() || '');
+      } catch (e) {
+        console.error('Failed to parse user role:', e);
+      }
+    }
   }, []);
 
   useEffect(() => {
@@ -572,10 +625,10 @@ export default function TugasPage() {
                 <div style={s.cardHeader}>
                   <span style={{
                     ...s.typeBadge,
-                    background: sub.lecturer_verified ? 'rgba(0, 200, 83, 0.12)' : 'rgba(255, 178, 64, 0.12)',
-                    color: sub.lecturer_verified ? '#00C853' : 'var(--lemon)'
+                    background: sub.is_verified_by_me ? 'rgba(0, 200, 83, 0.12)' : 'rgba(255, 178, 64, 0.12)',
+                    color: sub.is_verified_by_me ? '#00C853' : 'var(--lemon)'
                   }}>
-                    {sub.lecturer_verified ? 'Verified' : 'Pending Verification'}
+                    {sub.is_verified_by_me ? 'Verified' : 'Pending Verification'}
                   </span>
                   <span style={{ fontSize: '0.72rem', color: 'var(--grey-blue)' }}>
                     AI Score: <strong>{sub.ai_score ?? '-'}</strong>
@@ -624,7 +677,7 @@ export default function TugasPage() {
                     placeholder="Nilai (0-100)"
                     value={gradingScore[sub.id] || ''}
                     onChange={(e) => setGradingScore(prev => ({ ...prev, [sub.id]: e.target.value }))}
-                    disabled={sub.lecturer_verified || gradingSubmitting[sub.id]}
+                    disabled={sub.is_verified_by_me || gradingSubmitting[sub.id]}
                     style={{
                       flex: 1,
                       background: 'rgba(255,255,255,0.02)',
@@ -638,21 +691,21 @@ export default function TugasPage() {
                   />
                   <button
                     onClick={() => handleVerify(sub.id)}
-                    disabled={sub.lecturer_verified || gradingSubmitting[sub.id]}
+                    disabled={sub.is_verified_by_me || gradingSubmitting[sub.id]}
                     style={{
-                      background: sub.lecturer_verified ? 'rgba(255,255,255,0.05)' : 'linear-gradient(135deg, var(--navy), var(--m-blue))',
-                      color: sub.lecturer_verified ? 'var(--grey-blue)' : '#fff',
+                      background: sub.is_verified_by_me ? 'rgba(255,255,255,0.05)' : 'linear-gradient(135deg, var(--navy), var(--m-blue))',
+                      color: sub.is_verified_by_me ? 'var(--grey-blue)' : '#fff',
                       border: 'none',
                       borderRadius: 6,
                       padding: '6px 14px',
                       fontSize: '0.8rem',
                       fontWeight: 600,
-                      cursor: sub.lecturer_verified ? 'default' : 'pointer'
+                      cursor: sub.is_verified_by_me ? 'default' : 'pointer'
                     }}
                   >
                     {gradingSubmitting[sub.id] ? (
                       <Loader2 size={13} style={{ animation: 'spin 1s linear infinite' }} />
-                    ) : sub.lecturer_verified ? (
+                    ) : sub.is_verified_by_me ? (
                       `Score: ${sub.final_score ?? sub.lecturer_score ?? ''}`
                     ) : (
                       'Verify'

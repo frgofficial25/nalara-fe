@@ -72,6 +72,7 @@ export const getMenuForRole = (role?: string) => {
           { label: 'Dashboard', href: '/student/dashboard', icon: LayoutDashboard },
           { label: 'Courses', href: '/student/courses', icon: Layers },
           { label: 'Study Cases', href: '/student/study-case-submissions', icon: FileText },
+          { label: 'Leaderboard', href: '/student/leaderboard', icon: TrendingUp },
         ],
       },
     ];
