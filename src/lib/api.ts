@@ -21,6 +21,8 @@ function handleApiError(response: Response, data: any) {
     if (typeof window !== 'undefined') {
       sessionStorage.removeItem('nalara_auth_token');
       localStorage.removeItem('nalara_auth_token');
+      sessionStorage.removeItem('nalara_user_info');
+      localStorage.removeItem('nalara_user_info');
       if (window.location.pathname !== '/login') {
         window.location.href = '/login';
       }

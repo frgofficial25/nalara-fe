@@ -45,55 +45,33 @@ export default function LeaderboardPage() {
       setError(null);
       const auth = getAuthHeaders();
 
-      // Check current user ID from token/session
+      // Get current user's ID from stored session
       const localUser = localStorage.getItem('nalara_user_info') || sessionStorage.getItem('nalara_user_info');
       let userId = '';
       if (localUser) {
         try {
           const userObj = JSON.parse(localUser);
-          if (userObj.id) {
-            userId = userObj.id;
-          }
+          userId = userObj.id || userObj.uuid_user || '';
         } catch {}
       }
 
-      let path = '/api/students/leaderboard';
-      if (userId) {
-        path += `?userId=${userId}`;
-      }
+      const path = userId
+        ? `/api/students/leaderboard?userId=${userId}`
+        : '/api/students/leaderboard';
 
-      const response = await apiGet<{ success: boolean; data: LeaderboardData } | LeaderboardData>(path, {
+      const response = await apiGet<{ success: boolean; data: LeaderboardData }>(path, {
         token: auth.token,
         headers: auth.headers
       });
 
-      let resData: LeaderboardData;
-      if (response && 'data' in response) {
-        resData = (response as { success: boolean; data: LeaderboardData }).data;
+      if (response?.success && response?.data) {
+        setData(response.data);
       } else {
-        resData = response as unknown as LeaderboardData;
+        throw new Error('Format response tidak dikenali');
       }
-
-      setData(resData);
     } catch (err) {
       console.error('Error fetching leaderboard:', err);
       setError(err instanceof Error ? err.message : 'Gagal memuat data leaderboard.');
-      // Mock Fallback Data in case backend is loading/empty
-      setData({
-        topStudents: [
-          { rank: 1, id: "1", full_name: "Gerard Bruenerd", username: "gerard", avatar_url: null, final_score: 95.5, status_kelulusan: "Lulus" },
-          { rank: 2, id: "2", full_name: "Raven Ravellyn", username: "raven", avatar_url: null, final_score: 92.0, status_kelulusan: "Lulus" },
-          { rank: 3, id: "3", full_name: "Rifky Cahya", username: "rifky", avatar_url: null, final_score: 89.2, status_kelulusan: "Lulus" },
-          { rank: 4, id: "4", full_name: "Sayyid Hasher", username: "sayyid", avatar_url: null, final_score: 84.0, status_kelulusan: "Lulus" },
-          { rank: 5, id: "5", full_name: "Budi Santoso", username: "budi", avatar_url: null, final_score: 79.5, status_kelulusan: "Lulus" },
-          { rank: 6, id: "6", full_name: "Ani Wijaya", username: "ani", avatar_url: null, final_score: 77.0, status_kelulusan: "Lulus" },
-          { rank: 7, id: "7", full_name: "Dedi Setiadi", username: "dedi", avatar_url: null, final_score: 74.5, status_kelulusan: "Tidak Lulus" },
-          { rank: 8, id: "8", full_name: "Eka Putri", username: "eka", avatar_url: null, final_score: 71.0, status_kelulusan: "Tidak Lulus" },
-          { rank: 9, id: "9", full_name: "Fajar Nugraha", username: "fajar", avatar_url: null, final_score: 68.0, status_kelulusan: "Tidak Lulus" },
-          { rank: 10, id: "10", full_name: "Gita Lestari", username: "gita", avatar_url: null, final_score: 65.5, status_kelulusan: "Tidak Lulus" },
-        ],
-        userRank: { rank: 5, id: "5", full_name: "Budi Santoso", username: "budi", avatar_url: null, final_score: 79.5, status_kelulusan: "Lulus" }
-      });
     } finally {
       setLoading(false);
       setIsRefreshing(false);

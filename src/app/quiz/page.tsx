@@ -2,11 +2,11 @@
 
 import React, { useState, useEffect, useCallback, useRef, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
-import Card from '../../components/quiz/Card';
-import Button from '../../components/quiz/Button';
-import { Quiz, QuizQuestion, DifficultyLevel, QuestionType } from '../../types/quiz.types';
-import { apiGet, apiPost } from '../../lib/api';
-import { getStoredToken } from '../../services/auth';
+import Card from '@/components/quiz/Card';
+import Button from '@/components/quiz/Button';
+import { Quiz, QuizQuestion, DifficultyLevel, QuestionType } from '@/types/quiz.types';
+import { apiGet, apiPost } from '@/lib/api';
+import { getStoredToken } from '@/services/auth';
 import {
   Loader2, AlertCircle, Calendar, Clock, Award, ShieldAlert,
   CheckCircle, Play, ArrowLeft, ArrowRight, ChevronLeft, ChevronRight,
@@ -534,6 +534,25 @@ function QuizPageInner() {
   const [result, setResult] = useState<SubmitResult | null>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const autoSubmittedRef = useRef(false);
+
+  /* ─── Role Check ─────────────────────────────────────────────────────── */
+  useEffect(() => {
+    const data = localStorage.getItem('nalara_user_info') || sessionStorage.getItem('nalara_user_info');
+    if (!data) {
+      router.push('/login');
+      return;
+    }
+    try {
+      const user = JSON.parse(data);
+      const role = user.role?.toLowerCase() || '';
+      if (role !== 'student' && role !== 'mahasiswa' && role !== 'siswa' && role !== 'user') {
+        // Redirect non-student users
+        router.push('/login');
+      }
+    } catch (e) {
+      router.push('/login');
+    }
+  }, [router]);
 
   /* ─── Fetch quiz detail + rekap ──────────────────────────────────────── */
   useEffect(() => {
