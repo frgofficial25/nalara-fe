@@ -18,6 +18,7 @@ interface TugasDetail {
   content?: any;
   youtube_link?: string;
   file_url?: string;
+  file_format?: string;
   createdAt?: string;
   pembelajaran?: { title: string };
   modul?: { title: string };
@@ -30,10 +31,15 @@ function getFileExtension(url?: string) {
   return match ? `.${match[1].toLowerCase()}` : '';
 }
 
-function buildDocumentPreviewUrl(url?: string) {
+function buildDocumentPreviewUrl(url?: string, format?: string) {
   if (!url) return null;
-  const ext = getFileExtension(url);
-  if (ext === '.pdf') return url;
+  const extMatch = getFileExtension(url);
+  const ext = extMatch ? extMatch : (format ? `.${format.toLowerCase()}` : '');
+  
+  if (ext === '.pdf') {
+    // Gunakan Google Docs Viewer untuk PDF agar lebih stabil di iframe lintas browser/CORS
+    return `https://docs.google.com/viewer?url=${encodeURIComponent(url)}&embedded=true`;
+  }
   if (['.docx', '.ppt', '.pptx'].includes(ext)) {
     return `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(url)}`;
   }
@@ -82,10 +88,21 @@ export default function MateriDetailClient() {
         `/api/materi/${tugasId}`,
         { token: auth.token, headers: auth.headers }
       );
-      const data: TugasDetail = (res && 'data' in res && res.data)
-        ? { ...res.data, id: res.data.uuid_tugas || res.data.id }
-        : { ...res, id: res.uuid_tugas || res.id };
-      setTugas(data);
+      const rawData = (res && 'data' in res) ? res.data : res;
+      
+      const mappedData: TugasDetail = {
+        id: rawData.id || rawData.uuid_materi || rawData.uuid_tugas,
+        title: rawData.nama_materi || rawData.title,
+        type: rawData.tipe || rawData.type,
+        youtube_link: rawData.video_url || rawData.youtube_link,
+        file_url: rawData.file?.preview_url || rawData.file_url,
+        file_format: rawData.file?.format_file || rawData.file_format,
+        pembelajaran: { title: rawData.nama_pembelajaran || rawData.pembelajaran?.title || 'Detail Kelas' },
+        modul: { title: rawData.nama_modul || rawData.modul?.title || 'Modul' },
+        content: rawData.content,
+      };
+
+      setTugas(mappedData);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Gagal memuat detail materi.');
     } finally {
@@ -102,8 +119,9 @@ export default function MateriDetailClient() {
     window.open(tugas.file_url, '_blank');
   };
 
-  const previewUrl = buildDocumentPreviewUrl(tugas?.file_url);
-  const isPdf = getFileExtension(tugas?.file_url) === '.pdf';
+  const previewUrl = buildDocumentPreviewUrl(tugas?.file_url, tugas?.file_format);
+  const extMatch = getFileExtension(tugas?.file_url);
+  const isPdf = extMatch === '.pdf' || (tugas?.file_format?.toLowerCase() === 'pdf');
 
   const renderContent = (content: any) => {
     if (!content) return null;
