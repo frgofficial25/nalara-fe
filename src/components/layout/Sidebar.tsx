@@ -17,7 +17,8 @@ import {
   FileText,
   User,
   Layers,
-  Users
+  Users,
+  ClipboardList
 } from 'lucide-react';
 import { logoutApi } from '@/services/auth';
 
@@ -64,9 +65,10 @@ export const getMenuForRole = (role?: string) => {
         group: 'OVERVIEW',
         items: [
           { label: 'Dashboard', href: '/student/dashboard', icon: LayoutDashboard },
-          { label: 'Courses', href: '/student/courses', icon: Layers },
-          { label: 'Study Cases', href: '/student/study-case-submissions', icon: FileText },
+          { label: 'Kelas', href: '/student/kelas', icon: Layers },
+          { label: 'Penugasan', href: '/student/penugasan', icon: ClipboardList },
           { label: 'Leaderboard', href: '/student/leaderboard', icon: TrendingUp },
+          { label: 'Profile', href: '/student/profile', icon: User },
         ],
       },
     ];
