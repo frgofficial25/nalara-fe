@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { 
+import {
   Users, BookOpen, RefreshCw, AlertTriangle, ArrowRight, Clock, CheckCircle, Flame, Target, Layers
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
@@ -110,7 +110,7 @@ export default function LecturerDashboard() {
           if (userObj.name) {
             setUserName(userObj.name);
           }
-        } catch {}
+        } catch { }
       }
 
       if (lecturerData) {
@@ -144,24 +144,24 @@ export default function LecturerDashboard() {
 
   const activeCourses = data?.active_courses ?? 0;
   const totalStudents = data?.total_students ?? 0;
-  
+
   let totalPendingTasks = data?.pending_submissions ?? 0;
   if (data?.tasks_to_grade && data.tasks_to_grade.length > 0) {
     const sumUngraded = data.tasks_to_grade.reduce((acc, t) => acc + t.ungraded_count, 0);
     if (sumUngraded > totalPendingTasks) {
-       totalPendingTasks = sumUngraded;
+      totalPendingTasks = sumUngraded;
     }
   }
 
   // FIFO sorting: Get task with ungraded_count > 0 having the closest deadline date
   const urgentTask = data?.tasks_to_grade
     ? [...data.tasks_to_grade]
-        .filter(t => t.ungraded_count > 0)
-        .sort((a, b) => {
-          if (!a.deadline) return 1;
-          if (!b.deadline) return -1;
-          return new Date(a.deadline).getTime() - new Date(b.deadline).getTime();
-        })[0]
+      .filter(t => t.ungraded_count > 0)
+      .sort((a, b) => {
+        if (!a.deadline) return 1;
+        if (!b.deadline) return -1;
+        return new Date(a.deadline).getTime() - new Date(b.deadline).getTime();
+      })[0]
     : undefined;
 
   const kpiCards = [
@@ -198,7 +198,7 @@ export default function LecturerDashboard() {
         {/* Top bar with Refresh */}
         <div style={s.topBar}>
           <h1 style={s.pageTitle}>Dashboard</h1>
-          <button 
+          <button
             onClick={handleRefresh}
             disabled={loading || isRefreshing}
             style={{
@@ -206,11 +206,11 @@ export default function LecturerDashboard() {
               opacity: loading || isRefreshing ? 0.7 : 1,
             }}
           >
-            <RefreshCw 
-              size={14} 
-              style={{ 
-                animation: isRefreshing ? 'spin 1s linear infinite' : 'none' 
-              }} 
+            <RefreshCw
+              size={14}
+              style={{
+                animation: isRefreshing ? 'spin 1s linear infinite' : 'none'
+              }}
             />
             {isRefreshing ? 'Syncing...' : 'Refresh'}
           </button>
@@ -232,12 +232,12 @@ export default function LecturerDashboard() {
             <div style={s.heroGreetingWrapper}>
               <h2 style={s.heroGreeting}>Welcome back, {userName}!</h2>
               <p style={s.heroSubtitle}>
-                {urgentTask 
+                {urgentTask
                   ? "You have tasks waiting for verification. Let's get them cleared!"
                   : "Everything is up to date. Excellent work!"}
               </p>
             </div>
-            
+
             <div style={s.heroMetricsMini}>
               <div style={s.miniMetric}>
                 <Target size={16} color="#3B82F6" />
@@ -278,16 +278,16 @@ export default function LecturerDashboard() {
                 <div style={s.urgentTaskFooter}>
                   <div style={s.taskProgress}>
                     <span style={s.progressText}>
-                      <strong style={{ color: '#F59E0B', fontSize: '1.1rem' }}>{formatNumber(urgentTask.ungraded_count)}</strong> 
+                      <strong style={{ color: '#F59E0B', fontSize: '1.1rem' }}>{formatNumber(urgentTask.ungraded_count)}</strong>
                       <span style={{ opacity: 0.6 }}> / {formatNumber(urgentTask.total_submissions)} Belum dinilai</span>
                     </span>
                     <div style={s.progressBarBg}>
                       <div style={{ ...s.progressBarFill, width: `${Math.min(100, Math.max(0, (urgentTask.total_submissions - urgentTask.ungraded_count) / Math.max(1, urgentTask.total_submissions) * 100))}%` }} />
                     </div>
                   </div>
-                  
-                  <button 
-                    onClick={() => router.push(`/lecturer/grades`)} 
+
+                  <button
+                    onClick={() => router.push(`/lecturer/tugas`)}
                     style={s.ctaButton}
                   >
                     Lanjutkan Pemberian Penilaian <ArrowRight size={16} />
