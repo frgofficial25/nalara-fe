@@ -85,6 +85,13 @@ function getUserId(): string {
 export default function PenugasanPage() {
   const [mainTab, setMainTab] = useState<'studycase' | 'quiz'>('studycase');
 
+  // Toast state
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
+  const showToast = (message: string, type: 'success' | 'error' | 'info' = 'success') => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 4000);
+  };
+
   // ── Study Case state ───────────────────────────────────────────────────────
   const [scTab, setScTab]             = useState<'pending' | 'submitted'>('pending');
   const [tasks, setTasks]             = useState<UrgentTask[]>([]);
@@ -234,7 +241,10 @@ export default function PenugasanPage() {
   const openQuiz = async (quizId: string) => {
     // Check if already attempted
     const already = myQuizRekap.find((r: any) => (r.uuid_quiz || r.quiz_id) === quizId);
-    if (already) { alert('Kamu sudah pernah mengerjakan kuis ini. Hanya boleh dikerjakan 1 kali.'); return; }
+    if (already) { 
+      showToast('Kamu sudah pernah mengerjakan kuis ini. Hanya boleh dikerjakan 1 kali.', 'info'); 
+      return; 
+    }
 
     try {
       setLoadingQuizDetail(true);
@@ -259,7 +269,9 @@ export default function PenugasanPage() {
       if (d.time_limit) {
         setTimeLeft(d.time_limit * 60);
       }
-    } catch (e: any) { alert(e.message || 'Gagal memuat kuis.'); }
+    } catch (e: any) { 
+      showToast(e.message || 'Gagal memuat kuis.', 'error'); 
+    }
     finally { setLoadingQuizDetail(false); }
   };
 
@@ -317,8 +329,11 @@ export default function PenugasanPage() {
         isPassed: (d.score ?? 0) >= 75,
       });
       setTimeLeft(null);
+      showToast('Kuis berhasil dikirim!', 'success');
       fetchQuizData(); // refresh rekap
-    } catch (e: any) { alert(e.message || 'Gagal submit kuis.'); }
+    } catch (e: any) { 
+      showToast(e.message || 'Gagal submit kuis.', 'error'); 
+    }
     finally { setSubmittingQuiz(false); }
   };
 
@@ -634,7 +649,38 @@ export default function PenugasanPage() {
         </div>
       )}
 
-      <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
+      {/* Toast Alert */}
+      {toast && (
+        <div style={{
+          position: 'fixed',
+          bottom: 24,
+          right: 24,
+          background: toast.type === 'success' ? '#00C853' : toast.type === 'error' ? '#FF5252' : '#0671E0',
+          color: '#fff',
+          padding: '12px 20px',
+          borderRadius: 8,
+          boxShadow: '0 4px 12px rgba(0,0,0,0.25)',
+          zIndex: 1000,
+          display: 'flex',
+          alignItems: 'center',
+          gap: 10,
+          fontWeight: 600,
+          fontSize: '0.88rem',
+          animation: 'slideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards'
+        }}>
+          {toast.type === 'success' ? <CheckCircle2 size={16} /> : toast.type === 'error' ? <AlertCircle size={16} /> : <Info size={16} />}
+          <span>{toast.message}</span>
+          <button onClick={() => setToast(null)} style={{ background: 'none', border: 'none', color: '#fff', cursor: 'pointer', fontSize: '1.1rem', marginLeft: 8, lineHeight: 1 }}>×</button>
+        </div>
+      )}
+
+      <style>{`
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        @keyframes slideIn {
+          from { transform: translateY(20px); opacity: 0; }
+          to { transform: translateY(0); opacity: 1; }
+        }
+      `}</style>
     </div>
   );
 }

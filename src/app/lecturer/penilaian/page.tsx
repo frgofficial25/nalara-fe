@@ -69,6 +69,14 @@ export default function PenilaianPage() {
   // ── Tab state ────────────────────────────────────────────────────────────
   const [tab, setTab] = useState<'quiz' | 'studycase'>('quiz');
 
+  // Toast state
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+  
+  const showToast = (message: string, type: 'success' | 'error' = 'success') => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 4000);
+  };
+
   // ── User role (Lecturer / Mentor) ────────────────────────────────────────
   const [userRole, setUserRole] = useState<'Lecturer' | 'Mentor'>('Lecturer');
   useEffect(() => {
@@ -151,8 +159,6 @@ export default function PenilaianPage() {
     setSubError(null);
     try {
       const auth = getAuth();
-      // GET /api/study-case-submissions/review-queue
-      // Returns: { success: true, data: StudyCaseSubmission[] }
       const res = await apiGet<any>('/api/study-case-submissions/review-queue', {
         token: auth.token,
         headers: auth.headers,
@@ -204,12 +210,12 @@ export default function PenilaianPage() {
         { token: auth.token, headers: auth.headers },
       );
 
+      showToast(`Verifikasi berhasil disimpan! Nilai akan dirilis jika kedua verifikator sudah verifikasi.`, 'success');
       setModal(null);
       setModalNotes(''); setModalScore(''); setModalReason('');
-      // Refresh queue setelah verifikasi
       await fetchQueue();
     } catch (e: any) {
-      alert(`Gagal melakukan verifikasi: ${e.message}`);
+      showToast(`Gagal melakukan verifikasi: ${e.message}`, 'error');
     } finally {
       setVerifying(false);
     }
@@ -659,7 +665,38 @@ export default function PenilaianPage() {
         </div>
       )}
 
-      <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
+      {/* Toast Alert */}
+      {toast && (
+        <div style={{
+          position: 'fixed',
+          bottom: 24,
+          right: 24,
+          background: toast.type === 'success' ? '#00C853' : '#FF5252',
+          color: '#fff',
+          padding: '12px 20px',
+          borderRadius: 8,
+          boxShadow: '0 4px 12px rgba(0,0,0,0.25)',
+          zIndex: 1000,
+          display: 'flex',
+          alignItems: 'center',
+          gap: 10,
+          fontWeight: 600,
+          fontSize: '0.88rem',
+          animation: 'slideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards'
+        }}>
+          {toast.type === 'success' ? <CheckCircle2 size={16} /> : <AlertCircle size={16} />}
+          <span>{toast.message}</span>
+          <button onClick={() => setToast(null)} style={{ background: 'none', border: 'none', color: '#fff', cursor: 'pointer', fontSize: '1.1rem', marginLeft: 8, lineHeight: 1 }}>×</button>
+        </div>
+      )}
+
+      <style>{`
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        @keyframes slideIn {
+          from { transform: translateY(20px); opacity: 0; }
+          to { transform: translateY(0); opacity: 1; }
+        }
+      `}</style>
     </div>
   );
 }
