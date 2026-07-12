@@ -1,8 +1,8 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { 
-  BookOpen, Loader2, AlertCircle, ChevronRight, Video, 
+import {
+  BookOpen, Loader2, AlertCircle, ChevronRight, Video,
   BookOpenCheck, FlaskConical, PencilLine, ArrowLeft, Layers,
   Brain
 } from 'lucide-react';
@@ -228,9 +228,9 @@ export default function CourseDetailClient() {
                       ) : (
                         <>
                           {tugasList.map((t) => (
-                            <div 
-                              key={t.id} 
-                              style={s.materiItem} 
+                            <div
+                              key={t.id}
+                              style={s.materiItem}
                               onClick={() => handleTugasClick(t)}
                               className="materi-item-hover"
                             >
@@ -246,9 +246,9 @@ export default function CourseDetailClient() {
                           ))}
 
                           {(quizMap[modul.id] || []).map((q: any) => (
-                            <div 
-                              key={q.uuid_quiz || q.id} 
-                              style={s.materiItem} 
+                            <div
+                              key={q.uuid_quiz || q.id}
+                              style={s.materiItem}
                               onClick={() => router.push(`/quiz?id=${q.uuid_quiz || q.id}`)}
                               className="materi-item-hover"
                             >

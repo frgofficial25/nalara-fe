@@ -121,9 +121,9 @@ export default function StudentCoursesPage() {
       ) : (
         <div style={s.grid}>
           {courses.map((course) => (
-            <div 
-              key={course.id} 
-              style={s.card} 
+            <div
+              key={course.id}
+              style={s.card}
               className="glass-panel hover-card"
               onClick={() => router.push(`/student/courses/detail?id=${course.id}`)}
             >

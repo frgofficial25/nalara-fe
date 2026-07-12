@@ -47,16 +47,16 @@ function getAuthHeaders() {
 }
 
 const typeIcon: Record<string, React.ReactNode> = {
-  Reading:   <BookOpenCheck size={14} color="#4196F0" />,
-  Video:     <Video size={14} color="#E040FB" />,
+  Reading: <BookOpenCheck size={14} color="#4196F0" />,
+  Video: <Video size={14} color="#E040FB" />,
   CaseStudy: <FlaskConical size={14} color="#FF9100" />,
-  Practice:  <PencilLine size={14} color="#00C853" />,
+  Practice: <PencilLine size={14} color="#00C853" />,
 };
 const typeColor: Record<string, { bg: string; text: string }> = {
-  Reading:   { bg: 'rgba(65,150,240,0.1)',  text: '#4196F0' },
-  Video:     { bg: 'rgba(224,64,251,0.1)',  text: '#E040FB' },
-  CaseStudy: { bg: 'rgba(255,145,0,0.1)',   text: '#FF9100' },
-  Practice:  { bg: 'rgba(0,200,83,0.1)',    text: '#00C853' },
+  Reading: { bg: 'rgba(65,150,240,0.1)', text: '#4196F0' },
+  Video: { bg: 'rgba(224,64,251,0.1)', text: '#E040FB' },
+  CaseStudy: { bg: 'rgba(255,145,0,0.1)', text: '#FF9100' },
+  Practice: { bg: 'rgba(0,200,83,0.1)', text: '#00C853' },
 };
 
 // ═════════════════════════════════════════════════════════════════════════════
@@ -68,11 +68,11 @@ export default function StudentKelasPage() {
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
   const [selectedModule, setSelectedModule] = useState<Module | null>(null);
 
-  const [courses, setCourses]   = useState<Course[]>([]);
-  const [modules, setModules]   = useState<Module[]>([]);
+  const [courses, setCourses] = useState<Course[]>([]);
+  const [modules, setModules] = useState<Module[]>([]);
   const [materiList, setMateriList] = useState<Materi[]>([]);
-  const [loading, setLoading]   = useState(true);
-  const [error, setError]       = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   // Reading modal
   const [readingModal, setReadingModal] = useState<Materi | null>(null);
@@ -101,12 +101,16 @@ export default function StudentKelasPage() {
       setLoading(true); setError(null);
       const auth = getAuthHeaders();
       const res = await apiGet<any>(`/api/modul?uuid_pembelajaran=${courseId}`, { token: auth.token, headers: auth.headers });
-      const list = Array.isArray(res) ? res : (res?.data || []);
+      const rawList = Array.isArray(res) ? res : (res?.data || []);
+      // Filter di sisi klien sebagai jaminan — server lama mungkin belum support filter query
+      const list = rawList.filter((m: any) =>
+        !m.uuid_pembelajaran || m.uuid_pembelajaran === courseId
+      );
       setModules(list.map((m: any) => ({
         id: m.uuid_modul || m.id,
         uuid_modul: m.uuid_modul || m.id,
-        title: m.nama_modul || m.title || 'Modul',
-        description: m.deskripsi || m.description || '',
+        title: m.title || m.nama_modul || 'Modul',
+        description: m.description || m.deskripsi || '',
         difficulty: m.difficulty || '',
         uuid_pembelajaran: m.uuid_pembelajaran || courseId,
       })));
@@ -120,13 +124,22 @@ export default function StudentKelasPage() {
       setLoading(true); setError(null);
       const auth = getAuthHeaders();
       const res = await apiGet<any>(`/api/materi?uuid_modul=${moduleId}`, { token: auth.token, headers: auth.headers });
-      const list = Array.isArray(res) ? res : (res?.data || []);
+      // Backend: { success, data: { materi: [...], nama_modul, ... } }
+      // Fallback ke flat array jika backend lama
+      let list: any[] = [];
+      if (res?.data?.materi && Array.isArray(res.data.materi)) {
+        list = res.data.materi;
+      } else if (Array.isArray(res?.data)) {
+        list = res.data;
+      } else if (Array.isArray(res)) {
+        list = res;
+      }
       setMateriList(list.map((m: any) => ({
-        id: m.uuid_materi || m.id,
-        uuid_materi: m.uuid_materi || m.id,
-        title: m.title || m.nama_materi || 'Materi',
-        type: m.type || 'Reading',
-        youtube_link: m.youtube_link || '',
+        id: m.id || m.uuid_materi,
+        uuid_materi: m.id || m.uuid_materi,
+        title: m.nama_materi || m.title || 'Materi',
+        type: m.tipe || m.type || 'Reading',
+        youtube_link: m.video_url || m.youtube_link || '',
         content: m.content,
         slug: m.slug,
       })));
