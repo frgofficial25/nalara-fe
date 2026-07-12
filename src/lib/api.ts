@@ -199,6 +199,49 @@ export async function apiDelete<TResponse>(
 }
 
 /**
+ * Kirim PATCH request ke backend API.
+ *
+ * @param path    - Path endpoint, contoh: '/api/study-case-submissions/uuid/verify'
+ * @param body    - Payload JSON yang akan dikirim
+ * @param options - Opsi tambahan (token, headers)
+ * @returns       Parsed JSON response
+ */
+export async function apiPatch<TResponse>(
+  path: string,
+  body: unknown,
+  options: RequestOptions = {}
+): Promise<TResponse> {
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    ...options.headers,
+  };
+
+  if (options.token) {
+    headers['Authorization'] = `Bearer ${options.token}`;
+  }
+
+  const response = await fetch(`${API_BASE_URL}${path}`, {
+    method: 'PATCH',
+    headers,
+    body: JSON.stringify(body),
+  });
+
+  let data: TResponse;
+  try {
+    data = (await response.json()) as TResponse;
+  } catch {
+    throw new Error(`Server mengembalikan response yang tidak valid (HTTP ${response.status})`);
+  }
+
+  if (!response.ok) {
+    handleApiError(response, data);
+  }
+
+  return data;
+}
+
+
+/**
  * Kirim upload file (multipart/form-data) ke backend API.
  *
  * @param path    - Path endpoint, contoh: '/api/profile/avatar'

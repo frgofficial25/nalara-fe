@@ -135,11 +135,8 @@ export default function PenugasanPage() {
         apiGet<any>('/api/study-case-submissions/me', { token: auth.token, headers: auth.headers }),
       ]);
 
-      const rawTasks = Array.isArray(tasksRes) ? tasksRes : (tasksRes?.data || []);
-      setTasks(rawTasks.filter((t: any) => t.tipe === 'CaseStudy' || t.tipe === 'Practice'));
-
       const rawSubs = Array.isArray(subsRes) ? subsRes : (subsRes?.data || []);
-      setSubmissions(rawSubs.map((s: any) => ({
+      const mappedSubs: Submission[] = rawSubs.map((s: any) => ({
         id: s.uuid_submission || s.id,
         uuid_tugas: s.uuid_tugas,
         tugas: s.tugas,
@@ -152,7 +149,20 @@ export default function PenugasanPage() {
         released_score: s.released_score,
         is_released: s.is_released,
         submitted_at: s.submitted_at,
-      })));
+      }));
+      setSubmissions(mappedSubs);
+
+      // Set uuid_tugas yang sudah dikumpulkan
+      const submittedTugasIds = new Set(mappedSubs.map(sub => sub.uuid_tugas));
+
+      const rawTasks = Array.isArray(tasksRes) ? tasksRes : (tasksRes?.data || []);
+      // Hanya tampilkan tugas CaseStudy/Practice yang belum dikumpulkan
+      setTasks(
+        rawTasks.filter((t: any) =>
+          (t.tipe === 'CaseStudy' || t.tipe === 'Practice') &&
+          !submittedTugasIds.has(t.id_tugas)
+        )
+      );
     } catch (e: any) { setScError(e.message || 'Gagal memuat data tugas.'); }
     finally { setLoadingSc(false); }
   };
