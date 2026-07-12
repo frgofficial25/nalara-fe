@@ -33,6 +33,8 @@ interface Materi {
   title: string;
   type: 'Reading' | 'Video' | 'CaseStudy' | 'Practice';
   youtube_link?: string;
+  file_url?: string;
+  file_format?: string;
   content?: any;
   slug?: string;
 }
@@ -140,6 +142,8 @@ export default function StudentKelasPage() {
         title: m.nama_materi || m.title || 'Materi',
         type: m.tipe || m.type || 'Reading',
         youtube_link: m.video_url || m.youtube_link || '',
+        file_url: m.file?.url || m.file?.preview_url || m.file_url || '',
+        file_format: m.file?.format_file || m.file_format || '',
         content: m.content,
         slug: m.slug,
       })));
@@ -163,13 +167,14 @@ export default function StudentKelasPage() {
   };
 
   const openMateri = (materi: Materi) => {
+    const courseId = selectedCourse?.id || '';
     if (materi.type === 'Video' && materi.youtube_link) {
+      // Video dengan link YouTube langsung dibuka di tab baru
       window.open(materi.youtube_link, '_blank');
-    } else if (materi.type === 'Reading') {
-      setReadingModal(materi);
     } else {
-      // CaseStudy / Practice — navigate to materi detail
-      router.push(`/student/courses/materi?id=${materi.id}`);
+      // Semua tipe lain (Reading/PDF, CaseStudy, Practice)
+      // → navigasi ke halaman detail materi yang sudah support PDF preview
+      router.push(`/student/courses/materi?courseId=${courseId}&tugasId=${materi.id}`);
     }
   };
 
