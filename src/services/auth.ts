@@ -8,7 +8,7 @@
  * Semua komunikasi HTTP dilakukan melalui `src/lib/api.ts`.
  */
 
-import { apiPost } from '@/lib/api';
+import { apiPost, saveRefreshToken } from '@/lib/api';
 import type {
   LoginRequest,
   LoginResponse,
@@ -52,10 +52,13 @@ export async function loginApi(
       password,
     });
 
-    // Simpan token jika login berhasil
+    // Simpan token & refresh_token jika login berhasil
     if (response.success && response.data?.token) {
       const storage = rememberMe ? localStorage : sessionStorage;
       storage.setItem(TOKEN_KEY, response.data.token);
+      if (response.data.refresh_token) {
+        saveRefreshToken(response.data.refresh_token, !!rememberMe);
+      }
     }
 
     return response;

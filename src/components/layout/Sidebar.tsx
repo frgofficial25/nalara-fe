@@ -18,7 +18,8 @@ import {
   User,
   Layers,
   Users,
-  ClipboardList
+  ClipboardList,
+  Award
 } from 'lucide-react';
 import { logoutApi } from '@/services/auth';
 

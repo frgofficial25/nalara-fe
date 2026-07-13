@@ -23,6 +23,7 @@ export interface AuthUser {
 export interface LoginData {
   user: AuthUser;
   token: string;
+  refresh_token?: string;
 }
 
 /** Response sukses login dari POST /api/auth/login */

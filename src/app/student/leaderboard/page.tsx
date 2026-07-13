@@ -2,7 +2,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { 
-  TrendingUp, Award, RefreshCw, Trophy, Crown, CheckCircle, AlertTriangle, User
+  TrendingUp, Award, RefreshCw, Trophy, Crown, CheckCircle, AlertTriangle, User,
+  Clock, Loader2
 } from 'lucide-react';
 import { apiGet } from '@/lib/api';
 import { getStoredToken } from '@/services/auth';
@@ -22,8 +23,23 @@ interface LeaderboardData {
   userRank: RankedStudent | null;
 }
 
+interface GradeItem {
+  uuid_attempt: string;
+  quiz: {
+    uuid_quiz: string;
+    title: string;
+  };
+  score: number;
+  percentage: number;
+  grade_letter: string;
+  is_passed: boolean;
+  started_at: string;
+  completed_at?: string;
+}
+
 export default function LeaderboardPage() {
   const [data, setData] = useState<LeaderboardData | null>(null);
+  const [grades, setGrades] = useState<GradeItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -59,18 +75,30 @@ export default function LeaderboardPage() {
         ? `/api/students/leaderboard?userId=${userId}`
         : '/api/students/leaderboard';
 
-      const response = await apiGet<{ success: boolean; data: LeaderboardData }>(path, {
-        token: auth.token,
-        headers: auth.headers
-      });
+      const [leaderboardRes, gradesRes] = await Promise.all([
+        apiGet<{ success: boolean; data: LeaderboardData }>(path, {
+          token: auth.token,
+          headers: auth.headers
+        }),
+        apiGet<any>('/api/grade-center/my-grades', {
+          token: auth.token,
+          headers: auth.headers
+        }).catch(err => {
+          console.warn('Gagal memuat grades:', err);
+          return [];
+        })
+      ]);
 
-      if (response?.success && response?.data) {
-        setData(response.data);
+      if (leaderboardRes?.success && leaderboardRes?.data) {
+        setData(leaderboardRes.data);
       } else {
         throw new Error('Format response tidak dikenali');
       }
+
+      const gradesList = Array.isArray(gradesRes) ? gradesRes : (gradesRes?.data ?? []);
+      setGrades(gradesList);
     } catch (err) {
-      console.error('Error fetching leaderboard:', err);
+      console.error('Error fetching leaderboard data:', err);
       setError(err instanceof Error ? err.message : 'Gagal memuat data leaderboard.');
     } finally {
       setLoading(false);
@@ -157,6 +185,82 @@ export default function LeaderboardPage() {
         </div>
       ) : (
         <div style={s.content}>
+          {/* Nilai Saya Section */}
+          <div style={{ marginBottom: '28px' }}>
+            <h3 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '1.15rem', margin: '0 0 16px 0', color: '#fff' }}>Nilai & Riwayat Kuis Saya</h3>
+            {grades.length === 0 ? (
+              <div className="glass-panel" style={{
+                background: 'rgba(25, 25, 25, 0.95)',
+                border: '1px dashed var(--border-color)',
+                borderRadius: '12px',
+                padding: '24px',
+                textAlign: 'center',
+                color: 'var(--grey-blue)',
+                fontSize: '0.85rem'
+              }}>
+                Belum ada kuis yang selesai dikerjakan atau dinilai.
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                {grades.map((item, i) => (
+                  <div key={i} className="glass-panel" style={{
+                    background: 'rgba(25, 25, 25, 0.95)',
+                    border: '1px solid var(--border-color)',
+                    borderRadius: '12px',
+                    padding: '16px 20px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '10px'
+                  }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <div style={{ width: '36px', height: '36px', borderRadius: '8px', background: 'rgba(6,113,224,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <Award size={18} color="var(--azure)" />
+                        </div>
+                        <div>
+                          <h4 style={{ fontSize: '0.9rem', fontWeight: 700, color: '#fff', margin: 0 }}>{item.quiz.title}</h4>
+                          <span style={{ fontSize: '0.72rem', color: 'var(--grey-blue)', display: 'flex', alignItems: 'center', marginTop: '2px' }}>
+                            <Clock size={11} style={{ marginRight: '4px' }} />
+                            Selesai: {item.completed_at ? new Date(item.completed_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : '-'}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                        <div style={{ textAlign: 'right' }}>
+                          <span style={{ fontSize: '0.68rem', color: 'var(--grey-blue)', textTransform: 'uppercase' }}>Nilai</span>
+                          <div style={{ fontSize: '1.1rem', fontWeight: 700, color: '#fff' }}>{item.score}%</div>
+                        </div>
+                        <div style={{
+                          fontSize: '0.72rem',
+                          fontWeight: 700,
+                          padding: '3px 10px',
+                          borderRadius: '10px',
+                          border: '1px solid',
+                          background: item.is_passed ? 'rgba(0, 200, 83, 0.1)' : 'rgba(255, 82, 82, 0.1)',
+                          color: item.is_passed ? '#00C853' : '#FF5252',
+                          borderColor: item.is_passed ? 'rgba(0, 200, 83, 0.2)' : 'rgba(255, 82, 82, 0.2)',
+                        }}>
+                          Grade {item.grade_letter}
+                        </div>
+                      </div>
+                    </div>
+                    {/* Progress bar */}
+                    <div style={{ background: 'rgba(255,255,255,0.04)', borderRadius: '4px', height: '4px', width: '100%' }}>
+                      <div style={{
+                        height: '100%',
+                        borderRadius: '4px',
+                        width: `${Math.min(item.score, 100)}%`,
+                        background: item.is_passed ? 'var(--azure)' : '#FF5252',
+                        transition: 'width 0.6s ease'
+                      }} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
           {/* User Personal Rank Card Banner */}
           {data?.userRank && (
             <div style={{

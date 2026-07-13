@@ -153,7 +153,7 @@ export default function PenugasanPage() {
         ai_score: s.ai_score,
         lecture_status: s.lecture_status,
         mentor_status: s.mentor_status,
-        released_score: s.released_score,
+        released_score: s.score,
         is_released: s.is_released,
         submitted_at: s.submitted_at,
       }));
