@@ -33,6 +33,7 @@ interface QuizDetail {
   tenggat_pengerjaan: string;     // ISO date
   is_published: boolean;
   questions: MappedQuestion[];
+  uuid_pembelajaran?: string;
 }
 
 interface RekapResult {
@@ -586,6 +587,7 @@ function QuizPageInner() {
               is_correct: !!o.is_correct
             }))
           })),
+          uuid_pembelajaran: d.uuid_pembelajaran || '',
         };
         setDetail(mapped);
 
@@ -739,7 +741,12 @@ function QuizPageInner() {
 
   /* ─── Navigation ─────────────────────────────────────────────────────── */
   const goBack = () => {
-    router.push('/student/courses');
+    const courseId = searchParams.get('courseId') || detail?.uuid_pembelajaran;
+    if (courseId) {
+      router.push(`/student/courses/detail?id=${courseId}`);
+    } else {
+      router.push('/student/courses');
+    }
   };
 
   /* ─── Render ─────────────────────────────────────────────────────────── */

@@ -9,37 +9,38 @@ export default function Curriculum() {
     dasar: {
       title: 'Level Dasar (Preparatory)',
       duration: '32 Jam Instruksional',
-      dates: '23, 24, 25, 26 Juli',
+      dates: '23, 24, 25, 26, 27 Juli',
       schedule: [
         { day: 'Rabu, 22 Juli 2026', topic: 'Technical Meeting (100 Menit)', desc: 'Onboarding LMS Nalara.academy, instalasi tools, setup environment, & pengumuman case pitching. Dipandu oleh Muhammad Hafiizh Anindya.' },
-        { day: 'Kamis, 23 Juli 2026', topic: 'Python Programming & Image Processing', desc: 'Sintaks Python lanjutan, NumPy, manipulasi citra menggunakan OpenCV, filter spasial, dan konversi ruang warna.' },
-        { day: 'Jumat, 24 Juli 2026', topic: 'Exploring Data Analysis (EDA) & NumPy/Pandas', desc: 'Pemetaan data citra, augmentasi dataset, penanganan data tidak seimbang, dan pipeline pemrosesan awal.' },
-        { day: 'Sabtu, 25 Juli 2026', topic: 'Exploring Data Analysis (EDA) & NumPy/Pandas', desc: 'Konvolusi dasar, pooling layer, perbandingan build model dengan TensorFlow vs PyTorch, dan transfer learning fundamental.' },
-        { day: 'Minggu, 26 Juli 2026', topic: 'Data Splitting & Overfitting Workshop', desc: 'Strategi k-fold cross-validation, regularisasi (dropout, batch normalization), deteksi overfitting via grafik loss/accuracy, & Modul Ujian Dasar.' }
+        { day: 'Kamis, 23 Juli 2026', topic: 'Modul 1: Python Programming & OOP', desc: 'Sintaks Python lanjutan, NumPy, konsep dasar Object-Oriented Programming (OOP) untuk penulisan kode yang modular dan terstruktur.' },
+        { day: 'Jumat, 24 Juli 2026', topic: 'Modul 2: Fondasi AI & Machine Learning — Data Tabular', desc: 'Pemahaman data & statistik deskriptif, preprocessing (KNN Imputer, outlier winsorizing), feature engineering (datetime, aggregasi), pencegahan data leakage, penanganan class imbalance (SMOTE), serta pemodelan (8 algoritma klasik), evaluasi (PR-AUC), dan interpretasi model (SHAP, LIME).' },
+        { day: 'Sabtu, 25 Juli 2026', topic: 'Modul 3: Fondasi Data Citra & OpenCV', desc: 'Citra digital sebagai matriks angka (piksel, resolusi, bit depth), konversi ruang warna (Grayscale, RGB, HSV), transformasi geometri (resize, crop, rotasi, flip), filter spasial (Gaussian/Median Blur), deteksi tepi (Canny/Sobel), histogram equalization/CLAHE, dan class ImageProcessor.' },
+        { day: 'Minggu, 26 Juli 2026', topic: 'Modul 4: Exploratory Data Analysis (EDA) Data Citra', desc: 'Struktur folder dataset, train/val/test split, visualisasi histogram intensitas piksel, deteksi class imbalance, analisis dimensi & kualitas citra (corrupt, duplikat, blur, distorsi), analisis bounding box (deteksi objek) & mask (segmentasi), serta konsep domain shift.' },
+        { day: 'Senin, 27 Juli 2026', topic: 'Modul 5: Machine Learning Klasik untuk Data Citra & Ujian Dasar', desc: 'Augmentasi gambar, curse of dimensionality, ekstraksi fitur (Color Histogram), klasifikasi supervised (KNN, SVM), evaluasi model (confusion matrix, PR/F1-score), unsupervised learning (K-Means & Color Quantization), kompresi gambar, analisis batas kemampuan ML klasik (hand-crafted features), serta evaluasi akhir tingkat dasar.' }
       ]
     },
     menengah: {
       title: 'Level Menengah (Intermediate)',
       duration: '32 Jam Instruksional',
-      dates: '30, 31 Juli, 1, 2 Agustus',
+      dates: '31 Juli, 1, 2, 3 Agustus',
       schedule: [
-        { day: 'Rabu, 29 Juli 2026', topic: 'Review Evaluasi Level Dasar', desc: 'Analisis hasil ujian level dasar, pembahasan feedback coding portofolio, dan sinkronisasi tools model menengah.' },
-        { day: 'Kamis, 30 Juli 2026', topic: 'Image Segmentation (Semantic & Instance)', desc: 'FCN, U-Net architecture, perbedaan segmentasi semantik dan instansi, penyusunan dataset mask annotation.' },
-        { day: 'Jumat, 31 Juli 2026', topic: 'Modern Backbone & Vision Transformers', desc: 'ResNet, MobileNet untuk komputasi ringan, konsep Vision Transformers (ViT) dalam klasifikasi & segmentasi.' },
-        { day: 'Sabtu, 1 Agustus 2026', topic: 'Transfer Learning & Custom Datasets', desc: 'Fine-tuning weights model pre-trained COCO dataset, penyesuaian learning rate scheduler untuk konvergensi optimal.' },
-        { day: 'Minggu, 2 Agustus 2026', topic: 'Evaluation Metrics Workshop & Case Study', desc: 'Perhitungan IoU (Intersection over Union), Dice Coefficient, analisis kebingungan matriks presisi-recall, & Modul Ujian Menengah.' }
+        { day: 'Kamis, 30 Juli 2026', topic: 'Review Evaluasi Level Dasar', desc: 'Analisis hasil ujian level dasar, pembahasan feedback coding portofolio, dan sinkronisasi tools model menengah.' },
+        { day: 'Jumat, 31 Juli 2026', topic: 'Modul 6: Fundamental Deep Learning & CNN', desc: 'Arsitektur Neural Network (neuron, weight, activation function ReLU/Sigmoid/Softmax), forward pass & backpropagation secara konseptual, optimizer (Adam), dataset Fashion MNIST, "The Big 4 Layers" CNN (Convolutional, Pooling, Flatten, Dense), regularisasi (Dropout, Early Stopping, Data Augmentation), serta visualisasi training curve.' },
+        { day: 'Sabtu, 1 Agustus 2026', topic: 'Modul 7: Image Classification & Transfer Learning', desc: 'Penggunaan Pre-Trained Models (VGG, ResNet, MobileNet, EfficientNet) yang dilatih di ImageNet, teknik Feature Extraction (membekukan base model), teknik Fine-Tuning (membuka kunci & melatih layer teratas dengan learning rate rendah), evaluasi model, interpretability dengan Grad-CAM & Saliency Map, serta uji signifikansi (McNemar, bootstrap).' },
+        { day: 'Minggu, 2 Agustus 2026', topic: 'Modul 8: Object Detection', desc: 'Deteksi multi-objek menggunakan arsitektur YOLO, anatomi bounding box, IoU, live inference YOLOv8n, grid-based approach vs sliding window, metrik evaluasi mAP & confidence threshold, ekstraksi data ke JSON, class imbalance level objek (focal loss), penanganan objek kecil, custom object detection training, format anotasi (COCO, Pascal VOC, YOLO), dan video tracking (Kalman Filter, Hungarian Algorithm).' },
+        { day: 'Senin, 3 Agustus 2026', topic: 'Modul 9: Image Segmentation & Ujian Menengah', desc: 'Semantic vs instance segmentation, arsitektur U-Net (encoder-decoder, skip connection), inference YOLOv8n-seg, metrik evaluasi (IoU, Dice Coefficient), konversi mask ke metrik bisnis (luas area kerusakan), Segment Anything Model (SAM) untuk zero-shot & promptable segmentation, serta evaluasi akhir tingkat menengah & visualisasi Virtual Background.' }
       ]
     },
     advanced: {
       title: 'Level Advanced (MLOps)',
       duration: '32 Jam Instruksional',
-      dates: '6, 7, 8, 9 Agustus',
+      dates: '7, 8, 9, 10 Agustus',
       schedule: [
-        { day: 'Rabu, 5 Agustus 2026', topic: 'Briefing Project Akhir & Hybrid Pipeline', desc: 'Pembagian tim proyek, pengumuman studi kasus hybrid pipeline, dan konsultasi arsitektur deployment.' },
-        { day: 'Kamis, 6 Agustus 2026', topic: 'MLOps Automation Lifecycle', desc: 'Version control untuk model (DVC), tracking eksperimen menggunakan MLflow, dan pembuatan docker image untuk environment model.' },
-        { day: 'Jumat, 7 Agustus 2026', topic: 'Production API & Cloud Deployment', desc: 'Membangun REST API performa tinggi dengan FastAPI, deployment model ke Kubernetes/Cloud Engine, dan monitoring model drift.' },
-        { day: 'Sabtu, 8 Agustus 2026', topic: 'Pitching Project Evaluated by Industry Reviewers', desc: 'Presentasi hasil proyek akhir di depan Dosen Pembina & reviewer industri terkemuka untuk validasi kelayakan produk.' },
-        { day: 'Minggu, 9 Agustus 2026', topic: 'Graduation Ceremony & Career Networking', desc: 'Penyerahan sertifikat kelulusan resmi FRG FILKOM UB, sesi networking alumni, dan tips integrasi portofolio ke rekrutmen.' }
+        { day: 'Kamis, 6 Agustus 2026', topic: 'Modul 10: Briefing Project Akhir & Hybrid Pipeline', desc: 'Pembagian tim proyek, pengumuman studi kasus hybrid pipeline, dan konsultasi arsitektur deployment.' },
+        { day: 'Jumat, 7 Agustus 2026', topic: 'Modul 11: MLOps Automation Lifecycle', desc: 'Version control untuk model (DVC), tracking eksperimen menggunakan MLflow, dan pembuatan docker image untuk environment model.' },
+        { day: 'Sabtu, 8 Agustus 2026', topic: 'Modul 12: Production API & Cloud Deployment', desc: 'Membangun REST API performa tinggi dengan FastAPI, deployment model ke Kubernetes/Cloud Engine, dan monitoring model drift.' },
+        { day: 'Minggu, 9 Agustus 2026', topic: 'Modul 13: Pitching Project Evaluated by Industry Reviewers', desc: 'Presentasi hasil proyek akhir di depan Dosen Pembina & reviewer industri terkemuka untuk validasi kelayakan produk.' },
+        { day: 'Senin, 10 Agustus 2026', topic: 'Graduation Ceremony & Career Networking', desc: 'Penyerahan sertifikat kelulusan resmi FRG FILKOM UB, sesi networking alumni, dan tips integrasi portofolio ke rekrutmen.' }
       ]
     }
   };

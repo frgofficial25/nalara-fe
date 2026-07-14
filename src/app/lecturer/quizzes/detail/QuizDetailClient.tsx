@@ -152,7 +152,7 @@ export default function QuizDetailClient() {
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '60vh', gap: 16 }}>
         <AlertCircle size={40} color="#FF5252" />
         <span style={{ color: '#FF5252', fontWeight: 600 }}>{error || 'Kuis tidak ditemukan'}</span>
-        <button onClick={() => router.push('/lecturer/quizzes')} style={s.backBtn}>
+        <button onClick={() => router.push('/lecturer/evaluasi')} style={s.backBtn}>
           <ArrowLeft size={16} /> Kembali ke Quiz Bank
         </button>
         <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
@@ -168,7 +168,7 @@ export default function QuizDetailClient() {
 
       {/* Top Bar */}
       <div style={s.topBar}>
-        <button onClick={() => router.push('/lecturer/quizzes')} style={s.backBtn}>
+        <button onClick={() => router.push('/lecturer/evaluasi')} style={s.backBtn}>
           <ArrowLeft size={16} />
           <span>Quiz Bank</span>
         </button>
