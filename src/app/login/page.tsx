@@ -40,31 +40,6 @@ export default function LoginPage() {
     }
   }, [router]);
 
-  // Carousel State for Left Panel
-  const [activeSlide, setActiveSlide] = useState(0);
-  const carouselSlides = [
-    {
-      title: 'Akselerasi Belajar AI Lebih Cepat',
-      desc: 'Pelajari machine learning, deep learning, dan MLOps langsung dari riset dan standar industri terdepan bersama FR Group FILKOM UB.',
-    },
-    {
-      title: 'Engine Evaluasi Cerdas Berbasis AI',
-      desc: 'Dapatkan koreksi jawaban instan, feedback personal, dan rekomendasi jalur belajar dinamis yang menyesuaikan pemahaman Anda.',
-    },
-    {
-      title: 'Akses GPU Node Eksklusif',
-      desc: 'Setiap level pembelajaran dilengkapi akses cluster komputasi khusus untuk pelatihan model AI berukuran besar secara langsung.',
-    }
-  ];
-
-  // Auto-slide carousel
-  useEffect(() => {
-    const slideInterval = setInterval(() => {
-      setActiveSlide((prev) => (prev + 1) % carouselSlides.length);
-    }, 6000);
-    return () => clearInterval(slideInterval);
-  }, [carouselSlides.length]);
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg('');
@@ -106,125 +81,140 @@ export default function LoginPage() {
     }
   };
 
-  // Social login tidak tersedia di API saat ini
-
-  const handleLogout = () => {
-    setSession(null);
-    setSuccessMsg('');
-    setEmail('');
-    setPassword('');
-  };
-
   return (
-    <div style={styles.pageContainer}>
-      {/* LEFT PANEL: Showcase (Hidden on Mobile) */}
-      <div style={styles.leftPanel} className="login-left-panel">
-        {/* Glow backgrounds */}
-        <div style={styles.glow1} />
-        <div style={styles.glow2} />
+    <>
+      <style>{`
+        @keyframes floatGentle {
+          0% { transform: translateY(0px); }
+          50% { transform: translateY(-10px); }
+          100% { transform: translateY(0px); }
+        }
+        @keyframes scaleUp {
+          from { opacity: 0; transform: scale(0.97); }
+          to { opacity: 1; transform: scale(1); }
+        }
+        @keyframes glowPulse {
+          0%, 100% { transform: scale(1); opacity: 0.5; }
+          50% { transform: scale(1.15); opacity: 0.8; }
+        }
+        @keyframes floatParticle1 {
+          0%, 100% { transform: translate(0, 0); }
+          50% { transform: translate(30px, -40px); }
+        }
+        @keyframes floatParticle2 {
+          0%, 100% { transform: translate(0, 0); }
+          50% { transform: translate(-40px, 30px); }
+        }
+        @keyframes floatParticle3 {
+          0%, 100% { transform: translate(0, 0); }
+          50% { transform: translate(25px, 25px); }
+        }
 
+        .login-card {
+          animation: scaleUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards, floatGentle 8s infinite ease-in-out 0.8s;
+          max-width: 460px;
+          width: 100%;
+          background: rgba(255, 255, 255, 0.02);
+          border: 1px solid var(--border-color);
+          backdrop-filter: blur(24px);
+          -webkit-backdrop-filter: blur(24px);
+          border-radius: 24px;
+          padding: 3rem 2.5rem;
+          box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4);
+          z-index: 10;
+        }
 
-        {/* Glassmorphic Presentation Wrapper */}
-        <div style={styles.showcaseContent}>
-          {/* Visual Presentation Section (Mock IDE / Terminal Window) */}
-          <div style={styles.ideShowcaseWrapper}>
-            <div style={styles.ideWindow}>
-              {/* Window Bar */}
-              <div style={styles.ideHeader}>
-                <div style={styles.windowDots}>
-                  <span style={{ ...styles.dotDot, background: '#FF5F56' }} />
-                  <span style={{ ...styles.dotDot, background: '#FFBD2E' }} />
-                  <span style={{ ...styles.dotDot, background: '#27C93F' }} />
-                </div>
-                <span style={styles.ideTitle}>nalara_net.py</span>
-                <span style={styles.ideLang}>python</span>
-              </div>
-              
-              {/* Code Editor Body */}
-              <div style={styles.ideBody}>
-                <div style={styles.codeLine}><span style={{ color: 'var(--lemon)' }}>import</span> torch</div>
-                <div style={styles.codeLine}><span style={{ color: 'var(--lemon)' }}>import</span> torch.nn <span style={{ color: 'var(--lemon)' }}>as</span> nn</div>
-                <div style={styles.codeLine} />
-                <div style={styles.codeLine}><span style={{ color: 'var(--azure)' }}>class</span> <span style={{ color: 'var(--white)', fontWeight: 600 }}>NalaraNet</span>(nn.Module):</div>
-                <div style={styles.codeLine}>&nbsp;&nbsp;&nbsp;&nbsp;<span style={{ color: 'var(--azure)' }}>def</span> <span style={{ color: 'var(--white)' }}>__init__</span>(self):</div>
-                <div style={styles.codeLine}>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;super().__init__()</div>
-                <div style={styles.codeLine}>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;self.model = nn.Sequential(</div>
-                <div style={styles.codeLine}>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;nn.Linear(<span style={{ color: 'var(--lemon)' }}>512</span>, <span style={{ color: 'var(--lemon)' }}>128</span>),</div>
-                <div style={styles.codeLine}>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;nn.ReLU(),</div>
-                <div style={styles.codeLine}>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;nn.Linear(<span style={{ color: 'var(--lemon)' }}>128</span>, <span style={{ color: 'var(--lemon)' }}>10</span>)</div>
-                <div style={styles.codeLine}>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;)</div>
-              </div>
+        .input-field {
+          width: 100%;
+          padding: 0.85rem 1rem 0.85rem 2.75rem;
+          border-radius: 10px;
+          border: 1px solid var(--border-color);
+          background: rgba(255, 255, 255, 0.03);
+          color: var(--white);
+          font-size: 0.95rem;
+          outline: none;
+          transition: all 0.25s ease;
+        }
 
-              {/* Terminal Execution Output */}
-              <div style={styles.ideTerminal}>
-                <div style={styles.terminalHeader}>
-                  <span style={styles.terminalDot} />
-                  <span>Terminal - GPU Cluster Node #4</span>
-                </div>
-                <div style={styles.terminalOutput}>
-                  <span style={{ color: 'var(--grey)' }}>$ python train.py</span>
-                  <br />
-                  <span style={{ color: 'var(--azure)' }}>[Nalara Engine]</span> Epoch 5/5 | Loss: 0.0143 | Acc: 99.1%
-                  <span style={styles.terminalCursor} />
-                </div>
-              </div>
-            </div>
+        .input-field:focus {
+          border-color: var(--azure);
+          background: rgba(255, 255, 255, 0.06);
+          box-shadow: 0 0 0 3px rgba(6, 99, 199, 0.2);
+        }
 
-            {/* Floating GPU Status Badge */}
-            <div style={styles.gpuWidget}>
-              <div style={styles.gpuPulseDot} />
-              <div style={styles.gpuText}>
-                <div style={styles.gpuLabel}>GPU Node #4 Active</div>
-                <div style={styles.gpuValue}>V100 - Temp 68°C</div>
-              </div>
-            </div>
-          </div>
+        .login-btn {
+          width: 100%;
+          padding: 0.85rem;
+          border-radius: 10px;
+          font-size: 0.95rem;
+          font-weight: 700;
+          background: var(--azure);
+          color: var(--white);
+          border: none;
+          cursor: pointer;
+          transition: all 0.25s ease;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 0.5rem;
+          box-shadow: 0 4px 14px rgba(6, 99, 199, 0.3);
+        }
 
-          {/* Core Feature Text Carousel */}
-          <div style={styles.carouselSection}>
-            <div style={styles.carouselSlideContainer}>
-              <h2 style={styles.carouselTitle}>
-                {carouselSlides[activeSlide].title}
-              </h2>
-              <p style={styles.carouselDesc}>
-                {carouselSlides[activeSlide].desc}
-              </p>
-            </div>
+        .login-btn:hover:not(:disabled) {
+          background: var(--azure-hover, #0b76ee);
+          transform: translateY(-1px);
+          box-shadow: 0 6px 20px rgba(6, 99, 199, 0.4);
+        }
 
-            {/* Dots */}
-            <div style={styles.carouselDots}>
-              {carouselSlides.map((_, idx) => (
-                <button
-                  key={idx}
-                  onClick={() => setActiveSlide(idx)}
-                  style={{
-                    ...styles.dot,
-                    background: idx === activeSlide ? 'var(--lemon)' : 'rgba(255, 255, 255, 0.2)',
-                    width: idx === activeSlide ? '24px' : '8px',
-                  }}
-                  aria-label={`Slide ${idx + 1}`}
-                />
-              ))}
-            </div>
-          </div>
+        .login-btn:disabled {
+          opacity: 0.6;
+          cursor: not-allowed;
+        }
+
+        .spinner-custom {
+          width: 18px;
+          height: 18px;
+          border: 2px solid rgba(255, 255, 255, 0.3);
+          border-top-color: var(--white);
+          border-radius: 50%;
+          animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+          to { transform: rotate(360deg); }
+        }
+      `}</style>
+
+      <div style={styles.container}>
+        {/* Background Gradients from ComingSoon */}
+        <div style={{ ...styles.glow1, animation: 'glowPulse 12s infinite ease-in-out' }} />
+        <div style={{ ...styles.glow2, animation: 'glowPulse 15s infinite ease-in-out 3s' }} />
+
+        {/* Floating Sparkles / Particles for Tech Feel */}
+        <div style={styles.particleContainer}>
+          <div style={{ ...styles.particle, width: '6px', height: '6px', top: '12%', left: '8%', animation: 'floatParticle1 8s infinite ease-in-out' }} />
+          <div style={{ ...styles.particle, width: '9px', height: '9px', top: '20%', left: '88%', animation: 'floatParticle2 10s infinite ease-in-out' }} />
+          <div style={{ ...styles.particle, width: '7px', height: '7px', top: '82%', left: '10%', animation: 'floatParticle3 9s infinite ease-in-out' }} />
+          <div style={{ ...styles.particle, width: '5px', height: '5px', top: '85%', left: '85%', animation: 'floatParticle2 12s infinite ease-in-out reverse' }} />
+          <div style={{ ...styles.particle, width: '8px', height: '8px', top: '50%', left: '5%', animation: 'floatParticle1 11s infinite ease-in-out reverse' }} />
         </div>
-      </div>
 
-      {/* RIGHT PANEL: Form Container */}
-      <div style={styles.rightPanel} className="login-right-panel">
-        <div style={styles.formWrapper}>
+        {/* Centered Login Card */}
+        <div className="login-card">
           {/* Logo */}
           <div style={styles.logoContainer}>
-            <img src="/image/logonalara2.png" alt="Nalara Academy Logo" style={{ height: '80px', objectFit: 'contain' }} />
+            <img src="/image/logonalara2.png" alt="Nalara Academy Logo" style={{ height: '70px', objectFit: 'contain' }} />
           </div>
 
           {!session ? (
             <>
-              {/* Form Headers */}
-              <h1 style={styles.formTitle}>Welcome Nalarians!</h1>
-              <p style={styles.formSubtitle}>Sign in with your Nalara accounts credentials to access your learning workspace.</p>
+              {/* Form Header */}
+              <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
+                <h1 style={styles.formTitle}>Welcome Nalarians!</h1>
+                <p style={styles.formSubtitle}>Sign in with your credentials to access your workspace.</p>
+              </div>
 
-              {/* API Alert Banners */}
+              {/* Error Banner */}
               {errorMsg && (
                 <div style={styles.errorBanner}>
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -236,12 +226,12 @@ export default function LoginPage() {
                 </div>
               )}
 
-              {/* Input Form */}
-              <form onSubmit={handleSubmit} style={styles.form}>
-                {/* Username Field */}
+              {/* Login Form */}
+              <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                {/* Username Input */}
                 <div style={styles.inputGroup}>
                   <label htmlFor="username" style={styles.label}>Username</label>
-                  <div style={styles.inputIconWrapper}>
+                  <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
                     <svg style={styles.inputIcon} width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                       <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
                       <circle cx="12" cy="7" r="4" />
@@ -253,16 +243,16 @@ export default function LoginPage() {
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       required
-                      style={styles.inputWithLeftIcon}
+                      className="input-field"
                       disabled={loading}
                     />
                   </div>
                 </div>
 
-                {/* Password Field */}
+                {/* Password Input */}
                 <div style={styles.inputGroup}>
                   <label htmlFor="password" style={styles.label}>Password</label>
-                  <div style={styles.passwordWrapper}>
+                  <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
                     <svg style={styles.inputIcon} width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                       <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
                       <path d="M7 11V7a5 5 0 0110 0v4"></path>
@@ -274,7 +264,8 @@ export default function LoginPage() {
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       required
-                      style={styles.inputWithBothIcons}
+                      className="input-field"
+                      style={{ paddingRight: '2.75rem' }}
                       disabled={loading}
                     />
                     <button
@@ -298,405 +289,140 @@ export default function LoginPage() {
                   </div>
                 </div>
 
+                {/* Remember Me Checkbox */}
+                <div style={styles.rememberRow}>
+                  <label htmlFor="rememberMe" style={styles.checkboxLabel}>
+                    <input
+                      id="rememberMe"
+                      type="checkbox"
+                      checked={rememberMe}
+                      onChange={(e) => setRememberMe(e.target.checked)}
+                      style={styles.checkbox}
+                    />
+                    <span>Remember me</span>
+                  </label>
+                </div>
+
                 {/* Submit button */}
                 <button
                   type="submit"
                   disabled={loading}
-                  style={styles.submitButton}
+                  className="login-btn"
                 >
                   {loading ? (
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
-                      <div style={styles.spinner} />
+                    <>
+                      <div className="spinner-custom" />
                       <span>Signing in...</span>
-                    </div>
+                    </>
                   ) : (
                     <span>Sign In</span>
                   )}
                 </button>
               </form>
-
             </>
           ) : (
             /* Logged in success state */
             <div style={styles.successState}>
               <div style={styles.successIconWrapper}>
-                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--lemon)" strokeWidth="3">
+                <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="var(--lemon)" strokeWidth="3">
                   <polyline points="20 6 9 17 4 12" />
                 </svg>
               </div>
-              <h1 style={styles.successTitle}>Login Successful!</h1>
+              <h1 style={styles.successTitle}>Success!</h1>
               <p style={styles.successSub}>
-                Welcome back, <strong>{session.user.name}</strong> ({session.user.email}). You are logged in as <strong>{session.user.role}</strong>.
+                Welcome back, <strong>{session.user.name}</strong>.
                 <br /><br />
                 Redirecting to dashboard...
               </p>
-
-              <div style={styles.successActions}>
-                <a href="/" style={{ ...styles.submitButton, textDecoration: 'none', textAlign: 'center', display: 'block' }}>
-                  Go to Dashboard
-                </a>
-              </div>
             </div>
           )}
         </div>
+
+        {/* Footer info */}
         <div style={styles.footerText}>
-            @ 2026 Nalara Academy. All rights reserved.
+          &copy; 2026 Nalara Academy. All rights reserved.
         </div>
       </div>
-    </div>
+    </>
   );
 }
 
 const styles: Record<string, React.CSSProperties> = {
-  pageContainer: {
-    display: 'flex',
+  container: {
     minHeight: '100vh',
-    width: '100%',
-    background: 'var(--bg-darker)',
-    color: 'var(--white)',
-    overflow: 'hidden',
-    flexDirection: 'row',
-  },
-  // Showcase Panel (Left)
-  leftPanel: {
-    flex: '1.2 1 0%',
-    background: 'var(--bg-dark)',
     display: 'flex',
-    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    background: 'var(--bg-dark)',
     position: 'relative',
     overflow: 'hidden',
-    borderRight: '1px solid var(--border-color)',
-    padding: '3rem',
-    justifyContent: 'space-between',
-    // We handle responsive hiding via styles + media queries or checking client widths if needed, 
-    // but a standard responsive flex-wrap will also handle it.
+    padding: '2rem 1.5rem',
   },
   glow1: {
     position: 'absolute',
-    width: '600px',
-    height: '600px',
+    width: '450px',
+    height: '450px',
     borderRadius: '50%',
-    background: 'radial-gradient(circle, rgba(6,99,199,0.15) 0%, transparent 75%)',
-    top: '-200px',
-    left: '-200px',
+    background: 'radial-gradient(circle, rgba(6,99,199,0.15) 0%, transparent 70%)',
+    top: '-100px',
+    left: '-100px',
     pointerEvents: 'none',
   },
   glow2: {
     position: 'absolute',
-    width: '600px',
-    height: '600px',
+    width: '500px',
+    height: '500px',
     borderRadius: '50%',
-    background: 'radial-gradient(circle, rgba(255,168,38,0.08) 0%, transparent 75%)',
-    bottom: '-200px',
+    background: 'radial-gradient(circle, rgba(255,168,38,0.08) 0%, transparent 70%)',
+    bottom: '-150px',
     right: '-100px',
     pointerEvents: 'none',
   },
-  supportHeader: {
-    display: 'flex',
-    justifyContent: 'flex-start',
-    zIndex: 5,
-  },
-  supportBtn: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '0.5rem',
-    color: 'var(--grey-blue)',
-    textDecoration: 'none',
-    fontSize: '0.85rem',
-    fontWeight: 600,
-    background: 'rgba(255, 255, 255, 0.03)',
-    border: '1px solid var(--border-color)',
-    padding: '0.6rem 1.2rem',
-    borderRadius: '9999px',
-    transition: 'all var(--transition-fast)',
-  },
-  showcaseContent: {
-    display: 'flex',
-    flexDirection: 'column',
-    justifyContent: 'center',
-    flex: 1,
-    zIndex: 5,
-    maxWidth: '550px',
-    margin: '0 auto',
-    width: '100%',
-    gap: '4rem',
-  },
-  ideShowcaseWrapper: {
-    position: 'relative',
-    display: 'flex',
-    height: '340px',
-    justifyContent: 'center',
-    alignItems: 'center',
-    width: '100%',
-  },
-  ideWindow: {
-    width: '100%',
-    maxWidth: '420px',
-    background: 'rgba(25, 25, 25, 0.75)',
-    backdropFilter: 'blur(20px)',
-    WebkitBackdropFilter: 'blur(20px)',
-    border: '1px solid rgba(255, 255, 255, 0.1)',
-    borderRadius: '12px',
-    boxShadow: '0 20px 40px rgba(0, 0, 0, 0.4)',
-    overflow: 'hidden',
-    display: 'flex',
-    flexDirection: 'column',
-    fontFamily: 'var(--font-mono, monospace)',
-    fontSize: '0.8rem',
-  },
-  ideHeader: {
-    display: 'flex',
-    alignItems: 'center',
-    padding: '0.6rem 1rem',
-    background: 'rgba(0, 0, 0, 0.3)',
-    borderBottom: '1px solid rgba(255, 255, 255, 0.05)',
-  },
-  windowDots: {
-    display: 'flex',
-    gap: '6px',
-    marginRight: '1.5rem',
-  },
-  dotDot: {
-    width: '10px',
-    height: '10px',
-    borderRadius: '50%',
-    display: 'inline-block',
-  },
-  ideTitle: {
-    color: 'var(--grey-blue)',
-    flex: 1,
-    textAlign: 'center',
-    fontSize: '0.75rem',
-    letterSpacing: '0.05em',
-  },
-  ideLang: {
-    color: 'var(--grey)',
-    fontSize: '0.7rem',
-    textTransform: 'uppercase',
-  },
-  ideBody: {
-    padding: '1.25rem',
-    color: 'var(--grey-blue)',
-    lineHeight: '1.5',
-    textAlign: 'left',
-    background: 'rgba(0, 0, 0, 0.15)',
-  },
-  codeLine: {
-    whiteSpace: 'pre',
-  },
-  ideTerminal: {
-    borderTop: '1px solid rgba(255, 255, 255, 0.05)',
-    background: 'rgba(0, 0, 0, 0.5)',
-    padding: '0.75rem 1.25rem',
-    textAlign: 'left',
-  },
-  terminalHeader: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '6px',
-    fontSize: '0.7rem',
-    color: 'var(--grey)',
-    marginBottom: '0.35rem',
-  },
-  terminalDot: {
-    width: '6px',
-    height: '6px',
-    borderRadius: '50%',
-    background: 'var(--lemon)',
-  },
-  terminalOutput: {
-    color: 'var(--white)',
-    lineHeight: '1.4',
-  },
-  terminalCursor: {
-    display: 'inline-block',
-    width: '6px',
-    height: '13px',
-    background: 'var(--lemon)',
-    marginLeft: '5px',
-  },
-  gpuWidget: {
+  particleContainer: {
     position: 'absolute',
-    bottom: '-15px',
-    right: '-10px',
-    background: 'rgba(33, 33, 33, 0.85)',
-    backdropFilter: 'blur(16px)',
-    border: '1px solid var(--border-color)',
-    borderRadius: '8px',
-    padding: '0.6rem 1rem',
-    boxShadow: '0 12px 24px rgba(0,0,0,0.5)',
-    zIndex: 5,
-    display: 'flex',
-    alignItems: 'center',
-    gap: '0.75rem',
-  },
-  gpuPulseDot: {
-    width: '8px',
-    height: '8px',
-    borderRadius: '50%',
-    background: '#27C93F',
-    boxShadow: '0 0 8px #27C93F',
-  },
-  gpuText: {
-    textAlign: 'left',
-  },
-  gpuLabel: {
-    fontSize: '0.65rem',
-    color: 'var(--grey-blue)',
-    fontWeight: 600,
-  },
-  gpuValue: {
-    fontSize: '0.75rem',
-    fontWeight: 700,
-    color: 'var(--white)',
-  },
-  // Carousel Section
-  carouselSection: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '1.5rem',
-  },
-  carouselSlideContainer: {
-    minHeight: '120px',
-  },
-  carouselTitle: {
-    fontSize: '1.75rem',
-    fontWeight: 800,
-    lineHeight: 1.3,
-    marginBottom: '0.75rem',
-  },
-  carouselDesc: {
-    fontSize: '0.95rem',
-    color: 'var(--grey-blue)',
-    lineHeight: 1.6,
-  },
-  carouselDots: {
-    display: 'flex',
-    gap: '6px',
-  },
-  dot: {
-    height: '8px',
-    borderRadius: '99px',
-    border: 'none',
-    cursor: 'pointer',
-    transition: 'all 0.3s ease',
-  },
-  
-  // Right Panel: Form
-  rightPanel: {
-    flex: '1 1 0%',
-    background: '#111827',
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: '3rem 2rem',
-    position: 'relative',
-    zIndex: 5,
-  },
-  formWrapper: {
-    maxWidth: '400px',
+    top: 0,
+    left: 0,
     width: '100%',
-    display: 'flex',
-    flexDirection: 'column',
+    height: '100%',
+    pointerEvents: 'none',
+  },
+  particle: {
+    position: 'absolute',
+    background: 'var(--azure)',
+    borderRadius: '50%',
+    boxShadow: '0 0 10px var(--azure)',
   },
   logoContainer: {
     display: 'flex',
-    alignItems: 'center',
     justifyContent: 'center',
-    gap: '1rem',
-    marginBottom: '2rem',
-  },
-  logoIcon: {
-    display: 'flex',
-    alignItems: 'center',
-  },
-  logoTextGroup: {
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'flex-start',
-    justifyContent: 'center',
-    gap: '2px',
-  },
-  logoNalara: {
-    fontSize: '1.2rem',
-    fontWeight: 700,
-    color: '#3B82F6',
-    letterSpacing: '0.3em',
-  },
-  logoAcademy: {
-    fontSize: '0.8rem',
-    fontWeight: 700,
-    color: '#F59E0B',
-    letterSpacing: '0.35em',
+    marginBottom: '1.5rem',
   },
   formTitle: {
     fontSize: '1.75rem',
-    fontWeight: 700,
-    color: '#F9FAFB',
-    marginBottom: '0.75rem',
-    textAlign: 'center',
+    fontWeight: 800,
+    color: 'var(--white)',
+    marginBottom: '0.5rem',
   },
   formSubtitle: {
     fontSize: '0.875rem',
-    color: '#9CA3AF',
-    marginBottom: '2rem',
-    textAlign: 'center',
-    lineHeight: '1.5',
-  },
-  form: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '1.25rem',
+    color: 'var(--grey-blue)',
+    lineHeight: 1.4,
   },
   inputGroup: {
     display: 'flex',
     flexDirection: 'column',
-    gap: '0.5rem',
+    gap: '0.4rem',
   },
   label: {
-    fontSize: '0.875rem',
-    fontWeight: 500,
+    fontSize: '0.85rem',
+    fontWeight: 600,
     color: '#D1D5DB',
-  },
-  inputIconWrapper: {
-    position: 'relative',
-    display: 'flex',
-    alignItems: 'center',
-    width: '100%',
   },
   inputIcon: {
     position: 'absolute',
     left: '12px',
     color: '#6B7280',
-  },
-  inputWithLeftIcon: {
-    width: '100%',
-    padding: '0.75rem 1rem 0.75rem 2.5rem',
-    borderRadius: '6px',
-    border: '1px solid #374151',
-    background: '#1F2937',
-    color: '#F9FAFB',
-    fontSize: '0.875rem',
-    outline: 'none',
-    transition: 'all 0.2s ease',
-  },
-  passwordWrapper: {
-    position: 'relative',
-    display: 'flex',
-    alignItems: 'center',
-    width: '100%',
-  },
-  inputWithBothIcons: {
-    width: '100%',
-    padding: '0.75rem 2.5rem 0.75rem 2.5rem',
-    borderRadius: '6px',
-    border: '1px solid #374151',
-    background: '#1F2937',
-    color: '#F9FAFB',
-    fontSize: '0.875rem',
-    outline: 'none',
-    transition: 'all 0.2s ease',
+    pointerEvents: 'none',
   },
   passwordToggleBtn: {
     position: 'absolute',
@@ -712,7 +438,7 @@ const styles: Record<string, React.CSSProperties> = {
   rememberRow: {
     display: 'flex',
     alignItems: 'center',
-    fontSize: '0.875rem',
+    fontSize: '0.85rem',
   },
   checkboxLabel: {
     display: 'flex',
@@ -723,91 +449,9 @@ const styles: Record<string, React.CSSProperties> = {
   },
   checkbox: {
     accentColor: '#3B82F6',
-    width: '14px',
-    height: '14px',
+    width: '15px',
+    height: '15px',
     cursor: 'pointer',
-  },
-  submitButton: {
-    width: '100%',
-    padding: '0.75rem',
-    borderRadius: '6px',
-    fontSize: '0.875rem',
-    fontWeight: 600,
-    marginTop: '0.5rem',
-    background: '#2563EB',
-    color: '#FFFFFF',
-    border: 'none',
-    cursor: 'pointer',
-    transition: 'background 0.2s',
-  },
-  spinner: {
-    width: '16px',
-    height: '16px',
-    border: '2px solid rgba(255,255,255,0.3)',
-    borderTopColor: '#FFFFFF',
-    borderRadius: '50%',
-    animation: 'pulse 1s infinite linear',
-  },
-  supportText: {
-    textAlign: 'center',
-    fontSize: '0.75rem',
-    color: '#9CA3AF',
-    marginTop: '1rem',
-    lineHeight: '1.5',
-  },
-  supportLink: {
-    color: '#3B82F6',
-    textDecoration: 'none',
-  },
-  footerText: {
-    position: 'absolute',
-    bottom: '2rem',
-    width: '100%',
-    textAlign: 'center',
-    fontSize: '0.75rem',
-    color: '#6B7280',
-  },
-  separator: {
-    display: 'flex',
-    alignItems: 'center',
-    margin: '2rem 0',
-    width: '100%',
-  },
-  line: {
-    flex: 1,
-    height: '1px',
-    background: 'var(--border-color)',
-  },
-  separatorText: {
-    padding: '0 1rem',
-    fontSize: '0.75rem',
-    color: 'var(--grey)',
-    fontWeight: 700,
-    letterSpacing: '0.05em',
-  },
-  socialGroup: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '0.75rem',
-  },
-  socialBtn: {
-    width: '100%',
-    padding: '0.85rem',
-    borderRadius: '10px',
-    background: 'transparent',
-    border: '1px solid var(--border-color)',
-    color: 'var(--white)',
-    fontWeight: 600,
-    fontSize: '0.9rem',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: '0.75rem',
-    cursor: 'pointer',
-    transition: 'all 0.2s ease',
-  },
-  socialIcon: {
-    flexShrink: 0,
   },
   errorBanner: {
     display: 'flex',
@@ -822,60 +466,40 @@ const styles: Record<string, React.CSSProperties> = {
     marginBottom: '1.5rem',
     lineHeight: 1.4,
   },
-  // Success state UI
   successState: {
     textAlign: 'center',
-    padding: '2rem 1rem',
+    padding: '1.5rem 1rem',
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
   },
   successIconWrapper: {
-    width: '72px',
-    height: '72px',
+    width: '64px',
+    height: '64px',
     borderRadius: '50%',
     background: 'rgba(255, 168, 38, 0.1)',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: '1.5rem',
+    marginBottom: '1.25rem',
   },
   successTitle: {
-    fontSize: '2rem',
+    fontSize: '1.75rem',
     fontWeight: 800,
-    marginBottom: '1rem',
+    marginBottom: '0.75rem',
+    color: 'var(--white)',
   },
   successSub: {
-    fontSize: '1rem',
+    fontSize: '0.95rem',
     color: 'var(--grey-blue)',
-    lineHeight: 1.6,
-    marginBottom: '2rem',
+    lineHeight: 1.5,
   },
-  tokenBox: {
+  footerText: {
+    position: 'absolute',
+    bottom: '1.5rem',
     width: '100%',
-    background: 'rgba(255, 255, 255, 0.02)',
-    border: '1px solid var(--border-color)',
-    borderRadius: '8px',
-    padding: '1rem',
-    textAlign: 'left',
-    marginBottom: '2rem',
-  },
-  tokenLabel: {
-    fontSize: '0.7rem',
-    color: 'var(--grey)',
-    textTransform: 'uppercase',
-    letterSpacing: '0.05em',
-    marginBottom: '0.5rem',
-  },
-  tokenText: {
-    fontSize: '0.8rem',
-    fontFamily: 'monospace',
-    color: 'var(--azure)',
-    wordBreak: 'break-all',
-  },
-  successActions: {
-    display: 'flex',
-    gap: '1rem',
-    width: '100%',
+    textAlign: 'center',
+    fontSize: '0.75rem',
+    color: '#4b5563',
   },
 };
