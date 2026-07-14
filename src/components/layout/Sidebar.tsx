@@ -157,7 +157,7 @@ export default function Sidebar({
         }
         .menu-item-transition {
           position: relative;
-          transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
           border: 1px solid transparent;
         }
         .menu-item-transition:hover {
@@ -189,61 +189,80 @@ export default function Sidebar({
           transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
         .bottom-logout-btn {
-          transition: all 0.25s ease;
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
         .bottom-logout-btn:hover {
           background-color: rgba(239, 68, 68, 0.08) !important;
           transform: translateX(4px);
         }
-        .bottom-collapse-btn {
-          transition: all 0.25s ease;
-        }
-        .bottom-collapse-btn:hover {
-          background-color: rgba(255, 255, 255, 0.03) !important;
-        }
       `}} />
 
       {/* Logo Area */}
-      <div style={s.logoArea}>
-        <div style={s.logoWrapper}>
-          <svg width="38" height="38" viewBox="0 0 38 38" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <rect width="38" height="38" rx="8" fill="white"/>
-            <path d="M19 7C12.5 7 7 12.5 7 19C7 23.3 9.4 27.1 13 29.1C13 27 14 23.2 19 23.2C24 23.2 25 27 25 29.1C28.6 27.1 31 23.3 31 19C31 12.5 25.5 7 19 7Z" fill="#0056b3" />
-            <path d="M19 10C14.6 10 11 13.6 11 18C11 20.9 12.5 23.4 14.8 24.8C15.8 22.3 17.3 20.5 19 20.5C20.7 20.5 22.2 22.3 23.2 24.8C25.5 23.4 27 20.9 27 18C27 13.6 23.4 10 19 10Z" fill="white" />
-            <path d="M19 13C16.2 13 14 15.2 14 18C14 19.8 15 21.4 16.4 22.3C17 20.6 17.9 19.5 19 19.5C20.1 19.5 21 20.6 21.6 22.3C23 21.4 24 19.8 24 18C24 15.2 21.8 13 19 13Z" fill="#0ea5e9" />
-            <path d="M19 22L22 27H16L19 22Z" fill="#f59e0b" />
-            <circle cx="19" cy="18" r="2.5" fill="#3b82f6" />
-          </svg>
+      <div style={{
+        ...s.logoArea,
+        flexDirection: 'column',
+        alignItems: isCollapsed ? 'center' : 'stretch',
+        justifyContent: 'center',
+        padding: isCollapsed ? '24px 10px' : '32px 24px 20px 24px',
+        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+      }}>
+        <div style={{
+          width: isCollapsed ? '36px' : '100%',
+          height: isCollapsed ? '36px' : 'auto',
+          maxWidth: isCollapsed ? '36px' : '180px',
+          aspectRatio: isCollapsed ? '1/1' : 'auto',
+          transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          overflow: 'hidden',
+        }}>
+          <img 
+            src={isCollapsed ? "/image/logonalara.png" : "/image/logonalara2.png"} 
+            alt="Nalara Logo" 
+            style={{ 
+              width: '100%', 
+              height: '100%', 
+              objectFit: 'contain',
+              transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+            }} 
+          />
         </div>
-        {!isCollapsed && (
-          <div style={s.logoText}>
-            <span style={s.logoTitle}>Nalara Academy</span>
-            <span style={s.logoSubtitle}>Admin Console</span>
-          </div>
-        )}
       </div>
 
       {/* Role Badge */}
-      {!isCollapsed && (
-        <div style={s.roleBadgeWrap}>
-          <div style={s.roleBadge}>
-            <span className="pulse-dot" />
-            <span style={s.roleBadgeText}>
-              {roleName === 'SuperAdmin' ? 'SuperAdmin Portal' : 
-               roleName === 'Lecturer' ? 'Lecturer Portal' : 
-               roleName === 'Tentor' ? 'Tentor Portal' : 'Student Portal'}
-            </span>
-          </div>
+      <div style={{
+        ...s.roleBadgeWrap,
+        opacity: isCollapsed ? 0 : 1,
+        maxHeight: isCollapsed ? '0px' : '50px',
+        overflow: 'hidden',
+        padding: isCollapsed ? '0' : '0 20px 16px 20px',
+        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+      }}>
+        <div style={s.roleBadge}>
+          <span className="pulse-dot" />
+          <span style={s.roleBadgeText}>
+            {roleName === 'SuperAdmin' ? 'SuperAdmin Portal' : 
+             roleName === 'Lecturer' ? 'Lecturer Portal' : 
+             roleName === 'Tentor' ? 'Tentor Portal' : 'Student Portal'}
+          </span>
         </div>
-      )}
+      </div>
 
       {/* Navigation */}
       <nav style={s.nav}>
         {activeMenu.map((group, index) => (
           <div key={index} style={s.menuGroup}>
-            {!isCollapsed && (
-              <div style={s.groupLabel}>{group.group}</div>
-            )}
+            <div style={{
+              ...s.groupLabel,
+              opacity: isCollapsed ? 0 : 1,
+              maxHeight: isCollapsed ? '0px' : '20px',
+              overflow: 'hidden',
+              marginBottom: isCollapsed ? '0px' : '8px',
+              transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+            }}>
+              {group.group}
+            </div>
             <ul style={s.menuList}>
               {group.items.map((item: any, itemIndex: number) => {
                 const isActive = pathname === item.href;
@@ -260,24 +279,28 @@ export default function Sidebar({
                       }}
                       title={isCollapsed ? item.label : undefined}
                     >
-                      {isActive && <div className="left-indicator" />}
+                      {isActive && !isCollapsed && <div className="left-indicator" />}
                       <Icon 
                         size={18} 
                         className={isActive ? 'active-icon' : ''} 
                         color={isActive ? '#0ea5e9' : '#64748b'} 
-                        style={{ transition: 'color 0.25s' }}
+                        style={{ transition: 'color 0.25s', flexShrink: 0 }}
                       />
-                      {!isCollapsed && (
-                        <span 
-                          className={isActive ? 'active-label' : ''}
-                          style={{
-                            ...s.menuLabel,
-                            color: isActive ? '#ffffff' : '#94a3b8',
-                          }}
-                        >
-                          {item.label}
-                        </span>
-                      )}
+                      <span 
+                        className={isActive ? 'active-label' : ''}
+                        style={{
+                          ...s.menuLabel,
+                          color: isActive ? '#ffffff' : '#94a3b8',
+                          opacity: isCollapsed ? 0 : 1,
+                          maxWidth: isCollapsed ? '0px' : '200px',
+                          visibility: isCollapsed ? 'hidden' : 'visible',
+                          overflow: 'hidden',
+                          display: 'inline-block',
+                          transition: 'opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1), maxWidth 0.3s cubic-bezier(0.4, 0, 0.2, 1), color 0.3s',
+                        }}
+                      >
+                        {item.label}
+                      </span>
                     </Link>
                   </li>
                 );
@@ -295,17 +318,20 @@ export default function Sidebar({
           onClick={handleLogout} 
           title={isCollapsed ? "Sign Out" : undefined}
         >
-          <LogOut size={18} color="#ef4444" />
-          {!isCollapsed && <span style={{ ...s.bottomBtnLabel, color: '#ef4444', fontWeight: 600 }}>Sign Out</span>}
-        </button>
-        <button 
-          className="bottom-collapse-btn"
-          style={s.bottomBtn} 
-          onClick={onToggleCollapse} 
-          title={isCollapsed ? "Expand" : "Collapse"}
-        >
-          {isCollapsed ? <ChevronRight size={18} color="#64748b" /> : <ChevronLeft size={18} color="#64748b" />}
-          {!isCollapsed && <span style={s.bottomBtnLabel}>Collapse Sidebar</span>}
+          <LogOut size={18} color="#ef4444" style={{ flexShrink: 0 }} />
+          <span style={{ 
+            ...s.bottomBtnLabel, 
+            color: '#ef4444', 
+            fontWeight: 600,
+            opacity: isCollapsed ? 0 : 1,
+            maxWidth: isCollapsed ? '0px' : '200px',
+            visibility: isCollapsed ? 'hidden' : 'visible',
+            overflow: 'hidden',
+            display: 'inline-block',
+            transition: 'opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1), maxWidth 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+          }}>
+            Sign Out
+          </span>
         </button>
       </div>
     </aside>
@@ -321,7 +347,7 @@ const s: Record<string, React.CSSProperties> = {
     top: 0,
     background: '#0B0E14',
     borderRight: '1px solid rgba(255, 255, 255, 0.06)',
-    transition: 'width 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+    transition: 'width 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
     zIndex: 40,
     flexShrink: 0,
     overflow: 'hidden',
@@ -331,34 +357,6 @@ const s: Record<string, React.CSSProperties> = {
     alignItems: 'center',
     gap: '12px',
     padding: '24px 20px',
-  },
-  logoWrapper: {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexShrink: 0,
-    boxShadow: '0 4px 10px rgba(0, 0, 0, 0.3)',
-    borderRadius: '8px',
-  },
-  logoText: {
-    display: 'flex',
-    flexDirection: 'column',
-    overflow: 'hidden',
-  },
-  logoTitle: {
-    fontFamily: 'var(--font-display)',
-    fontWeight: 700,
-    color: '#fff',
-    fontSize: '1rem',
-    lineHeight: 1.2,
-    whiteSpace: 'nowrap',
-    letterSpacing: '-0.01em',
-  },
-  logoSubtitle: {
-    fontSize: '0.75rem',
-    color: '#64748b',
-    whiteSpace: 'nowrap',
-    marginTop: '2px',
   },
   roleBadgeWrap: {
     padding: '0 20px 16px 20px',
@@ -382,9 +380,11 @@ const s: Record<string, React.CSSProperties> = {
     overflowY: 'auto',
     overflowX: 'hidden',
     padding: '12px 16px',
+    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
   },
   menuGroup: {
     marginBottom: '24px',
+    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
   },
   groupLabel: {
     fontSize: '0.7rem',
@@ -411,6 +411,7 @@ const s: Record<string, React.CSSProperties> = {
     cursor: 'pointer',
     background: 'transparent',
     border: '1px solid transparent',
+    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
   },
   menuLabel: {
     fontWeight: 500,
@@ -425,6 +426,7 @@ const s: Record<string, React.CSSProperties> = {
     flexDirection: 'column',
     gap: '6px',
     background: 'rgba(0, 0, 0, 0.1)',
+    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
   },
   bottomBtn: {
     display: 'flex',
@@ -437,7 +439,7 @@ const s: Record<string, React.CSSProperties> = {
     cursor: 'pointer',
     width: '100%',
     textAlign: 'left',
-    transition: 'all 0.2s ease',
+    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
   },
   bottomBtnLabel: {
     fontWeight: 500,

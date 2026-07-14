@@ -1,21 +1,45 @@
 "use client";
 
-import React from 'react';
-import { ChevronDown } from 'lucide-react';
+import React, { useState } from 'react';
+import { ChevronDown, Menu } from 'lucide-react';
 
 interface HeaderProps {
   userName?: string;
   userRole?: string;
   userInitial?: string;
+  isCollapsed?: boolean;
+  onToggleCollapse?: () => void;
 }
 
 export default function Header({
   userName = "Nalara Chief Administrator",
   userRole = "Owner",
-  userInitial = "N"
+  userInitial = "N",
+  isCollapsed = false,
+  onToggleCollapse
 }: HeaderProps) {
+  const [isHovered, setIsHovered] = useState(false);
+
   return (
     <header style={s.header}>
+      {/* Collapse/Expand Toggle on Left */}
+      {onToggleCollapse ? (
+        <button
+          onClick={onToggleCollapse}
+          onMouseEnter={() => setIsHovered(true)}
+          onMouseLeave={() => setIsHovered(false)}
+          style={{
+            ...s.collapseBtn,
+            backgroundColor: isHovered ? 'rgba(255, 255, 255, 0.06)' : 'transparent',
+          }}
+          title={isCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
+        >
+          <Menu size={20} color="#94a3b8" />
+        </button>
+      ) : (
+        <div /> // Spacer if no toggle
+      )}
+
       {/* User Profile */}
       <div style={s.userProfile}>
         <div style={s.userAvatar}>
@@ -35,15 +59,26 @@ const s: Record<string, React.CSSProperties> = {
   header: {
     display: 'flex',
     alignItems: 'center',
-    justifyContent: 'flex-end',
+    justifyContent: 'space-between',
     padding: '14px 24px',
     position: 'sticky',
     top: 0,
     zIndex: 30,
-    background: 'rgba(33, 33, 33, 0.9)',
+    background: 'rgba(11, 14, 20, 0.75)',
     backdropFilter: 'blur(20px)',
     WebkitBackdropFilter: 'blur(20px)',
-    borderBottom: '1px solid var(--border-color)',
+    borderBottom: '1px solid rgba(255, 255, 255, 0.06)',
+  },
+  collapseBtn: {
+    background: 'transparent',
+    border: 'none',
+    cursor: 'pointer',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: '8px',
+    borderRadius: '6px',
+    transition: 'all 0.2s ease',
   },
   userProfile: {
     display: 'flex',
