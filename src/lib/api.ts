@@ -169,6 +169,14 @@ function buildHeaders(
 ): Record<string, string> {
   const headers: Record<string, string> = { ...extra, ...options.headers };
   if (options.token) headers['Authorization'] = `Bearer ${options.token}`;
+
+  // Backend mewajibkan API key statis di x-api-key pada hampir semua endpoint.
+  // Pakai nilai dari env agar tidak tercampur dengan access token user.
+  const apiKey = process.env.NEXT_PUBLIC_API_KEY;
+  if (apiKey) {
+    headers['x-api-key'] = apiKey;
+  }
+
   return headers;
 }
 
