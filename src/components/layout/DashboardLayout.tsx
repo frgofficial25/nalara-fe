@@ -3,7 +3,6 @@
 import React, { useState, useEffect } from 'react';
 import Sidebar from './Sidebar';
 import Header from './Header';
-
 import { useRouter, usePathname } from 'next/navigation';
 
 interface DashboardLayoutProps {
@@ -73,19 +72,11 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
       {/* Main Content Area */}
       <div style={s.mainArea}>
-        {/* Ambient Glowing Blobs */}
-        <div style={s.glowRed} />
-        <div style={s.glowYellow} />
-
-        <div style={{ position: 'relative', zIndex: 10 }}>
-          <Header 
-            userName={userInfo?.name || "Nalara User"}
-            userRole={getRoleName(userInfo?.role)}
-            userInitial={userInfo?.name ? userInfo.name.charAt(0).toUpperCase() : "N"}
-            isCollapsed={isSidebarCollapsed}
-            onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-          />
-        </div>
+        <Header 
+          userName={userInfo?.name || "Nalara User"}
+          userRole={getRoleName(userInfo?.role)}
+          userInitial={userInfo?.name ? userInfo.name.charAt(0).toUpperCase() : "N"}
+        />
         
         {/* Scrollable Content */}
         <main style={s.content}>
@@ -114,44 +105,15 @@ const s: Record<string, React.CSSProperties> = {
     overflow: 'hidden',
     minWidth: 0,
     background: '#0B0E14',
-    position: 'relative',
-  },
-  glowRed: {
-    position: 'absolute',
-    top: '-150px',
-    right: '-100px',
-    width: '400px',
-    height: '400px',
-    borderRadius: '50%',
-    background: 'radial-gradient(circle, rgba(239, 68, 68, 0.07) 0%, rgba(239, 68, 68, 0) 70%)',
-    filter: 'blur(60px)',
-    pointerEvents: 'none',
-    zIndex: 1,
-  },
-  glowYellow: {
-    position: 'absolute',
-    bottom: '-150px',
-    left: '20%',
-    width: '500px',
-    height: '500px',
-    borderRadius: '50%',
-    background: 'radial-gradient(circle, rgba(245, 158, 11, 0.05) 0%, rgba(245, 158, 11, 0) 70%)',
-    filter: 'blur(80px)',
-    pointerEvents: 'none',
-    zIndex: 1,
   },
   content: {
     flex: 1,
     overflowY: 'auto',
     overflowX: 'hidden',
     padding: '28px 32px',
-    position: 'relative',
-    zIndex: 2,
   },
   contentInner: {
     maxWidth: '1200px',
     margin: '0 auto',
-    position: 'relative',
-    zIndex: 2,
   },
 };

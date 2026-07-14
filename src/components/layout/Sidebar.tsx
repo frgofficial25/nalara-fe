@@ -1,6 +1,6 @@
 "use client";
 
-import React from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { 
@@ -20,7 +20,8 @@ import {
   Users,
   ClipboardList,
   Award,
-  Gem
+  Gem,
+  Menu
 } from 'lucide-react';
 import { logoutApi } from '@/services/auth';
 
@@ -108,6 +109,7 @@ export default function Sidebar({
 }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
+  const [isBtnHovered, setIsBtnHovered] = useState(false);
 
   const handleLogout = async () => {
     try {
@@ -197,24 +199,24 @@ export default function Sidebar({
         }
       `}} />
 
-      {/* Logo Area */}
+      {/* Sidebar Header with Logo and Collapse/Expand Toggle */}
       <div style={{
         ...s.logoArea,
-        flexDirection: 'column',
-        alignItems: isCollapsed ? 'center' : 'stretch',
-        justifyContent: 'center',
-        padding: isCollapsed ? '24px 10px' : '32px 24px 20px 24px',
-        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+        flexDirection: isCollapsed ? 'column' : 'row',
+        alignItems: 'center',
+        justifyContent: isCollapsed ? 'center' : 'space-between',
+        padding: isCollapsed ? '24px 10px' : '24px 20px',
+        gap: isCollapsed ? '16px' : '0px',
+        borderBottom: '1px solid rgba(255, 255, 255, 0.05)',
       }}>
+        {/* Logo container */}
         <div style={{
-          width: isCollapsed ? '36px' : '100%',
-          height: isCollapsed ? '36px' : 'auto',
-          maxWidth: isCollapsed ? '36px' : '180px',
-          aspectRatio: isCollapsed ? '1/1' : 'auto',
+          width: isCollapsed ? '32px' : '150px',
+          height: isCollapsed ? '32px' : '38px',
           transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
           display: 'flex',
           alignItems: 'center',
-          justifyContent: 'center',
+          justifyContent: isCollapsed ? 'center' : 'flex-start',
           overflow: 'hidden',
         }}>
           <img 
@@ -228,6 +230,29 @@ export default function Sidebar({
             }} 
           />
         </div>
+
+        {/* Collapse toggle button next to logo */}
+        {onToggleCollapse && (
+          <button
+            onClick={onToggleCollapse}
+            onMouseEnter={() => setIsBtnHovered(true)}
+            onMouseLeave={() => setIsBtnHovered(false)}
+            style={{
+              background: isBtnHovered ? 'rgba(255, 255, 255, 0.06)' : 'transparent',
+              border: 'none',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '6px',
+              borderRadius: '6px',
+              transition: 'all 0.2s ease',
+            }}
+            title={isCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
+          >
+            <Menu size={18} color="#94a3b8" />
+          </button>
+        )}
       </div>
 
       {/* Role Badge */}
@@ -235,8 +260,9 @@ export default function Sidebar({
         ...s.roleBadgeWrap,
         opacity: isCollapsed ? 0 : 1,
         maxHeight: isCollapsed ? '0px' : '50px',
+        transform: isCollapsed ? 'scale(0.8) translateY(-10px)' : 'scale(1) translateY(0)',
         overflow: 'hidden',
-        padding: isCollapsed ? '0' : '0 20px 16px 20px',
+        padding: isCollapsed ? '0' : '16px 20px 16px 20px',
         transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
       }}>
         <div style={s.roleBadge}>
@@ -257,6 +283,7 @@ export default function Sidebar({
               ...s.groupLabel,
               opacity: isCollapsed ? 0 : 1,
               maxHeight: isCollapsed ? '0px' : '20px',
+              transform: isCollapsed ? 'scale(0.8) translateY(-10px)' : 'scale(1) translateY(0)',
               overflow: 'hidden',
               marginBottom: isCollapsed ? '0px' : '8px',
               transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
@@ -275,7 +302,8 @@ export default function Sidebar({
                       style={{
                         ...s.menuItem,
                         justifyContent: isCollapsed ? 'center' : 'flex-start',
-                        padding: isCollapsed ? '10px' : '11px 14px',
+                        padding: isCollapsed ? '12px' : '11px 14px',
+                        gap: isCollapsed ? '0' : '12px',
                       }}
                       title={isCollapsed ? item.label : undefined}
                     >
@@ -292,11 +320,12 @@ export default function Sidebar({
                           ...s.menuLabel,
                           color: isActive ? '#ffffff' : '#94a3b8',
                           opacity: isCollapsed ? 0 : 1,
+                          transform: isCollapsed ? 'translateX(-10px)' : 'translateX(0)',
                           maxWidth: isCollapsed ? '0px' : '200px',
                           visibility: isCollapsed ? 'hidden' : 'visible',
                           overflow: 'hidden',
                           display: 'inline-block',
-                          transition: 'opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1), maxWidth 0.3s cubic-bezier(0.4, 0, 0.2, 1), color 0.3s',
+                          transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                         }}
                       >
                         {item.label}
@@ -324,11 +353,12 @@ export default function Sidebar({
             color: '#ef4444', 
             fontWeight: 600,
             opacity: isCollapsed ? 0 : 1,
+            transform: isCollapsed ? 'translateX(-10px)' : 'translateX(0)',
             maxWidth: isCollapsed ? '0px' : '200px',
             visibility: isCollapsed ? 'hidden' : 'visible',
             overflow: 'hidden',
             display: 'inline-block',
-            transition: 'opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1), maxWidth 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
           }}>
             Sign Out
           </span>
@@ -357,6 +387,7 @@ const s: Record<string, React.CSSProperties> = {
     alignItems: 'center',
     gap: '12px',
     padding: '24px 20px',
+    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
   },
   roleBadgeWrap: {
     padding: '0 20px 16px 20px',
@@ -405,13 +436,11 @@ const s: Record<string, React.CSSProperties> = {
   menuItem: {
     display: 'flex',
     alignItems: 'center',
-    gap: '12px',
     borderRadius: '8px',
     textDecoration: 'none',
     cursor: 'pointer',
     background: 'transparent',
     border: '1px solid transparent',
-    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
   },
   menuLabel: {
     fontWeight: 500,
@@ -432,14 +461,12 @@ const s: Record<string, React.CSSProperties> = {
     display: 'flex',
     alignItems: 'center',
     gap: '12px',
-    padding: '10px 14px',
     borderRadius: '8px',
     background: 'transparent',
     border: 'none',
     cursor: 'pointer',
     width: '100%',
     textAlign: 'left',
-    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
   },
   bottomBtnLabel: {
     fontWeight: 500,
