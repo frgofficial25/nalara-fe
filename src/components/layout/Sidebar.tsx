@@ -44,10 +44,9 @@ export const getMenuForRole = (role?: string) => {
         group: 'OVERVIEW',
         items: [
           { label: 'Dashboard', href: '/lecturer/dashboard', icon: LayoutDashboard },
-          { label: 'Level', href: '/lecturer/kelas', icon: Gem },
-          { label: 'Assignments', href: '/lecturer/tugas', icon: FileText },
-          { label: 'Quiz Bank', href: '/lecturer/evaluasi', icon: Brain },
-          { label: 'Grade Center', href: '/lecturer/penilaian', icon: TrendingUp },
+          { label: 'Kelas (Level)', href: '/lecturer/kelas', icon: Gem },
+          { label: 'Evaluasi', href: '/lecturer/evaluasi', icon: Brain },
+          { label: 'Penilaian', href: '/lecturer/penilaian', icon: TrendingUp },
         ],
       },
       {

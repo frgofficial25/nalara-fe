@@ -64,9 +64,13 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   return (
     <div style={s.wrapper}>
       <style dangerouslySetInnerHTML={{__html: `
-        @keyframes glowPulseDashboard {
-          0%, 100% { transform: scale(1); opacity: 0.4; }
-          50% { transform: scale(1.1); opacity: 0.6; }
+        @keyframes glowPulseDashboard1 {
+          0%, 100% { transform: translate(0, 0) scale(1); opacity: 0.45; }
+          50% { transform: translate(100px, 60px) scale(1.25); opacity: 0.75; }
+        }
+        @keyframes glowPulseDashboard2 {
+          0%, 100% { transform: translate(0, 0) scale(1.2); opacity: 0.35; }
+          50% { transform: translate(-100px, -80px) scale(0.95); opacity: 0.65; }
         }
         @keyframes floatDashboardParticle1 {
           0%, 100% { transform: translate(0, 0); }
@@ -80,29 +84,41 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           0%, 100% { transform: translate(0, 0); }
           50% { transform: translate(20px, 20px); }
         }
+        @keyframes fadeInUpDashboard {
+          from {
+            opacity: 0;
+            transform: translateY(12px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
         .dashboard-glow1 {
           position: absolute;
-          width: 500px;
-          height: 500px;
+          width: 750px;
+          height: 750px;
           border-radius: 50%;
-          background: radial-gradient(circle, rgba(6, 99, 199, 0.07) 0%, transparent 70%);
-          top: -150px;
-          left: -150px;
+          background: radial-gradient(circle, rgba(6, 99, 199, 0.12) 0%, transparent 70%);
+          top: -200px;
+          left: -200px;
           pointer-events: none;
           z-index: 1;
-          animation: glowPulseDashboard 12s infinite ease-in-out;
+          animation: glowPulseDashboard1 20s infinite ease-in-out;
+          filter: blur(40px);
         }
         .dashboard-glow2 {
           position: absolute;
-          width: 650px;
-          height: 650px;
+          width: 900px;
+          height: 900px;
           border-radius: 50%;
-          background: radial-gradient(circle, rgba(255, 168, 38, 0.04) 0%, transparent 70%);
-          bottom: -250px;
-          right: -150px;
+          background: radial-gradient(circle, rgba(255, 168, 38, 0.08) 0%, transparent 70%);
+          bottom: -300px;
+          right: -200px;
           pointer-events: none;
           z-index: 1;
-          animation: glowPulseDashboard 15s infinite ease-in-out 3s;
+          animation: glowPulseDashboard2 25s infinite ease-in-out;
+          filter: blur(50px);
         }
         .dashboard-particle {
           position: absolute;
@@ -111,6 +127,9 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           box-shadow: 0 0 10px var(--azure);
           pointer-events: none;
           z-index: 1;
+        }
+        .animate-fade-in-up {
+          animation: fadeInUpDashboard 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
         }
       `}} />
 
@@ -143,7 +162,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         
         {/* Scrollable Content */}
         <main style={s.content}>
-          <div style={s.contentInner}>
+          <div style={s.contentInner} key={pathname} className="animate-fade-in-up">
             {children}
           </div>
         </main>
@@ -179,6 +198,7 @@ const s: Record<string, React.CSSProperties> = {
     zIndex: 2,
   },
   contentInner: {
+    width: '100%',
     maxWidth: '1200px',
     margin: '0 auto',
     position: 'relative',
