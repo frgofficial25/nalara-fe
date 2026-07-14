@@ -96,16 +96,26 @@ export default function CoursesPage() {
         list = response.data;
       }
 
+      let publishedIds: string[] = [];
+      try {
+        const storedPub = localStorage.getItem('nalara_published_courses');
+        if (storedPub) publishedIds = JSON.parse(storedPub);
+      } catch {}
+
       // Add default statuses just like nalara_lite if not present
-      const baseCourses = list.map((c: any) => ({
-        ...c,
-        id: c.uuid_pembelajaran || c.id,
-        title: c.nama_pembelajaran || c.title || '',
-        description: c.deskripsi || c.description || '',
-        createdAt: c.tanggal_dibuat || c.createdAt || c.created_at,
-        created_at: c.tanggal_dibuat || c.created_at || c.createdAt,
-        status: c.status || 'draft'
-      }));
+      const baseCourses = list.map((c: any) => {
+        const courseId = c.uuid_pembelajaran || c.id;
+        const isPublished = publishedIds.includes(courseId);
+        return {
+          ...c,
+          id: courseId,
+          title: c.nama_pembelajaran || c.title || '',
+          description: c.deskripsi || c.description || '',
+          createdAt: c.tanggal_dibuat || c.createdAt || c.created_at,
+          created_at: c.tanggal_dibuat || c.created_at || c.createdAt,
+          status: c.status || (isPublished ? 'published' : 'draft')
+        };
+      });
 
       // Fetch moduls count for each course
       const coursesWithModules = await Promise.all(baseCourses.map(async (c) => {
@@ -219,6 +229,14 @@ export default function CoursesPage() {
               student_ids: schedule.studentIds
             }, { token: auth.token, headers: auth.headers });
             setCourses(prev => prev.map(c => c.id === courseId ? { ...c, status: 'published' } : c));
+            try {
+              const storedPub = localStorage.getItem('nalara_published_courses');
+              const publishedIds = storedPub ? JSON.parse(storedPub) : [];
+              if (!publishedIds.includes(courseId)) {
+                publishedIds.push(courseId);
+                localStorage.setItem('nalara_published_courses', JSON.stringify(publishedIds));
+              }
+            } catch {}
           } catch (err) {
             console.error('Auto-publish failed for course:', courseId, err);
           }
@@ -398,6 +416,14 @@ export default function CoursesPage() {
 
       // Update local course status dynamically to published
       setCourses(prev => prev.map(c => c.id === publishCourseId ? { ...c, status: 'published' } : c));
+      try {
+        const storedPub = localStorage.getItem('nalara_published_courses');
+        const publishedIds = storedPub ? JSON.parse(storedPub) : [];
+        if (!publishedIds.includes(publishCourseId)) {
+          publishedIds.push(publishCourseId);
+          localStorage.setItem('nalara_published_courses', JSON.stringify(publishedIds));
+        }
+      } catch {}
       // Remove any existing schedule for this course
       const updated = { ...courseSchedules };
       delete updated[publishCourseId];

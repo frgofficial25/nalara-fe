@@ -944,6 +944,7 @@ export default function QuizzesPage() {
                         type="datetime-local"
                         value={aiDeadline}
                         onChange={(e) => setAiDeadline(e.target.value)}
+                        onClick={(e) => { try { (e.target as any).showPicker(); } catch {} }}
                         style={s.input}
                       />
                     </div>
@@ -1122,6 +1123,7 @@ export default function QuizzesPage() {
                         type="datetime-local"
                         value={manualDeadline}
                         onChange={(e) => setManualDeadline(e.target.value)}
+                        onClick={(e) => { try { (e.target as any).showPicker(); } catch {} }}
                         style={s.input}
                       />
                     </div>

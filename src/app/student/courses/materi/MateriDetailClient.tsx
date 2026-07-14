@@ -284,6 +284,17 @@ export default function MateriDetailClient() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Helper to parse any YouTube URL into embed format
+  const getYoutubeEmbedUrl = (url?: string | null): string | null => {
+    if (!url) return null;
+    const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+    const match = url.match(regExp);
+    if (match && match[2].length === 11) {
+      return `https://www.youtube.com/embed/${match[2]}`;
+    }
+    return null;
+  };
+
   const fetchTugas = useCallback(async () => {
     if (!tugasId) return;
     try {
@@ -440,13 +451,19 @@ export default function MateriDetailClient() {
             {/* ── YouTube / Video URL ── */}
             {hasVideo && (
               <div style={{ width: '100%', aspectRatio: '16/9', borderRadius: 12, overflow: 'hidden', background: '#000' }}>
-                <iframe
-                  src={tugas.youtube_link!.replace('watch?v=', 'embed/')}
-                  style={{ width: '100%', height: '100%', border: 'none', borderRadius: 12 }}
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                  allowFullScreen
-                  title={tugas.title}
-                />
+                {getYoutubeEmbedUrl(tugas.youtube_link) ? (
+                  <iframe
+                    src={getYoutubeEmbedUrl(tugas.youtube_link)!}
+                    style={{ width: '100%', height: '100%', border: 'none', borderRadius: 12 }}
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
+                    title={tugas.title}
+                  />
+                ) : (
+                  <div style={{ padding: 16, color: '#f87171', background: 'rgba(239,68,68,0.1)', borderRadius: 12 }}>
+                    Link video tidak valid: {tugas.youtube_link}
+                  </div>
+                )}
               </div>
             )}
 

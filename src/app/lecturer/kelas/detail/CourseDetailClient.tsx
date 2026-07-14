@@ -149,11 +149,9 @@ function AddMateriModal({
           </div>
           <div style={formGroup}>
             <label style={label}>Tipe Materi</label>
-            <select value={type} onChange={(e) => setType(e.target.value as typeof type)} style={input}>
+            <select value={type} onChange={(e) => setType(e.target.value as any)} style={input}>
               <option value="Reading">Reading</option>
               <option value="Video">Video</option>
-              <option value="CaseStudy">Case Study</option>
-              <option value="Practice">Practice</option>
             </select>
           </div>
           <div style={{ display: 'flex', gap: 10, marginTop: 4 }}>

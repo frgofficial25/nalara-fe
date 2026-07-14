@@ -7,7 +7,7 @@ import {
   ExternalLink, RefreshCw, ZoomIn
 } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { apiGet, apiUploadPost, apiDelete } from '@/lib/api';
+import { apiGet, apiUploadPost, apiDelete, apiPut } from '@/lib/api';
 import { getStoredToken } from '@/services/auth';
 
 interface MateriFile {
@@ -325,6 +325,38 @@ export default function MateriDetailClient() {
   const [error, setError] = useState<string | null>(null);
   const [deletingFile, setDeletingFile] = useState(false);
   const [showUpload, setShowUpload] = useState(false);
+  const [youtubeUrl, setYoutubeUrl] = useState('');
+  const [savingYoutube, setSavingYoutube] = useState(false);
+  const [editYoutubeMode, setEditYoutubeMode] = useState(false);
+
+  // Helper to parse any YouTube URL into embed format
+  const getYoutubeEmbedUrl = (url?: string | null): string | null => {
+    if (!url) return null;
+    const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+    const match = url.match(regExp);
+    if (match && match[2].length === 11) {
+      return `https://www.youtube.com/embed/${match[2]}`;
+    }
+    return null;
+  };
+
+  const handleSaveYoutube = async () => {
+    if (!tugasId) return;
+    setSavingYoutube(true);
+    setError(null);
+    try {
+      const auth = getAuth();
+      await apiPut(`/api/materi/${tugasId}`, {
+        video_url: youtubeUrl.trim() || null
+      }, { token: auth.token, headers: auth.headers });
+      setEditYoutubeMode(false);
+      await fetchMateri();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Gagal menyimpan link YouTube.');
+    } finally {
+      setSavingYoutube(false);
+    }
+  };
 
   const fetchMateri = useCallback(async () => {
     if (!tugasId) return;
@@ -348,6 +380,7 @@ export default function MateriDetailClient() {
         terakhir_diperbarui: raw.terakhir_diperbarui,
       };
       setMateri(data);
+      if (data.video_url) setYoutubeUrl(data.video_url);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Gagal memuat detail materi.');
     } finally {
@@ -511,14 +544,80 @@ export default function MateriDetailClient() {
             )}
 
             {/* YouTube / Video URL embed */}
-            {materi.tipe === 'Video' && materi.video_url && !hasFile && !showUpload && (
-              <div style={{ width: '100%', aspectRatio: '16/9', borderRadius: 12, overflow: 'hidden', background: '#000' }}>
-                <iframe
-                  src={materi.video_url.replace('watch?v=', 'embed/')}
-                  style={{ width: '100%', height: '100%', border: 'none' }}
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                  allowFullScreen
-                />
+            {materi.tipe === 'Video' && materi.video_url && !hasFile && !showUpload && !editYoutubeMode && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                {getYoutubeEmbedUrl(materi.video_url) ? (
+                  <div style={{ width: '100%', aspectRatio: '16/9', borderRadius: 12, overflow: 'hidden', background: '#000' }}>
+                    <iframe
+                      src={getYoutubeEmbedUrl(materi.video_url)!}
+                      style={{ width: '100%', height: '100%', border: 'none' }}
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                      allowFullScreen
+                    />
+                  </div>
+                ) : (
+                  <div style={{ padding: 12, background: 'rgba(239,68,68,0.1)', color: '#f87171', borderRadius: 8, fontSize: '0.85rem' }}>
+                    Link video tidak valid: {materi.video_url}
+                  </div>
+                )}
+                <div style={{ display: 'flex', gap: 10 }}>
+                  <button onClick={() => setEditYoutubeMode(true)} style={secondaryBtn}>Edit Link YouTube</button>
+                  <button 
+                    onClick={async () => {
+                      if (confirm('Hapus link YouTube ini?')) {
+                        setSavingYoutube(true);
+                        try {
+                          const auth = getAuth();
+                          await apiPut(`/api/materi/${tugasId}`, { video_url: null }, { token: auth.token, headers: auth.headers });
+                          setYoutubeUrl('');
+                          await fetchMateri();
+                        } catch (err) {
+                          setError(err instanceof Error ? err.message : 'Gagal menghapus link YouTube.');
+                        } finally {
+                          setSavingYoutube(false);
+                        }
+                      }
+                    }} 
+                    style={{ ...secondaryBtn, color: '#f87171', borderColor: 'rgba(239,68,68,0.3)' }}
+                  >
+                    Hapus Link YouTube
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {materi.tipe === 'Video' && (editYoutubeMode || !materi.video_url) && !hasFile && !showUpload && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10, background: 'rgba(255,255,255,0.02)', padding: 16, borderRadius: 12, border: '1px solid rgba(255,255,255,0.06)' }}>
+                <label style={{ fontSize: '0.85rem', color: '#cbd5e1', fontWeight: 600 }}>Link YouTube / Video URL</label>
+                <div style={{ display: 'flex', gap: 10 }}>
+                  <input
+                    type="text"
+                    value={youtubeUrl}
+                    onChange={(e) => setYoutubeUrl(e.target.value)}
+                    placeholder="e.g., https://www.youtube.com/watch?v=dQw4w9WgXcQ"
+                    style={{
+                      flex: 1,
+                      background: 'rgba(0,0,0,0.2)',
+                      border: '1px solid rgba(255,255,255,0.1)',
+                      borderRadius: 8,
+                      padding: '8px 12px',
+                      color: '#fff',
+                      fontSize: '0.85rem'
+                    }}
+                  />
+                  <button 
+                    onClick={handleSaveYoutube} 
+                    disabled={savingYoutube || !youtubeUrl.trim()} 
+                    style={primaryBtn}
+                  >
+                    {savingYoutube ? 'Menyimpan...' : 'Simpan Link'}
+                  </button>
+                  {materi.video_url && (
+                    <button onClick={() => { setEditYoutubeMode(false); setYoutubeUrl(materi.video_url || ''); }} style={secondaryBtn}>
+                      Batal
+                    </button>
+                  )}
+                </div>
               </div>
             )}
 
