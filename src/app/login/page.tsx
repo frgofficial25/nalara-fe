@@ -353,7 +353,7 @@ const styles: Record<string, React.CSSProperties> = {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    background: 'var(--bg-dark)',
+    background: '#0B0E14',
     position: 'relative',
     overflow: 'hidden',
     padding: '2rem 1.5rem',

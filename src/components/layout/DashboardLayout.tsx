@@ -63,6 +63,57 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
   return (
     <div style={s.wrapper}>
+      <style dangerouslySetInnerHTML={{__html: `
+        @keyframes glowPulseDashboard {
+          0%, 100% { transform: scale(1); opacity: 0.4; }
+          50% { transform: scale(1.1); opacity: 0.6; }
+        }
+        @keyframes floatDashboardParticle1 {
+          0%, 100% { transform: translate(0, 0); }
+          50% { transform: translate(25px, -30px); }
+        }
+        @keyframes floatDashboardParticle2 {
+          0%, 100% { transform: translate(0, 0); }
+          50% { transform: translate(-30px, 20px); }
+        }
+        @keyframes floatDashboardParticle3 {
+          0%, 100% { transform: translate(0, 0); }
+          50% { transform: translate(20px, 20px); }
+        }
+        .dashboard-glow1 {
+          position: absolute;
+          width: 500px;
+          height: 500px;
+          border-radius: 50%;
+          background: radial-gradient(circle, rgba(6, 99, 199, 0.07) 0%, transparent 70%);
+          top: -150px;
+          left: -150px;
+          pointer-events: none;
+          z-index: 1;
+          animation: glowPulseDashboard 12s infinite ease-in-out;
+        }
+        .dashboard-glow2 {
+          position: absolute;
+          width: 650px;
+          height: 650px;
+          border-radius: 50%;
+          background: radial-gradient(circle, rgba(255, 168, 38, 0.04) 0%, transparent 70%);
+          bottom: -250px;
+          right: -150px;
+          pointer-events: none;
+          z-index: 1;
+          animation: glowPulseDashboard 15s infinite ease-in-out 3s;
+        }
+        .dashboard-particle {
+          position: absolute;
+          background: var(--azure);
+          border-radius: 50%;
+          box-shadow: 0 0 10px var(--azure);
+          pointer-events: none;
+          z-index: 1;
+        }
+      `}} />
+
       {/* Sidebar */}
       <Sidebar 
         roleName={getRoleName(userInfo?.role)}
@@ -72,11 +123,23 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
       {/* Main Content Area */}
       <div style={s.mainArea}>
-        <Header 
-          userName={userInfo?.name || "Nalara User"}
-          userRole={getRoleName(userInfo?.role)}
-          userInitial={userInfo?.name ? userInfo.name.charAt(0).toUpperCase() : "N"}
-        />
+        {/* Animated Glows & Particles */}
+        <div className="dashboard-glow1" />
+        <div className="dashboard-glow2" />
+        <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', pointerEvents: 'none', overflow: 'hidden', zIndex: 1 }}>
+          <div className="dashboard-particle" style={{ width: '4px', height: '4px', top: '15%', left: '15%', opacity: 0.25, animation: 'floatDashboardParticle1 12s infinite ease-in-out' }} />
+          <div className="dashboard-particle" style={{ width: '5px', height: '5px', top: '25%', left: '80%', opacity: 0.2, animation: 'floatDashboardParticle2 15s infinite ease-in-out' }} />
+          <div className="dashboard-particle" style={{ width: '4px', height: '4px', top: '75%', left: '12%', opacity: 0.25, animation: 'floatDashboardParticle3 14s infinite ease-in-out' }} />
+          <div className="dashboard-particle" style={{ width: '5px', height: '5px', top: '80%', left: '85%', opacity: 0.2, animation: 'floatDashboardParticle2 18s infinite ease-in-out reverse' }} />
+        </div>
+
+        <div style={{ position: 'relative', zIndex: 10 }}>
+          <Header 
+            userName={userInfo?.name || "Nalara User"}
+            userRole={getRoleName(userInfo?.role)}
+            userInitial={userInfo?.name ? userInfo.name.charAt(0).toUpperCase() : "N"}
+          />
+        </div>
         
         {/* Scrollable Content */}
         <main style={s.content}>
@@ -105,15 +168,20 @@ const s: Record<string, React.CSSProperties> = {
     overflow: 'hidden',
     minWidth: 0,
     background: '#0B0E14',
+    position: 'relative',
   },
   content: {
     flex: 1,
     overflowY: 'auto',
     overflowX: 'hidden',
     padding: '28px 32px',
+    position: 'relative',
+    zIndex: 2,
   },
   contentInner: {
     maxWidth: '1200px',
     margin: '0 auto',
+    position: 'relative',
+    zIndex: 2,
   },
 };

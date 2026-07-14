@@ -74,7 +74,7 @@ html,
 body {
   width: 100%;
   color: var(--silver);
-  background-color: var(--bg-dark);
+  background-color: #0B0E14;
   background-image: 
     radial-gradient(circle at top left, rgba(6, 99, 199, 0.12), transparent 45%),
     radial-gradient(circle at center right, rgba(255, 178, 64, 0.05), transparent 40%),
