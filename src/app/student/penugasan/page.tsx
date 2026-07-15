@@ -337,7 +337,6 @@ export default function PenugasanPage() {
     finally { setSubmittingQuiz(false); }
   };
 
-  // ── Helper: is quiz already done ──────────────────────────────────────────
   const getAttempt = (quizId: string) => myQuizRekap.find((r: any) => (r.uuid_quiz || r.quiz_id || r.id) === quizId);
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -463,7 +462,7 @@ export default function PenugasanPage() {
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
                         <Brain size={16} color="var(--azure)" />
                         <span style={s.courseLabel}>{quiz.moduleTitle}</span>
-                        {attempt && <span style={{ ...s.statusBadge, background: attempt.isPassed || attempt.score >= 75 ? 'rgba(0,200,83,0.12)' : 'rgba(255,82,82,0.12)', color: attempt.isPassed || attempt.score >= 75 ? '#00C853' : '#FF5252' }}>{attempt.score >= 75 ? 'Lulus' : 'Tidak Lulus'}</span>}
+                        {attempt && <span style={{ ...s.statusBadge, background: (attempt.is_passed || attempt.isPassed || attempt.score >= 75) ? 'rgba(0,200,83,0.12)' : 'rgba(255,82,82,0.12)', color: (attempt.is_passed || attempt.isPassed || attempt.score >= 75) ? '#00C853' : '#FF5252' }}>{(attempt.is_passed || attempt.isPassed || attempt.score >= 75) ? 'Lulus' : 'Tidak Lulus'}</span>}
                         {isExpired && !attempt && <span style={{ ...s.statusBadge, background: 'rgba(255,82,82,0.08)', color: '#FF5252' }}>Kedaluwarsa</span>}
                       </div>
                       <h3 style={s.taskTitle}>{quiz.title}</h3>
@@ -472,7 +471,7 @@ export default function PenugasanPage() {
                         <span>{quiz.questionCount} soal</span>
                         {quiz.time_limit && <span><Clock size={11} /> {quiz.time_limit} menit</span>}
                         {quiz.deadline && <span><Calendar size={11} /> {new Date(quiz.deadline).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}</span>}
-                        {attempt && <span style={{ color: attempt.score >= 75 ? '#00C853' : '#FF5252' }}>Skor: <strong>{attempt.score}</strong></span>}
+                        {attempt && <span style={{ fontSize: '0.78rem', color: 'var(--grey-blue)', display: 'flex', alignItems: 'center', gap: 4 }}>Skor: <strong style={{ color: (attempt.is_passed || attempt.isPassed || (attempt.score ?? attempt.skor) >= 75) ? '#00C853' : '#FF5252' }}>{attempt.score ?? attempt.skor ?? '-'}</strong></span>}
                       </div>
                     </div>
                     {!attempt && !isExpired && (

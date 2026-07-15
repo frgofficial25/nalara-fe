@@ -347,8 +347,10 @@ export default function MateriDetailClient() {
 
   const fileUrl = tugas?.file_url;
   const hasFile = !!fileUrl;
+  const hasYouTube = tugas?.type === 'Video' && !!getYoutubeEmbedUrl(tugas?.youtube_link);
+  const hasDirectVideo = tugas?.type === 'Video' && !!tugas?.youtube_link && !getYoutubeEmbedUrl(tugas?.youtube_link);
   const hasVideo = tugas?.type === 'Video' && !!tugas?.youtube_link;
-  const hasContent = tugas?.type === 'Reading' && !!tugas?.content;
+  const hasContent = (tugas?.type === 'Reading' || tugas?.type === 'CaseStudy' || tugas?.type === 'Practice') && !!tugas?.content;
   const hasAnything = hasFile || hasVideo || hasContent;
 
   return (
@@ -439,7 +441,7 @@ export default function MateriDetailClient() {
           <div style={contentCard} className="glass-panel">
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20, paddingBottom: 14, borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
               <h2 style={sectionTitle}>
-                {tugas.type === 'Video' ? '🎬 Konten Video' : tugas.type === 'Reading' ? '📖 Konten Bacaan' : '📄 Preview Materi'}
+                {tugas.type === 'Video' ? '🎬 Konten Video' : tugas.type === 'Reading' ? '📖 Konten Bacaan' : tugas.type === 'CaseStudy' ? '🔬 Studi Kasus' : tugas.type === 'Practice' ? '✏️ Latihan' : '📄 Preview Materi'}
               </h2>
               {hasFile && tugas.file_format && (
                 <span style={{ fontSize: '0.72rem', fontWeight: 700, padding: '3px 10px', borderRadius: 6, background: 'rgba(99,102,241,0.12)', color: '#a5b4fc', border: '1px solid rgba(99,102,241,0.2)' }}>
@@ -449,21 +451,26 @@ export default function MateriDetailClient() {
             </div>
 
             {/* ── YouTube / Video URL ── */}
-            {hasVideo && (
+            {hasYouTube && (
               <div style={{ width: '100%', aspectRatio: '16/9', borderRadius: 12, overflow: 'hidden', background: '#000' }}>
-                {getYoutubeEmbedUrl(tugas.youtube_link) ? (
-                  <iframe
-                    src={getYoutubeEmbedUrl(tugas.youtube_link)!}
-                    style={{ width: '100%', height: '100%', border: 'none', borderRadius: 12 }}
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                    allowFullScreen
-                    title={tugas.title}
-                  />
-                ) : (
-                  <div style={{ padding: 16, color: '#f87171', background: 'rgba(239,68,68,0.1)', borderRadius: 12 }}>
-                    Link video tidak valid: {tugas.youtube_link}
-                  </div>
-                )}
+                <iframe
+                  src={getYoutubeEmbedUrl(tugas.youtube_link)!}
+                  style={{ width: '100%', height: '100%', border: 'none', borderRadius: 12 }}
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                  title={tugas.title}
+                />
+              </div>
+            )}
+
+            {/* ── Direct Video URL (non-YouTube) ── */}
+            {hasDirectVideo && (
+              <div style={{ width: '100%', borderRadius: 12, overflow: 'hidden', background: '#000' }}>
+                <video
+                  src={tugas.youtube_link}
+                  controls
+                  style={{ width: '100%', display: 'block', maxHeight: 520 }}
+                />
               </div>
             )}
 

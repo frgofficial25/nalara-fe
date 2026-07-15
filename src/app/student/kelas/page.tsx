@@ -168,14 +168,8 @@ export default function StudentKelasPage() {
 
   const openMateri = (materi: Materi) => {
     const courseId = selectedCourse?.id || '';
-    if (materi.type === 'Video' && materi.youtube_link) {
-      // Video dengan link YouTube langsung dibuka di tab baru
-      window.open(materi.youtube_link, '_blank');
-    } else {
-      // Semua tipe lain (Reading/PDF, CaseStudy, Practice)
-      // → navigasi ke halaman detail materi yang sudah support PDF preview
-      router.push(`/student/courses/materi?courseId=${courseId}&tugasId=${materi.id}`);
-    }
+    // Semua tipe materi (termasuk Video YouTube) → navigasi ke halaman detail
+    router.push(`/student/courses/materi?courseId=${courseId}&tugasId=${materi.id}`);
   };
 
   const goBack = () => {

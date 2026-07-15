@@ -22,7 +22,7 @@ export default function ProfilePage() {
 
   // Password change
   const [showPasswordForm, setShowPasswordForm] = useState(false);
-  const [passwordForm, setPasswordForm] = useState({ new_password: '', confirm_password: '' });
+  const [passwordForm, setPasswordForm] = useState({ old_password: '', new_password: '', confirm_password: '' });
   const [showPassword, setShowPassword] = useState(false);
   const [changingPassword, setChangingPassword] = useState(false);
 
@@ -52,17 +52,23 @@ export default function ProfilePage() {
         headers: auth.headers
       });
 
-      let data: UserProfile;
-      if ('data' in response && (response as { data: UserProfile }).data) {
-        data = (response as { data: UserProfile }).data;
+      let data: any;
+      if ('data' in response && (response as any).data) {
+        data = (response as any).data;
       } else {
-        data = response as UserProfile;
+        data = response;
       }
 
-      setProfile(data);
+      const mappedProfile: UserProfile = {
+        ...data,
+        full_name: data.nama_lengkap || data.full_name || '',
+        avatar_url: data.foto_profile || data.avatar_url || null,
+      };
+
+      setProfile(mappedProfile);
       setEditForm({
-        username: data.username || '',
-        full_name: data.full_name || '',
+        username: mappedProfile.username || '',
+        full_name: mappedProfile.full_name || '',
       });
     } catch (err) {
       console.error(err);
@@ -91,6 +97,7 @@ export default function ProfilePage() {
       await apiPut('/api/profile', {
         username: editForm.username,
         full_name: editForm.full_name,
+        nama_lengkap: editForm.full_name,
       }, {
         token: auth.token,
         headers: auth.headers
@@ -110,12 +117,16 @@ export default function ProfilePage() {
     e.preventDefault();
     clearMessages();
 
+    if (!passwordForm.old_password) {
+      setError('Password lama wajib diisi.');
+      return;
+    }
     if (passwordForm.new_password !== passwordForm.confirm_password) {
       setError('Password baru dan konfirmasi tidak cocok.');
       return;
     }
     if (passwordForm.new_password.length < 8) {
-      setError('Password minimal 8 karakter.');
+      setError('Password baru minimal 8 karakter.');
       return;
     }
 
@@ -123,8 +134,9 @@ export default function ProfilePage() {
     try {
       const auth = getAuthHeaders();
       await apiPut('/api/profile/password', {
-        new_password: passwordForm.new_password,
-        confirm_password: passwordForm.confirm_password,
+        password_lama: passwordForm.old_password,
+        password_baru: passwordForm.new_password,
+        konfirmasi_password_baru: passwordForm.confirm_password,
       }, {
         token: auth.token,
         headers: auth.headers
@@ -132,7 +144,7 @@ export default function ProfilePage() {
 
       setSuccess('Password berhasil diubah!');
       setShowPasswordForm(false);
-      setPasswordForm({ new_password: '', confirm_password: '' });
+      setPasswordForm({ old_password: '', new_password: '', confirm_password: '' });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Gagal mengubah password.');
     } finally {
@@ -355,6 +367,17 @@ export default function ProfilePage() {
             {showPasswordForm ? (
               <form onSubmit={handleChangePassword} style={s.editForm}>
                 <div style={s.formGroup}>
+                  <label style={s.label}>Password Lama</label>
+                  <input
+                    type="password"
+                    required
+                    value={passwordForm.old_password}
+                    onChange={(e) => setPasswordForm({ ...passwordForm, old_password: e.target.value })}
+                    placeholder="Masukkan password lama..."
+                    style={s.input}
+                  />
+                </div>
+                <div style={s.formGroup}>
                   <label style={s.label}>New Password</label>
                   <div style={s.passwordInputWrap}>
                     <input
@@ -387,7 +410,7 @@ export default function ProfilePage() {
                   />
                 </div>
                 <div style={s.editBtnRow}>
-                  <button type="button" onClick={() => { setShowPasswordForm(false); setPasswordForm({ new_password: '', confirm_password: '' }); }} style={s.cancelBtn}>
+                  <button type="button" onClick={() => { setShowPasswordForm(false); setPasswordForm({ old_password: '', new_password: '', confirm_password: '' }); }} style={s.cancelBtn}>
                     Cancel
                   </button>
                   <button type="submit" disabled={changingPassword} style={{ ...s.saveBtn, opacity: changingPassword ? 0.6 : 1 }}>

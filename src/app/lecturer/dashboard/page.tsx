@@ -56,11 +56,35 @@ export default function LecturerDashboard() {
 
       let lecturerData: LecturerData;
       try {
-        const response = await apiGet<{ success: boolean; data: LecturerData }>(
+        const response = await apiGet<{ success: boolean; data: any }>(
           '/api/dashboard/lecturer',
           { token: token || undefined, headers }
         );
-        lecturerData = response.data;
+        const rawData = response.data || response;
+        const rawTasks = rawData.tasks_to_grade || rawData.tugas_mendesak || [];
+        const mappedTasks = rawTasks.map((t: any, idx: number) => {
+          let totalSub = 0;
+          if (t.rasio_pengumpulan && typeof t.rasio_pengumpulan === 'string') {
+            const parts = t.rasio_pengumpulan.split('/');
+            totalSub = parseInt(parts[1]) || 0;
+          }
+          return {
+            id: t.id_tugas || t.id || idx + 1,
+            task_name: t.nama_tugas || t.task_name || '',
+            course_name: t.kelas_asal || t.course_name || '',
+            module_name: t.modul_asal || t.module_name || '',
+            ungraded_count: t.jumlah_belum_dinilai !== undefined ? t.jumlah_belum_dinilai : t.ungraded_count || 0,
+            total_submissions: totalSub || t.total_submissions || 0,
+            deadline: t.tenggat_verifikasi || t.deadline || null
+          };
+        });
+        lecturerData = {
+          online_students: rawData.online_students || 0,
+          active_courses: rawData.active_courses || 0,
+          total_students: rawData.total_students || 0,
+          pending_submissions: rawData.pending_submissions || 0,
+          tasks_to_grade: mappedTasks
+        };
       } catch (err: any) {
         if (err.message?.includes('Forbidden') || err.message?.includes('403')) {
           console.warn('Lecturer dashboard forbidden, falling back to tentor dashboard');
@@ -107,8 +131,8 @@ export default function LecturerDashboard() {
       if (localUser) {
         try {
           const userObj = JSON.parse(localUser);
-          if (userObj.name) {
-            setUserName(userObj.name);
+          if (userObj.nama_lengkap || userObj.name || userObj.username) {
+            setUserName(userObj.nama_lengkap || userObj.name || userObj.username);
           }
         } catch { }
       }

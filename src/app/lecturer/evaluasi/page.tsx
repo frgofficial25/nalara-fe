@@ -10,6 +10,7 @@ import { apiGet, apiPost, apiPut, apiDelete } from '@/lib/api';
 import { getStoredToken } from '@/services/auth';
 import { useRouter } from 'next/navigation';
 import type { Tugas, TugasType, Pembelajaran, Modul } from '@/types/lecturer.types';
+import Portal from '@/components/common/Portal';
 
 // ─── Quiz types ─────────────────────────────────────────────────────────────
 interface QuizQuestionInput {
@@ -193,7 +194,9 @@ export default function EvaluasiPage() {
       const auth = getAuthHeaders();
       const payload: any = { title: form.title, type: form.type, uuid_pembelajaran: form.uuid_pembelajaran, uuid_modul: form.uuid_modul };
       if (form.type === 'Video' && form.youtube_link) payload.youtube_link = form.youtube_link;
-      if (form.type === 'Reading' && form.content_text) payload.content = { type: 'doc', content: [{ type: 'paragraph', content: [{ type: 'text', text: form.content_text }] }] };
+      if ((form.type === 'Reading' || form.type === 'CaseStudy') && form.content_text) {
+        payload.content = { type: 'doc', content: [{ type: 'paragraph', content: [{ type: 'text', text: form.content_text }] }] };
+      }
       await apiPost('/api/tugas', payload, { token: auth.token, headers: auth.headers });
       setShowCreateModal(false); resetForm(); fetchTugas();
     } catch (e: any) { alert(e.message || 'Gagal membuat tugas.'); }
@@ -208,7 +211,9 @@ export default function EvaluasiPage() {
       const auth = getAuthHeaders();
       const payload: any = { title: form.title, type: form.type };
       if (form.type === 'Video') payload.youtube_link = form.youtube_link;
-      if (form.type === 'Reading' && form.content_text) payload.content = { type: 'doc', content: [{ type: 'paragraph', content: [{ type: 'text', text: form.content_text }] }] };
+      if ((form.type === 'Reading' || form.type === 'CaseStudy') && form.content_text) {
+        payload.content = { type: 'doc', content: [{ type: 'paragraph', content: [{ type: 'text', text: form.content_text }] }] };
+      }
       if (form.uuid_pembelajaran) payload.uuid_pembelajaran = form.uuid_pembelajaran;
       if (form.uuid_modul) payload.uuid_modul = form.uuid_modul;
       await apiPut(`/api/tugas/${currentTugas.id}`, payload, { token: auth.token, headers: auth.headers });
@@ -237,7 +242,24 @@ export default function EvaluasiPage() {
 
   const openEditModal = (tugas: Tugas) => {
     setCurrentTugas(tugas);
-    setForm({ title: tugas.title, type: tugas.type, youtube_link: tugas.youtube_link || '', content_text: tugas.content ? JSON.stringify(tugas.content) : '', uuid_pembelajaran: tugas.uuid_pembelajaran || '', uuid_modul: tugas.uuid_modul || '' });
+    let initialText = '';
+    if (tugas.content) {
+      if (typeof tugas.content === 'object' && (tugas.content as any).content?.[0]?.content?.[0]?.text) {
+        initialText = (tugas.content as any).content[0].content[0].text;
+      } else if (typeof tugas.content === 'object' && (tugas.content as any).type === 'doc') {
+        initialText = (tugas.content as any).content?.map((p: any) => p.content?.map((t: any) => t.text).join('') || '').join('\n') || '';
+      } else {
+        initialText = typeof tugas.content === 'string' ? tugas.content : JSON.stringify(tugas.content);
+      }
+    }
+    setForm({
+      title: tugas.title,
+      type: tugas.type,
+      youtube_link: tugas.youtube_link || '',
+      content_text: initialText,
+      uuid_pembelajaran: tugas.uuid_pembelajaran || '',
+      uuid_modul: tugas.uuid_modul || ''
+    });
     setShowEditModal(true);
   };
 
@@ -543,29 +565,19 @@ export default function EvaluasiPage() {
 
       {/* ═══════════════════ TUGAS MODALS ═══════════════════ */}
       {(showCreateModal || showEditModal) && (
-        <div style={s.overlay}>
-          <div style={s.modal} className="glass-panel">
-            <div style={s.modalHead}>
-              <h3>{showCreateModal ? 'Buat Tugas Baru' : 'Edit Tugas'}</h3>
-              <button onClick={() => { setShowCreateModal(false); setShowEditModal(false); }} style={s.closeBtn}><X size={18} /></button>
-            </div>
-            <form onSubmit={showCreateModal ? handleCreate : handleEdit}>
-              <div style={s.modalBody}>
-                <div style={s.fg}>
-                  <label style={s.label}>Judul *</label>
-                  <input required value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} placeholder="Judul tugas..." style={s.input} />
-                </div>
-                <div style={s.fg}>
-                  <label style={s.label}>Tipe</label>
-                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' as const }}>
-                    {(['Reading', 'Video', 'CaseStudy', 'Practice'] as TugasType[]).map(t => (
-                      <button key={t} type="button" onClick={() => setForm({ ...form, type: t })} style={{ ...s.typeOpt, ...(form.type === t ? { border: `1px solid ${typeColors[t].text}`, background: typeColors[t].bg } : {}) }}>
-                        {typeIcons[t]}<span style={{ marginLeft: 6, fontSize: '0.78rem' }}>{t}</span>
-                      </button>
-                    ))}
+        <Portal>
+          <div style={{ ...s.overlay, zIndex: 9999 }}>
+            <div style={{ ...s.modal, maxHeight: '85vh', overflowY: 'auto' }} className="glass-panel">
+              <div style={s.modalHead}>
+                <h3>{showCreateModal ? 'Buat Tugas Baru' : 'Edit Tugas'}</h3>
+                <button onClick={() => { setShowCreateModal(false); setShowEditModal(false); }} style={s.closeBtn}><X size={18} /></button>
+              </div>
+              <form onSubmit={showCreateModal ? handleCreate : handleEdit}>
+                <div style={s.modalBody}>
+                  <div style={s.fg}>
+                    <label style={s.label}>Judul *</label>
+                    <input required value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} placeholder="Judul tugas..." style={s.input} />
                   </div>
-                </div>
-                <div style={s.grid2}>
                   <div style={s.fg}>
                     <label style={s.label}>Kelas *</label>
                     <select required value={form.uuid_pembelajaran} onChange={e => setForm({ ...form, uuid_pembelajaran: e.target.value, uuid_modul: '' })} style={s.select}>
@@ -573,221 +585,223 @@ export default function EvaluasiPage() {
                       {courses.map(c => <option key={c.id} value={c.id}>{c.title}</option>)}
                     </select>
                   </div>
-                  <div style={s.fg}>
-                    <label style={s.label}>Modul *</label>
-                    <select required value={form.uuid_modul} onChange={e => setForm({ ...form, uuid_modul: e.target.value })} style={s.select}>
-                      <option value="">Pilih modul...</option>
-                      {getFormModules().map(m => <option key={m.id} value={m.id}>{m.title}</option>)}
-                    </select>
-                  </div>
+                  {form.type === 'Video' && (
+                    <div style={s.fg}><label style={s.label}>YouTube Link</label><input type="url" value={form.youtube_link} onChange={e => setForm({ ...form, youtube_link: e.target.value })} placeholder="https://youtube.com/watch?v=..." style={s.input} /></div>
+                  )}
+                  {(form.type === 'Reading' || form.type === 'CaseStudy') && (
+                    <div style={s.fg}>
+                      <label style={s.label}>{form.type === 'CaseStudy' ? 'Soal / Deskripsi Tugas *' : 'Konten *'}</label>
+                      <textarea required rows={5} value={form.content_text} onChange={e => setForm({ ...form, content_text: e.target.value })} placeholder={form.type === 'CaseStudy' ? 'Tuliskan pertanyaan/instruksi studi kasus...' : 'Isi bacaan...'} style={s.textarea} />
+                    </div>
+                  )}
                 </div>
-                {form.type === 'Video' && (
-                  <div style={s.fg}><label style={s.label}>YouTube Link</label><input type="url" value={form.youtube_link} onChange={e => setForm({ ...form, youtube_link: e.target.value })} placeholder="https://youtube.com/watch?v=..." style={s.input} /></div>
-                )}
-                {form.type === 'Reading' && (
-                  <div style={s.fg}><label style={s.label}>Konten</label><textarea rows={5} value={form.content_text} onChange={e => setForm({ ...form, content_text: e.target.value })} placeholder="Isi bacaan..." style={s.textarea} /></div>
-                )}
-              </div>
-              <div style={s.modalFoot}>
-                <button type="button" onClick={() => { setShowCreateModal(false); setShowEditModal(false); }} style={s.btnGhost}>Batal</button>
-                <button type="submit" disabled={submitting} style={s.btnPrimary}>{submitting ? 'Menyimpan...' : 'Simpan'}</button>
-              </div>
-            </form>
+                <div style={s.modalFoot}>
+                  <button type="button" onClick={() => { setShowCreateModal(false); setShowEditModal(false); }} style={s.btnGhost}>Batal</button>
+                  <button type="submit" disabled={submitting} style={s.btnPrimary}>{submitting ? 'Menyimpan...' : 'Simpan'}</button>
+                </div>
+              </form>
+            </div>
           </div>
-        </div>
+        </Portal>
       )}
 
       {/* Detail Modal */}
       {showDetailModal && currentTugas && (
-        <div style={s.overlay}>
-          <div style={{ ...s.modal, maxWidth: 560 }} className="glass-panel">
-            <div style={s.modalHead}>
-              <h3>Detail Tugas</h3>
-              <button onClick={() => setShowDetailModal(false)} style={s.closeBtn}><X size={18} /></button>
-            </div>
-            <div style={{ ...s.modalBody, gap: 14 }}>
-              {[
-                ['Judul', currentTugas.title],
-                ['Tipe', currentTugas.type],
-                ['Kelas', currentTugas.pembelajaran?.title || '-'],
-                ['Modul', currentTugas.modul?.title || '-'],
-                currentTugas.slug && ['Slug', `/${currentTugas.slug}`],
-                currentTugas.youtube_link && ['YouTube', currentTugas.youtube_link],
-              ].filter(Boolean).map(([k, v]: any) => (
-                <div key={k} style={{ display: 'flex', gap: 12, borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: 10 }}>
-                  <span style={{ minWidth: 80, fontSize: '0.8rem', color: 'var(--grey-blue)', fontWeight: 600 }}>{k}</span>
-                  <span style={{ fontSize: '0.88rem', color: '#fff' }}>{v}</span>
-                </div>
-              ))}
+        <Portal>
+          <div style={{ ...s.overlay, zIndex: 9999 }}>
+            <div style={{ ...s.modal, maxWidth: 560, maxHeight: '85vh', overflowY: 'auto' }} className="glass-panel">
+              <div style={s.modalHead}>
+                <h3>Detail Tugas</h3>
+                <button onClick={() => setShowDetailModal(false)} style={s.closeBtn}><X size={18} /></button>
+              </div>
+              <div style={{ ...s.modalBody, gap: 14 }}>
+                {[
+                  ['Judul', currentTugas.title],
+                  ['Tipe', currentTugas.type],
+                  ['Kelas', currentTugas.pembelajaran?.title || '-'],
+                  ['Modul', currentTugas.modul?.title || '-'],
+                  currentTugas.slug && ['Slug', `/${currentTugas.slug}`],
+                  currentTugas.youtube_link && ['YouTube', currentTugas.youtube_link],
+                ].filter(Boolean).map(([k, v]: any) => (
+                  <div key={k} style={{ display: 'flex', gap: 12, borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: 10 }}>
+                    <span style={{ minWidth: 80, fontSize: '0.8rem', color: 'var(--grey-blue)', fontWeight: 600 }}>{k}</span>
+                    <span style={{ fontSize: '0.88rem', color: '#fff' }}>{v}</span>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
-        </div>
+        </Portal>
       )}
 
       {/* ═══════════════════ MANUAL QUIZ MODAL ═══════════════════ */}
       {showManualModal && (
-        <div style={s.overlay}>
-          <div style={{ ...s.modal, maxWidth: 820 }} className="glass-panel">
-            <div style={s.modalHead}>
-              <h3>{manualQuizId ? 'Edit Kuis' : 'Buat Kuis Manual'} — Langkah {modalStep}/2</h3>
-              <button onClick={() => setShowManualModal(false)} style={s.closeBtn}><X size={18} /></button>
-            </div>
-            <form onSubmit={handleSaveManualQuiz}>
-              {modalStep === 1 ? (
-                <div style={s.modalBody}>
-                  <div style={s.fg}><label style={s.label}>Judul Kuis *</label><input required value={manualTitle} onChange={e => setManualTitle(e.target.value)} placeholder="Judul kuis..." style={s.input} /></div>
-                  <div style={s.grid2}>
-                    <div style={s.fg}>
-                      <label style={s.label}>Kelas *</label>
-                      <select required value={manualCourse} onChange={e => setManualCourse(e.target.value)} style={s.select}>
-                        <option value="">Pilih kelas...</option>
-                        {courses.map(c => <option key={c.id} value={c.id}>{c.title}</option>)}
-                      </select>
-                    </div>
-                    <div style={s.fg}>
-                      <label style={s.label}>Modul</label>
-                      <select value={manualModule} onChange={e => setManualModule(e.target.value)} style={s.select}>
-                        <option value="">Pilih modul...</option>
-                        {modules.filter(m => !manualCourse || m.uuid_pembelajaran === manualCourse).map(m => <option key={m.id} value={m.id}>{m.title}</option>)}
-                      </select>
-                    </div>
-                  </div>
-                  <div style={s.grid2}>
-                    <div style={s.fg}><label style={s.label}>Durasi (menit)</label><input type="number" min="1" value={manualTimeLimit} onChange={e => setManualTimeLimit(+e.target.value || 30)} style={s.input} /></div>
-                    <div style={s.fg}><label style={s.label}>Tenggat</label><input type="datetime-local" value={manualDeadline} onChange={e => setManualDeadline(e.target.value)} style={s.input} /></div>
-                  </div>
-                  <div style={s.fg}><label style={s.label}>Deskripsi</label><textarea rows={3} value={manualDescription} onChange={e => setManualDescription(e.target.value)} placeholder="Instruksi kuis..." style={s.textarea} /></div>
-                  <div style={s.modalFoot}>
-                    <button type="button" onClick={() => setShowManualModal(false)} style={s.btnGhost}>Batal</button>
-                    <button type="button" onClick={() => { if (!manualTitle || !manualCourse) { alert('Judul & Kelas wajib diisi.'); return; } setModalStep(2); }} style={s.btnPrimary}>Selanjutnya →</button>
-                  </div>
-                </div>
-              ) : (
-                <div style={s.modalBody}>
-                  {manualQuestions.length < 10 && (
-                    <div style={{ ...s.errorBanner, marginBottom: 12 }}><AlertCircle size={16} /><span>Minimal 10 soal diperlukan. Saat ini: {manualQuestions.length}</span></div>
-                  )}
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                    <h4 style={{ margin: 0 }}>Daftar Soal ({manualQuestions.length})</h4>
-                    <button type="button" onClick={addQuestion} style={s.btnPrimary}><PlusCircle size={14} /><span>Tambah Soal</span></button>
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 14, maxHeight: 380, overflowY: 'auto' as const, paddingRight: 4 }}>
-                    {manualQuestions.map((q, qi) => (
-                      <div key={qi} style={s.questionCard}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
-                          <span style={{ fontWeight: 700, color: 'var(--azure)', fontSize: '0.85rem' }}>Soal #{qi + 1}</span>
-                          <button type="button" onClick={() => removeQuestion(qi)} style={{ background: 'none', border: 'none', cursor: 'pointer' }}><Trash2 size={13} color="#FF5252" /></button>
-                        </div>
-                        <input required value={q.question_text} onChange={e => changeQField(qi, 'question_text', e.target.value)} placeholder="Pertanyaan..." style={{ ...s.input, marginBottom: 8 }} />
-                        <select value={q.type} onChange={e => changeQField(qi, 'type', e.target.value)} style={{ ...s.select, marginBottom: 10 }}>
-                          <option value="MultipleChoice">Pilihan Ganda</option>
-                          <option value="TrueFalse">Benar / Salah</option>
-                          <option value="Checkbox">Checkbox (Multi Correct)</option>
+        <Portal>
+          <div style={{ ...s.overlay, zIndex: 9999 }}>
+            <div style={{ ...s.modal, maxWidth: 820, maxHeight: '85vh', overflowY: 'auto' }} className="glass-panel">
+              <div style={s.modalHead}>
+                <h3>{manualQuizId ? 'Edit Kuis' : 'Buat Kuis Manual'} — Langkah {modalStep}/2</h3>
+                <button onClick={() => setShowManualModal(false)} style={s.closeBtn}><X size={18} /></button>
+              </div>
+              <form onSubmit={handleSaveManualQuiz}>
+                {modalStep === 1 ? (
+                  <div style={s.modalBody}>
+                    <div style={s.fg}><label style={s.label}>Judul Kuis *</label><input required value={manualTitle} onChange={e => setManualTitle(e.target.value)} placeholder="Judul kuis..." style={s.input} /></div>
+                    <div style={s.grid2}>
+                      <div style={s.fg}>
+                        <label style={s.label}>Kelas *</label>
+                        <select required value={manualCourse} onChange={e => setManualCourse(e.target.value)} style={s.select}>
+                          <option value="">Pilih kelas...</option>
+                          {courses.map(c => <option key={c.id} value={c.id}>{c.title}</option>)}
                         </select>
-                        <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 6 }}>
-                          {q.options.map((opt, oi) => (
-                            <div key={opt.id} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                              <input type={q.type === 'Checkbox' ? 'checkbox' : 'radio'} name={`q-${qi}`} checked={opt.is_correct} onChange={() => changeOptCorrect(qi, oi)} />
-                              <span style={{ fontSize: '0.78rem', color: 'var(--grey-blue)', minWidth: 16 }}>{opt.id}</span>
-                              <input required={q.type !== 'TrueFalse'} disabled={q.type === 'TrueFalse'} value={opt.text} onChange={e => changeOptText(qi, oi, e.target.value)} placeholder={`Opsi ${opt.id}...`} style={{ ...s.input, padding: '6px 10px', flex: 1 }} />
-                            </div>
-                          ))}
-                        </div>
                       </div>
-                    ))}
+                      <div style={s.fg}>
+                        <label style={s.label}>Modul</label>
+                        <select value={manualModule} onChange={e => setManualModule(e.target.value)} style={s.select}>
+                          <option value="">Pilih modul...</option>
+                          {modules.filter(m => !manualCourse || m.uuid_pembelajaran === manualCourse).map(m => <option key={m.id} value={m.id}>{m.title}</option>)}
+                        </select>
+                      </div>
+                    </div>
+                    <div style={s.grid2}>
+                      <div style={s.fg}><label style={s.label}>Durasi (menit)</label><input type="number" min="1" value={manualTimeLimit} onChange={e => setManualTimeLimit(+e.target.value || 30)} style={s.input} /></div>
+                      <div style={s.fg}><label style={s.label}>Tenggat</label><input type="datetime-local" value={manualDeadline} onChange={e => setManualDeadline(e.target.value)} style={s.input} /></div>
+                    </div>
+                    <div style={s.fg}><label style={s.label}>Deskripsi</label><textarea rows={3} value={manualDescription} onChange={e => setManualDescription(e.target.value)} placeholder="Instruksi kuis..." style={s.textarea} /></div>
+                    <div style={s.modalFoot}>
+                      <button type="button" onClick={() => setShowManualModal(false)} style={s.btnGhost}>Batal</button>
+                      <button type="button" onClick={() => { if (!manualTitle || !manualCourse) { alert('Judul & Kelas wajib diisi.'); return; } setModalStep(2); }} style={s.btnPrimary}>Selanjutnya →</button>
+                    </div>
                   </div>
-                  <div style={s.modalFoot}>
-                    <button type="button" onClick={() => setModalStep(1)} style={s.btnGhost}>← Kembali</button>
-                    <button type="submit" disabled={savingManualQuiz || manualQuestions.length < 10} style={s.btnPrimary}>{savingManualQuiz ? 'Menyimpan...' : 'Simpan Kuis'}</button>
+                ) : (
+                  <div style={s.modalBody}>
+                    {manualQuestions.length < 10 && (
+                      <div style={{ ...s.errorBanner, marginBottom: 12 }}><AlertCircle size={16} /><span>Minimal 10 soal diperlukan. Saat ini: {manualQuestions.length}</span></div>
+                    )}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                      <h4 style={{ margin: 0 }}>Daftar Soal ({manualQuestions.length})</h4>
+                      <button type="button" onClick={addQuestion} style={s.btnPrimary}><PlusCircle size={14} /><span>Tambah Soal</span></button>
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 14, maxHeight: 380, overflowY: 'auto' as const, paddingRight: 4 }}>
+                      {manualQuestions.map((q, qi) => (
+                        <div key={qi} style={s.questionCard}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+                            <span style={{ fontWeight: 700, color: 'var(--azure)', fontSize: '0.85rem' }}>Soal #{qi + 1}</span>
+                            <button type="button" onClick={() => removeQuestion(qi)} style={{ background: 'none', border: 'none', cursor: 'pointer' }}><Trash2 size={13} color="#FF5252" /></button>
+                          </div>
+                          <input required value={q.question_text} onChange={e => changeQField(qi, 'question_text', e.target.value)} placeholder="Pertanyaan..." style={{ ...s.input, marginBottom: 8 }} />
+                          <select value={q.type} onChange={e => changeQField(qi, 'type', e.target.value)} style={{ ...s.select, marginBottom: 10 }}>
+                            <option value="MultipleChoice">Pilihan Ganda</option>
+                            <option value="TrueFalse">Benar / Salah</option>
+                            <option value="Checkbox">Checkbox (Multi Correct)</option>
+                          </select>
+                          <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 6 }}>
+                            {q.options.map((opt, oi) => (
+                              <div key={opt.id} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                <input type={q.type === 'Checkbox' ? 'checkbox' : 'radio'} name={`q-${qi}`} checked={opt.is_correct} onChange={() => changeOptCorrect(qi, oi)} />
+                                <span style={{ fontSize: '0.78rem', color: 'var(--grey-blue)', minWidth: 16 }}>{opt.id}</span>
+                                <input required={q.type !== 'TrueFalse'} disabled={q.type === 'TrueFalse'} value={opt.text} onChange={e => changeOptText(qi, oi, e.target.value)} placeholder={`Opsi ${opt.id}...`} style={{ ...s.input, padding: '6px 10px', flex: 1 }} />
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    <div style={s.modalFoot}>
+                      <button type="button" onClick={() => setModalStep(1)} style={s.btnGhost}>← Kembali</button>
+                      <button type="submit" disabled={savingManualQuiz || manualQuestions.length < 10} style={s.btnPrimary}>{savingManualQuiz ? 'Menyimpan...' : 'Simpan Kuis'}</button>
+                    </div>
                   </div>
-                </div>
-              )}
-            </form>
+                )}
+              </form>
+            </div>
           </div>
-        </div>
+        </Portal>
       )}
 
       {/* ═══════════════════ AI QUIZ MODAL ═══════════════════ */}
       {showAiModal && (
-        <div style={s.overlay}>
-          <div style={{ ...s.modal, maxWidth: 920 }} className="glass-panel">
-            <div style={s.modalHead}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}><Sparkles size={18} color="var(--azure)" /><h3>AI Quiz Generator</h3></div>
-              <button onClick={() => setShowAiModal(false)} style={s.closeBtn}><X size={18} /></button>
-            </div>
-            <div style={{ ...s.modalBody, display: 'grid', gridTemplateColumns: '1.1fr 0.9fr', gap: 24 }}>
-              {/* Left: settings */}
-              <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 14 }}>
-                <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--azure)', textTransform: 'uppercase' as const, letterSpacing: '0.08em' }}>① Generate Soal</div>
-                <div style={s.fg}>
-                  <label style={s.label}>Kelas *</label>
-                  <select value={selectedCourse} onChange={e => { setSelectedCourse(e.target.value); setSelectedModule(''); }} style={s.select}>
-                    <option value="">Pilih kelas...</option>
-                    {courses.map(c => <option key={c.id} value={c.id}>{c.title}</option>)}
-                  </select>
+        <Portal>
+          <div style={{ ...s.overlay, zIndex: 9999 }}>
+            <div style={{ ...s.modal, maxWidth: 920, maxHeight: '85vh', overflowY: 'auto' }} className="glass-panel">
+              <div style={s.modalHead}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}><Sparkles size={18} color="var(--azure)" /><h3>AI Quiz Generator</h3></div>
+                <button onClick={() => setShowAiModal(false)} style={s.closeBtn}><X size={18} /></button>
+              </div>
+              <div style={{ ...s.modalBody, display: 'grid', gridTemplateColumns: '1.1fr 0.9fr', gap: 24 }}>
+                {/* Left: settings */}
+                <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 14 }}>
+                  <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--azure)', textTransform: 'uppercase' as const, letterSpacing: '0.08em' }}>① Generate Soal</div>
+                  <div style={s.fg}>
+                    <label style={s.label}>Kelas *</label>
+                    <select value={selectedCourse} onChange={e => { setSelectedCourse(e.target.value); setSelectedModule(''); }} style={s.select}>
+                      <option value="">Pilih kelas...</option>
+                      {courses.map(c => <option key={c.id} value={c.id}>{c.title}</option>)}
+                    </select>
+                  </div>
+                  <div style={s.fg}>
+                    <label style={s.label}>Modul (Opsional)</label>
+                    <select value={selectedModule} onChange={e => setSelectedModule(e.target.value)} style={s.select}>
+                      <option value="">Pilih modul...</option>
+                      {modules.filter(m => !selectedCourse || m.uuid_pembelajaran === selectedCourse).map(m => <option key={m.id} value={m.id}>{m.title}</option>)}
+                    </select>
+                  </div>
+                  <div style={s.fg}>
+                    <label style={s.label}>Reading Material / Konteks *</label>
+                    <textarea rows={6} value={readingMaterial} onChange={e => setReadingMaterial(e.target.value)} placeholder="Paste materi bacaan di sini sebagai sumber soal..." style={s.textarea} />
+                  </div>
+                  <div style={s.fg}>
+                    <label style={s.label}>Topic Guidance (Opsional)</label>
+                    <input type="text" value={promptText} onChange={e => setPromptText(e.target.value)} placeholder="Fokus pada aspek tertentu..." style={s.input} />
+                  </div>
+                  <div style={s.fg}>
+                    <label style={s.label}>Jumlah Soal <span style={{ color: 'var(--grey-blue)', fontWeight: 400 }}>(Maks. 25 total)</span></label>
+                    <div style={{ display: 'flex', gap: 10 }}>
+                      {(['MultipleChoice', 'TrueFalse', 'Checkbox'] as const).map(type => (
+                        <div key={type} style={{ flex: 1, background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border-color)', borderRadius: 8, padding: '8px 10px', textAlign: 'center' as const }}>
+                          <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--grey-blue)' }}>{type === 'MultipleChoice' ? 'MCQ' : type === 'TrueFalse' ? 'T/F' : 'CB'}</div>
+                          <input type="number" min="0" max="25" value={counts[type]} onChange={e => setCounts({ ...counts, [type]: +e.target.value || 0 })} style={{ ...s.input, textAlign: 'center' as const, padding: '4px', marginTop: 4 }} />
+                        </div>
+                      ))}
+                    </div>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--grey-blue)', marginTop: 6 }}>
+                      Total: <strong style={{ color: (counts.MultipleChoice + counts.TrueFalse + counts.Checkbox) > 25 ? '#FF5252' : '#fff' }}>{counts.MultipleChoice + counts.TrueFalse + counts.Checkbox}</strong> soal
+                    </div>
+                  </div>
+                  <button type="button" onClick={handleGenerateAI} disabled={aiGenerating || !readingMaterial} style={{ ...s.btnAi, justifyContent: 'center', opacity: (aiGenerating || !readingMaterial) ? 0.6 : 1 }}>
+                    {aiGenerating ? <><Loader2 size={15} style={{ animation: 'spin 1s linear infinite' }} /><span>Generating...</span></> : <><Sparkles size={15} /><span>Generate Questions</span></>}
+                  </button>
                 </div>
-                <div style={s.fg}>
-                  <label style={s.label}>Modul (Opsional)</label>
-                  <select value={selectedModule} onChange={e => setSelectedModule(e.target.value)} style={s.select}>
-                    <option value="">Pilih modul...</option>
-                    {modules.filter(m => !selectedCourse || m.uuid_pembelajaran === selectedCourse).map(m => <option key={m.id} value={m.id}>{m.title}</option>)}
-                  </select>
-                </div>
-                <div style={s.fg}>
-                  <label style={s.label}>Reading Material / Konteks *</label>
-                  <textarea rows={6} value={readingMaterial} onChange={e => setReadingMaterial(e.target.value)} placeholder="Paste materi bacaan di sini sebagai sumber soal..." style={s.textarea} />
-                </div>
-                <div style={s.fg}>
-                  <label style={s.label}>Topic Guidance (Opsional)</label>
-                  <input type="text" value={promptText} onChange={e => setPromptText(e.target.value)} placeholder="Fokus pada aspek tertentu..." style={s.input} />
-                </div>
-                <div style={s.fg}>
-                  <label style={s.label}>Jumlah Soal <span style={{ color: 'var(--grey-blue)', fontWeight: 400 }}>(Maks. 25 total)</span></label>
-                  <div style={{ display: 'flex', gap: 10 }}>
-                    {(['MultipleChoice', 'TrueFalse', 'Checkbox'] as const).map(type => (
-                      <div key={type} style={{ flex: 1, background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border-color)', borderRadius: 8, padding: '8px 10px', textAlign: 'center' as const }}>
-                        <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--grey-blue)' }}>{type === 'MultipleChoice' ? 'MCQ' : type === 'TrueFalse' ? 'T/F' : 'CB'}</div>
-                        <input type="number" min="0" max="25" value={counts[type]} onChange={e => setCounts({ ...counts, [type]: +e.target.value || 0 })} style={{ ...s.input, textAlign: 'center' as const, padding: '4px', marginTop: 4 }} />
+  
+                {/* Right: preview & save settings */}
+                <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 14 }}>
+                  <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--azure)', textTransform: 'uppercase' as const, letterSpacing: '0.08em' }}>② Simpan ke Bank Soal</div>
+                  <div style={s.fg}><label style={s.label}>Judul Kuis *</label><input value={aiTitle} onChange={e => setAiTitle(e.target.value)} placeholder="Judul kuis AI..." style={s.input} /></div>
+                  <div style={s.fg}><label style={s.label}>Deskripsi</label><textarea rows={2} value={aiDescription} onChange={e => setAiDescription(e.target.value)} placeholder="Deskripsi singkat..." style={s.textarea} /></div>
+                  <div style={s.grid2}>
+                    <div style={s.fg}><label style={s.label}>Durasi (menit)</label><input type="number" min="1" value={aiTimeLimit} onChange={e => setAiTimeLimit(+e.target.value || 30)} style={s.input} /></div>
+                    <div style={s.fg}><label style={s.label}>Tenggat</label><input type="datetime-local" value={aiDeadline} onChange={e => setAiDeadline(e.target.value)} style={s.input} /></div>
+                  </div>
+                  {/* Preview */}
+                  <div style={{ flex: 1, background: 'rgba(0,0,0,0.25)', borderRadius: 10, padding: 14, overflowY: 'auto' as const, maxHeight: 240, border: '1px solid var(--border-color)' }}>
+                    <p style={{ margin: '0 0 8px', fontSize: '0.8rem', color: 'var(--grey-blue)', fontWeight: 600 }}>Preview ({generatedQuestions.length} soal)</p>
+                    {generatedQuestions.length === 0 ? (
+                      <p style={{ fontSize: '0.8rem', color: 'var(--grey)' }}>Belum ada soal. Klik "Generate Questions" terlebih dahulu.</p>
+                    ) : generatedQuestions.map((q, i) => (
+                      <div key={i} style={{ marginBottom: 12, paddingBottom: 10, borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                        <p style={{ margin: '0 0 4px', fontSize: '0.82rem', color: '#E2E8F0' }}>{i+1}. {q.question_text} <span style={{ color: 'var(--azure)', fontSize: '0.72rem' }}>({q.type})</span></p>
+                        {q.options.map(o => <div key={o.id} style={{ fontSize: '0.74rem', color: o.is_correct ? '#00C853' : 'var(--grey-blue)', paddingLeft: 10 }}>{o.id}: {o.text} {o.is_correct && '✓'}</div>)}
                       </div>
                     ))}
                   </div>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--grey-blue)', marginTop: 6 }}>
-                    Total: <strong style={{ color: (counts.MultipleChoice + counts.TrueFalse + counts.Checkbox) > 25 ? '#FF5252' : '#fff' }}>{counts.MultipleChoice + counts.TrueFalse + counts.Checkbox}</strong> soal
-                  </div>
+                  <button type="button" onClick={handleSaveAiQuiz} disabled={savingAiQuiz || generatedQuestions.length === 0 || !aiTitle.trim()} style={{ ...s.btnPrimary, justifyContent: 'center', opacity: (savingAiQuiz || generatedQuestions.length === 0 || !aiTitle.trim()) ? 0.6 : 1 }}>
+                    {savingAiQuiz ? 'Menyimpan...' : <><CheckCircle size={15} /><span>Simpan ke Bank Soal</span></>}
+                  </button>
                 </div>
-                <button type="button" onClick={handleGenerateAI} disabled={aiGenerating || !readingMaterial} style={{ ...s.btnAi, justifyContent: 'center', opacity: (aiGenerating || !readingMaterial) ? 0.6 : 1 }}>
-                  {aiGenerating ? <><Loader2 size={15} style={{ animation: 'spin 1s linear infinite' }} /><span>Generating...</span></> : <><Sparkles size={15} /><span>Generate Questions</span></>}
-                </button>
-              </div>
-
-              {/* Right: preview & save settings */}
-              <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 14 }}>
-                <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--azure)', textTransform: 'uppercase' as const, letterSpacing: '0.08em' }}>② Simpan ke Bank Soal</div>
-                <div style={s.fg}><label style={s.label}>Judul Kuis *</label><input value={aiTitle} onChange={e => setAiTitle(e.target.value)} placeholder="Judul kuis AI..." style={s.input} /></div>
-                <div style={s.fg}><label style={s.label}>Deskripsi</label><textarea rows={2} value={aiDescription} onChange={e => setAiDescription(e.target.value)} placeholder="Deskripsi singkat..." style={s.textarea} /></div>
-                <div style={s.grid2}>
-                  <div style={s.fg}><label style={s.label}>Durasi (menit)</label><input type="number" min="1" value={aiTimeLimit} onChange={e => setAiTimeLimit(+e.target.value || 30)} style={s.input} /></div>
-                  <div style={s.fg}><label style={s.label}>Tenggat</label><input type="datetime-local" value={aiDeadline} onChange={e => setAiDeadline(e.target.value)} style={s.input} /></div>
-                </div>
-                {/* Preview */}
-                <div style={{ flex: 1, background: 'rgba(0,0,0,0.25)', borderRadius: 10, padding: 14, overflowY: 'auto' as const, maxHeight: 240, border: '1px solid var(--border-color)' }}>
-                  <p style={{ margin: '0 0 8px', fontSize: '0.8rem', color: 'var(--grey-blue)', fontWeight: 600 }}>Preview ({generatedQuestions.length} soal)</p>
-                  {generatedQuestions.length === 0 ? (
-                    <p style={{ fontSize: '0.8rem', color: 'var(--grey)' }}>Belum ada soal. Klik "Generate Questions" terlebih dahulu.</p>
-                  ) : generatedQuestions.map((q, i) => (
-                    <div key={i} style={{ marginBottom: 12, paddingBottom: 10, borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                      <p style={{ margin: '0 0 4px', fontSize: '0.82rem', color: '#E2E8F0' }}>{i+1}. {q.question_text} <span style={{ color: 'var(--azure)', fontSize: '0.72rem' }}>({q.type})</span></p>
-                      {q.options.map(o => <div key={o.id} style={{ fontSize: '0.74rem', color: o.is_correct ? '#00C853' : 'var(--grey-blue)', paddingLeft: 10 }}>{o.id}: {o.text} {o.is_correct && '✓'}</div>)}
-                    </div>
-                  ))}
-                </div>
-                <button type="button" onClick={handleSaveAiQuiz} disabled={savingAiQuiz || generatedQuestions.length === 0 || !aiTitle.trim()} style={{ ...s.btnPrimary, justifyContent: 'center', opacity: (savingAiQuiz || generatedQuestions.length === 0 || !aiTitle.trim()) ? 0.6 : 1 }}>
-                  {savingAiQuiz ? 'Menyimpan...' : <><CheckCircle size={15} /><span>Simpan ke Bank Soal</span></>}
-                </button>
               </div>
             </div>
           </div>
-        </div>
+        </Portal>
       )}
 
       <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>

@@ -22,6 +22,7 @@ interface TentorData {
   managed_courses: number;
   total_students: number;
   pending_submissions: number;
+  verified_by_me: number;
   tasks_to_grade: TaskToGrade[];
 }
 
@@ -40,84 +41,44 @@ export default function TentorDashboard() {
       const apiKey = process.env.NEXT_PUBLIC_API_KEY;
 
       const headers: Record<string, string> = {};
-      if (apiKey) {
-        headers['x-api-key'] = apiKey;
-      } else if (token) {
-        headers['x-api-key'] = token;
-      }
+      if (apiKey) headers['x-api-key'] = apiKey;
+      else if (token) headers['x-api-key'] = token;
 
-      let responseData: any = null;
-      try {
-        const response = await apiGet<{ success: boolean; data: TentorData } | any>(
-          '/api/dashboard/tentor',
-          {
-            token: token || undefined,
-            headers
-          }
-        );
-        responseData = response?.data || response;
-      } catch (apiErr) {
-        console.warn("Failed fetching tentor dashboard from server, falling back to mock data", apiErr);
-      }
-
-      // Check username from local storage
+      // Ambil nama dari local storage
       const localUser = localStorage.getItem('nalara_user_info') || sessionStorage.getItem('nalara_user_info');
       if (localUser) {
         try {
           const userObj = JSON.parse(localUser);
-          if (userObj.name) {
-            setUserName(userObj.name);
-          }
+          const name = userObj.nama_lengkap || userObj.name || userObj.username;
+          if (name) setUserName(name);
         } catch {}
       }
 
-      if (responseData && typeof responseData === 'object') {
-        setData({
-          managed_courses: responseData.managed_courses ?? 3,
-          total_students: responseData.total_students ?? 124,
-          pending_submissions: responseData.pending_submissions ?? 18,
-          tasks_to_grade: responseData.tasks_to_grade ?? []
-        });
-      } else {
-        // Mock fallback statistics conforming to PRD
-        setData({
-          managed_courses: 4,
-          total_students: 1250000, // Will be formatted to 1.3 Juta
-          pending_submissions: 320,
-          tasks_to_grade: [
-            {
-              id: 101,
-              task_name: "Implementasi Neural Network dari Goresan (Scratch)",
-              course_name: "Level Menengah (Intermediate)",
-              module_name: "Deep Learning Foundations",
-              ungraded_count: 45,
-              total_submissions: 120,
-              deadline: "2026-07-02T23:59:59Z"
-            },
-            {
-              id: 102,
-              task_name: "Analisis Regresi Linear & Eksplorasi Data",
-              course_name: "Level Dasar (Preparatory)",
-              module_name: "Python for Data Science",
-              ungraded_count: 12,
-              total_submissions: 98,
-              deadline: "2026-07-01T23:59:59Z" // Closer deadline
-            },
-            {
-              id: 103,
-              task_name: "Fine-Tuning Vision Transformer (ViT)",
-              course_name: "Level Lanjut (Advanced)",
-              module_name: "Computer Vision & Generative AI",
-              ungraded_count: 28,
-              total_submissions: 42,
-              deadline: "2026-07-05T23:59:59Z"
-            }
-          ]
-        });
-      }
+      const response = await apiGet<{ success: boolean; data: any } | any>(
+        '/api/dashboard/tentor',
+        { token: token || undefined, headers }
+      );
+
+      const raw = response?.data || response;
+
+      setData({
+        managed_courses: raw?.managed_courses ?? 0,
+        total_students:  raw?.total_students  ?? 0,
+        pending_submissions: raw?.pending_submissions ?? 0,
+        verified_by_me: raw?.verified_by_me ?? 0,
+        tasks_to_grade: (raw?.tasks_to_grade ?? []).map((t: any, i: number) => ({
+          id: t.id ?? i + 1,
+          task_name: t.task_name ?? t.nama_tugas ?? '-',
+          course_name: t.course_name ?? t.kelas_asal ?? '-',
+          module_name: t.module_name ?? t.modul_asal ?? '-',
+          ungraded_count: t.ungraded_count ?? t.jumlah_belum_dinilai ?? 0,
+          total_submissions: t.total_submissions ?? 0,
+          deadline: t.deadline ?? null,
+        }))
+      });
     } catch (err) {
       console.error(err);
-      setError(err instanceof Error ? err.message : 'Gagal memuat data dashboard tentor');
+      setError(err instanceof Error ? err.message : 'Gagal memuat data dashboard.');
     } finally {
       setLoading(false);
       setIsRefreshing(false);
@@ -154,28 +115,36 @@ export default function TentorDashboard() {
 
   const kpiCards = [
     {
-      title: "Jumlah Kelas yang dibuka",
+      title: "Total Kelas",
       value: data?.managed_courses ?? 0,
-      desc: "Kelas aktif yang diampu",
+      desc: "Kelas aktif di platform",
       icon: BookOpen,
-      color: "#4196F0", // Azure
+      color: "#4196F0",
       bg: "rgba(65, 150, 240, 0.1)"
     },
     {
-      title: "Jumlah Student yang dimiliki",
+      title: "Total Student",
       value: data?.total_students ?? 0,
-      desc: "Total peserta yang terdaftar",
+      desc: "Total peserta terdaftar",
       icon: Users,
-      color: "#10b981", // Green
+      color: "#10b981",
       bg: "rgba(16, 185, 129, 0.1)"
     },
     {
-      title: "Tugas yang belum dinilai",
+      title: "Menunggu Verifikasi",
       value: data?.pending_submissions ?? 0,
-      desc: "Menunggu pemeriksaan",
+      desc: "Submission belum dinilai mentor",
       icon: FileText,
-      color: "#FFA826", // Orange
+      color: "#FFA826",
       bg: "rgba(255, 168, 38, 0.1)"
+    },
+    {
+      title: "Sudah Diverifikasi",
+      value: data?.verified_by_me ?? 0,
+      desc: "Submission yang telah kamu verifikasi",
+      icon: FileCheck,
+      color: "#10b981",
+      bg: "rgba(16, 185, 129, 0.1)"
     }
   ];
 
@@ -211,8 +180,8 @@ export default function TentorDashboard() {
         <div style={s.errorAlert}>
           <ShieldAlert size={20} color="#ef4444" />
           <div style={s.errorContent}>
-            <strong style={s.errorTitle}>API Server Offline</strong>
-            <span style={s.errorMsg}>{error} (Menampilkan data lokal/fallback)</span>
+            <strong style={s.errorTitle}>Gagal Memuat Data</strong>
+            <span style={s.errorMsg}>{error}</span>
           </div>
           <button style={s.retryBtn} onClick={handleRefresh}>Coba Lagi</button>
         </div>
@@ -362,7 +331,7 @@ export default function TentorDashboard() {
                   </span>
                 </div>
                 <button 
-                  onClick={() => router.push(`/lecturer/grades`)}
+                  onClick={() => router.push(`/tentor/tugas`)}
                   style={s.startTaskBtn}
                 >
                   <span>Periksa</span>

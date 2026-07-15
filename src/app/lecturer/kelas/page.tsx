@@ -853,23 +853,69 @@ export default function CoursesPage() {
         <Portal>
           <div style={{
             position: 'fixed',
-            bottom: 24,
-            right: 24,
-            background: toast.type === 'success' ? '#00C853' : '#FF5252',
-            color: '#fff',
-            padding: '12px 18px',
-            borderRadius: '10px',
-            boxShadow: '0 8px 30px rgba(0,0,0,0.3)',
+            inset: 0,
+            background: 'rgba(0, 0, 0, 0.4)',
+            backdropFilter: 'blur(4px)',
             display: 'flex',
             alignItems: 'center',
-            gap: 10,
+            justifyContent: 'center',
             zIndex: 99999,
-            fontSize: '0.88rem',
-            fontWeight: 600,
           }}>
-            {toast.type === 'success' ? <CheckCircle2 size={16} /> : <AlertCircle size={16} />}
-            <span>{toast.message}</span>
-            <button onClick={() => setToast(null)} style={{ background: 'none', border: 'none', color: '#fff', cursor: 'pointer', fontSize: '1.1rem', marginLeft: 8, lineHeight: 1 }}>✕</button>
+            <div style={{
+              background: '#1e1e2e',
+              border: '1px solid rgba(255, 255, 255, 0.08)',
+              borderRadius: '16px',
+              padding: '24px 32px',
+              width: '100%',
+              maxWidth: '380px',
+              textAlign: 'center',
+              boxShadow: '0 20px 50px rgba(0,0,0,0.5)',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: 16,
+            }}>
+              <div style={{
+                width: '56px',
+                height: '56px',
+                borderRadius: '50%',
+                background: toast.type === 'success' ? 'rgba(0, 200, 83, 0.12)' : 'rgba(255, 82, 82, 0.12)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}>
+                {toast.type === 'success' ? (
+                  <CheckCircle2 size={28} color="#00C853" />
+                ) : (
+                  <AlertCircle size={28} color="#FF5252" />
+                )}
+              </div>
+              <div>
+                <h3 style={{ margin: '0 0 6px 0', color: '#fff', fontSize: '1.15rem', fontWeight: 700 }}>
+                  {toast.type === 'success' ? 'Berhasil' : 'Gagal'}
+                </h3>
+                <p style={{ margin: 0, color: '#94a3b8', fontSize: '0.88rem', lineHeight: 1.5 }}>
+                  {toast.message}
+                </p>
+              </div>
+              <button 
+                onClick={() => setToast(null)} 
+                style={{
+                  width: '100%',
+                  padding: '10px 0',
+                  borderRadius: '8px',
+                  border: 'none',
+                  background: toast.type === 'success' ? 'linear-gradient(135deg, #00C853, #009624)' : 'linear-gradient(135deg, #FF5252, #D32F2F)',
+                  color: '#fff',
+                  fontSize: '0.9rem',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  transition: 'opacity 0.2s',
+                }}
+              >
+                Tutup
+              </button>
+            </div>
           </div>
         </Portal>
       )}

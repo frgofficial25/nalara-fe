@@ -329,7 +329,7 @@ export default function TugasPage() {
       if (form.type === 'Video' && form.youtube_link) {
         payload.youtube_link = form.youtube_link;
       }
-      if (form.type === 'Reading' && form.content_text) {
+      if ((form.type === 'Reading' || form.type === 'CaseStudy') && form.content_text) {
         payload.content = { type: 'doc', content: [{ type: 'paragraph', content: [{ type: 'text', text: form.content_text }] }] };
       }
 
@@ -365,7 +365,7 @@ export default function TugasPage() {
       if (form.type === 'Video') {
         payload.youtube_link = form.youtube_link;
       }
-      if (form.type === 'Reading' && form.content_text) {
+      if ((form.type === 'Reading' || form.type === 'CaseStudy') && form.content_text) {
         payload.content = { type: 'doc', content: [{ type: 'paragraph', content: [{ type: 'text', text: form.content_text }] }] };
       }
       if (form.uuid_pembelajaran) payload.uuid_pembelajaran = form.uuid_pembelajaran;
@@ -448,11 +448,21 @@ export default function TugasPage() {
 
   const openEditModal = (tugas: Tugas) => {
     setCurrentTugas(tugas);
+    let initialText = '';
+    if (tugas.content) {
+      if (typeof tugas.content === 'object' && (tugas.content as any).content?.[0]?.content?.[0]?.text) {
+        initialText = (tugas.content as any).content[0].content[0].text;
+      } else if (typeof tugas.content === 'object' && (tugas.content as any).type === 'doc') {
+        initialText = (tugas.content as any).content?.map((p: any) => p.content?.map((t: any) => t.text).join('') || '').join('\n') || '';
+      } else {
+        initialText = typeof tugas.content === 'string' ? tugas.content : JSON.stringify(tugas.content);
+      }
+    }
     setForm({
       title: tugas.title,
       type: tugas.type,
       youtube_link: tugas.youtube_link || '',
-      content_text: tugas.content ? JSON.stringify(tugas.content) : '',
+      content_text: initialText,
       uuid_pembelajaran: tugas.uuid_pembelajaran || '',
       uuid_modul: tugas.uuid_modul || '',
     });
@@ -793,13 +803,13 @@ export default function TugasPage() {
                     />
                   </div>
                 )}
-                {form.type === 'Reading' && (
+                {(form.type === 'Reading' || form.type === 'CaseStudy') && (
                   <div style={s.formGroup}>
-                    <label style={s.label}>Content</label>
+                    <label style={s.label}>{form.type === 'CaseStudy' ? 'Soal / Deskripsi Tugas' : 'Content'}</label>
                     <textarea
                       value={form.content_text}
                       onChange={(e) => setForm({ ...form, content_text: e.target.value })}
-                      placeholder="Tuliskan petunjuk atau materi tugas di sini..."
+                      placeholder={form.type === 'CaseStudy' ? 'Tuliskan pertanyaan/instruksi studi kasus di sini...' : 'Tuliskan petunjuk atau materi tugas di sini...'}
                       style={{ ...s.input, minHeight: 120, resize: 'vertical' }}
                     />
                   </div>
@@ -849,9 +859,9 @@ export default function TugasPage() {
                     />
                   </div>
                 )}
-                {form.type === 'Reading' && (
+                {(form.type === 'Reading' || form.type === 'CaseStudy') && (
                   <div style={s.formGroup}>
-                    <label style={s.label}>Content</label>
+                    <label style={s.label}>{form.type === 'CaseStudy' ? 'Soal / Deskripsi Tugas' : 'Content'}</label>
                     <textarea
                       value={form.content_text}
                       onChange={(e) => setForm({ ...form, content_text: e.target.value })}
@@ -942,23 +952,69 @@ export default function TugasPage() {
         <Portal>
           <div style={{
             position: 'fixed',
-            bottom: 24,
-            right: 24,
-            background: toast.type === 'success' ? '#00C853' : '#FF5252',
-            color: '#fff',
-            padding: '12px 18px',
-            borderRadius: '10px',
-            boxShadow: '0 8px 30px rgba(0,0,0,0.3)',
+            inset: 0,
+            background: 'rgba(0, 0, 0, 0.4)',
+            backdropFilter: 'blur(4px)',
             display: 'flex',
             alignItems: 'center',
-            gap: 10,
+            justifyContent: 'center',
             zIndex: 99999,
-            fontSize: '0.88rem',
-            fontWeight: 600,
           }}>
-            {toast.type === 'success' ? <CheckCircle2 size={16} /> : <AlertCircle size={16} />}
-            <span>{toast.message}</span>
-            <button onClick={() => setToast(null)} style={{ background: 'none', border: 'none', color: '#fff', cursor: 'pointer', fontSize: '1.1rem', marginLeft: 8, lineHeight: 1 }}>✕</button>
+            <div style={{
+              background: '#1e1e2e',
+              border: '1px solid rgba(255, 255, 255, 0.08)',
+              borderRadius: '16px',
+              padding: '24px 32px',
+              width: '100%',
+              maxWidth: '380px',
+              textAlign: 'center',
+              boxShadow: '0 20px 50px rgba(0,0,0,0.5)',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: 16,
+            }}>
+              <div style={{
+                width: '56px',
+                height: '56px',
+                borderRadius: '50%',
+                background: toast.type === 'success' ? 'rgba(0, 200, 83, 0.12)' : 'rgba(255, 82, 82, 0.12)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}>
+                {toast.type === 'success' ? (
+                  <CheckCircle2 size={28} color="#00C853" />
+                ) : (
+                  <AlertCircle size={28} color="#FF5252" />
+                )}
+              </div>
+              <div>
+                <h3 style={{ margin: '0 0 6px 0', color: '#fff', fontSize: '1.15rem', fontWeight: 700 }}>
+                  {toast.type === 'success' ? 'Berhasil' : 'Gagal'}
+                </h3>
+                <p style={{ margin: 0, color: '#94a3b8', fontSize: '0.88rem', lineHeight: 1.5 }}>
+                  {toast.message}
+                </p>
+              </div>
+              <button 
+                onClick={() => setToast(null)} 
+                style={{
+                  width: '100%',
+                  padding: '10px 0',
+                  borderRadius: '8px',
+                  border: 'none',
+                  background: toast.type === 'success' ? 'linear-gradient(135deg, #00C853, #009624)' : 'linear-gradient(135deg, #FF5252, #D32F2F)',
+                  color: '#fff',
+                  fontSize: '0.9rem',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  transition: 'opacity 0.2s',
+                }}
+              >
+                Tutup
+              </button>
+            </div>
           </div>
         </Portal>
       )}

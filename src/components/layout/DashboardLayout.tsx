@@ -5,6 +5,7 @@ import Sidebar from './Sidebar';
 import Header from './Header';
 import { useRouter, usePathname } from 'next/navigation';
 import { CheckCircle2, AlertCircle } from 'lucide-react';
+import Portal from '../common/Portal';
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -12,7 +13,7 @@ interface DashboardLayoutProps {
 
 export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
-  const [userInfo, setUserInfo] = useState<{ name: string; email: string; role: string } | null>(null);
+  const [userInfo, setUserInfo] = useState<{ name?: string; nama_lengkap?: string; username?: string; email: string; role: string } | null>(null);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const router = useRouter();
   const pathname = usePathname();
@@ -104,6 +105,16 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
             transform: translateY(0);
           }
         }
+        @keyframes scaleUpModal {
+          from {
+            opacity: 0;
+            transform: scale(0.95);
+          }
+          to {
+            opacity: 1;
+            transform: scale(1);
+          }
+        }
         .dashboard-glow1 {
           position: absolute;
           width: 750px;
@@ -164,9 +175,13 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
         <div style={{ position: 'relative', zIndex: 10 }}>
           <Header 
-            userName={userInfo?.name || "Nalara User"}
+            userName={userInfo?.nama_lengkap || userInfo?.name || userInfo?.username || "Nalara User"}
             userRole={getRoleName(userInfo?.role)}
-            userInitial={userInfo?.name ? userInfo.name.charAt(0).toUpperCase() : "N"}
+            userInitial={
+              userInfo?.nama_lengkap ? userInfo.nama_lengkap.charAt(0).toUpperCase() :
+              userInfo?.name ? userInfo.name.charAt(0).toUpperCase() :
+              userInfo?.username ? userInfo.username.charAt(0).toUpperCase() : "N"
+            }
           />
         </div>
         
@@ -178,27 +193,75 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         </main>
       </div>
       {toast && (
-        <div style={{
-          position: 'fixed',
-          bottom: 24,
-          right: 24,
-          background: toast.type === 'success' ? '#00C853' : '#FF5252',
-          color: '#fff',
-          padding: '12px 18px',
-          borderRadius: '10px',
-          boxShadow: '0 8px 30px rgba(0,0,0,0.3)',
-          display: 'flex',
-          alignItems: 'center',
-          gap: 10,
-          zIndex: 99999,
-          fontSize: '0.88rem',
-          fontWeight: 600,
-          animation: 'fadeInUpDashboard 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards'
-        }}>
-          {toast.type === 'success' ? <CheckCircle2 size={16} /> : <AlertCircle size={16} />}
-          <span>{toast.message}</span>
-          <button onClick={() => setToast(null)} style={{ background: 'none', border: 'none', color: '#fff', cursor: 'pointer', fontSize: '1.1rem', marginLeft: 8, lineHeight: 1 }}>✕</button>
-        </div>
+        <Portal>
+          <div style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0, 0, 0, 0.4)',
+            backdropFilter: 'blur(4px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 99999,
+          }}>
+            <div style={{
+              background: '#1e1e2e',
+              border: '1px solid rgba(255, 255, 255, 0.08)',
+              borderRadius: '16px',
+              padding: '24px 32px',
+              width: '100%',
+              maxWidth: '380px',
+              textAlign: 'center',
+              boxShadow: '0 20px 50px rgba(0,0,0,0.5)',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: 16,
+              animation: 'scaleUpModal 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards'
+            }}>
+              <div style={{
+                width: '56px',
+                height: '56px',
+                borderRadius: '50%',
+                background: toast.type === 'success' ? 'rgba(0, 200, 83, 0.12)' : 'rgba(255, 82, 82, 0.12)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}>
+                {toast.type === 'success' ? (
+                  <CheckCircle2 size={28} color="#00C853" />
+                ) : (
+                  <AlertCircle size={28} color="#FF5252" />
+                )}
+              </div>
+              <div>
+                <h3 style={{ margin: '0 0 6px 0', color: '#fff', fontSize: '1.15rem', fontWeight: 700 }}>
+                  {toast.type === 'success' ? 'Berhasil' : 'Gagal'}
+                </h3>
+                <p style={{ margin: 0, color: '#94a3b8', fontSize: '0.88rem', lineHeight: 1.5 }}>
+                  {toast.message}
+                </p>
+              </div>
+              <button 
+                onClick={() => setToast(null)} 
+                style={{
+                  width: '100%',
+                  padding: '10px 0',
+                  borderRadius: '8px',
+                  border: 'none',
+                  background: toast.type === 'success' ? 'linear-gradient(135deg, #00C853, #009624)' : 'linear-gradient(135deg, #FF5252, #D32F2F)',
+                  color: '#fff',
+                  fontSize: '0.9rem',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  transition: 'opacity 0.2s',
+                }}
+              >
+                Tutup
+              </button>
+            </div>
+          </div>
+        </Portal>
       )}
     </div>
   );

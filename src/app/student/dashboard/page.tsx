@@ -70,8 +70,8 @@ export default function StudentDashboard() {
       if (localUser) {
         try {
           const userObj = JSON.parse(localUser);
-          if (userObj.name) {
-            setUserName(userObj.name);
+          if (userObj.nama_lengkap || userObj.name || userObj.username) {
+            setUserName(userObj.nama_lengkap || userObj.name || userObj.username);
           }
           if (userObj.id) {
             userId = userObj.id;
@@ -133,9 +133,33 @@ export default function StudentDashboard() {
       }
 
       if (response && response.data) {
-        setData(response.data);
+        const rawData = response.data;
+        const rawTasks = rawData.tugas_mendesak || rawData.upcoming_tasks || [];
+        const upcoming_tasks = rawTasks.map((t: any, idx: number) => ({
+          id: t.id_tugas || t.id || idx + 1,
+          task_name: t.nama_tugas || t.task_name || 'Tugas Baru',
+          course_name: t.pembelajaran_asal || t.course_name || 'Kelas',
+          module_name: t.modul_asal || t.module_name || 'Modul',
+          deadline: t.deadline || 'Segera'
+        }));
+        setData({
+          ...rawData,
+          upcoming_tasks
+        });
       } else if (response && typeof response === 'object') {
-        setData(response);
+        const rawData = response;
+        const rawTasks = rawData.tugas_mendesak || rawData.upcoming_tasks || [];
+        const upcoming_tasks = rawTasks.map((t: any, idx: number) => ({
+          id: t.id_tugas || t.id || idx + 1,
+          task_name: t.nama_tugas || t.task_name || 'Tugas Baru',
+          course_name: t.pembelajaran_asal || t.course_name || 'Kelas',
+          module_name: t.modul_asal || t.module_name || 'Modul',
+          deadline: t.deadline || 'Segera'
+        }));
+        setData({
+          ...rawData,
+          upcoming_tasks
+        });
       } else {
         throw new Error('Format response data tidak valid');
       }

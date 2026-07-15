@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { User, Mail, Shield, Edit2, Loader2, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { User, Mail, Shield, Edit2, Loader2, AlertCircle, CheckCircle2, Lock, Eye, EyeOff } from 'lucide-react';
 import { apiGet, apiPut } from '@/lib/api';
 import { getStoredToken } from '@/services/auth';
 
@@ -39,31 +39,83 @@ export default function StudentProfilePage() {
       const auth = getAuthHeaders();
       const res = await apiGet<any>('/api/profile', { token: auth.token, headers: auth.headers });
       const d = res.data || res;
+      const mappedName = d.nama_lengkap || d.full_name || '';
+      const mappedAvatar = d.foto_profile || d.avatar_url || null;
       setProfile({
         id: d.uuid_user || d.id || '',
-        full_name: d.full_name || '',
+        full_name: mappedName,
         username: d.username || '',
         email: d.email || '',
         role: d.role || 'User',
-        avatar_url: d.avatar_url,
+        avatar_url: mappedAvatar,
         created_at: d.created_at || d.tanggal_bergabung,
       });
-      setForm({ full_name: d.full_name || '', username: d.username || '' });
+      setForm({ full_name: mappedName, username: d.username || '' });
     } catch (e: any) { setError(e.message || 'Gagal memuat profil.'); }
     finally { setLoading(false); }
   };
+
+  const [showPasswordForm, setShowPasswordForm] = useState(false);
+  const [passwordForm, setPasswordForm] = useState({ old_password: '', new_password: '', confirm_password: '' });
+  const [showPassword, setShowPassword] = useState(false);
+  const [changingPassword, setChangingPassword] = useState(false);
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
     try {
       const auth = getAuthHeaders();
-      await apiPut('/api/profile', { full_name: form.full_name, username: form.username }, { token: auth.token, headers: auth.headers });
+      await apiPut('/api/profile', { 
+        full_name: form.full_name, 
+        nama_lengkap: form.full_name,
+        username: form.username 
+      }, { token: auth.token, headers: auth.headers });
       setSaved(true); setEditing(false);
       fetchProfile();
       setTimeout(() => setSaved(false), 3000);
     } catch (e: any) { setError(e.message || 'Gagal menyimpan profil.'); }
     finally { setSaving(false); }
+  };
+
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    setSaved(false);
+
+    if (!passwordForm.old_password) {
+      setError('Password lama wajib diisi.');
+      return;
+    }
+    if (passwordForm.new_password !== passwordForm.confirm_password) {
+      setError('Password baru dan konfirmasi tidak cocok.');
+      return;
+    }
+    if (passwordForm.new_password.length < 8) {
+      setError('Password baru minimal 8 karakter.');
+      return;
+    }
+
+    setChangingPassword(true);
+    try {
+      const auth = getAuthHeaders();
+      await apiPut('/api/profile/password', {
+        password_lama: passwordForm.old_password,
+        password_baru: passwordForm.new_password,
+        konfirmasi_password_baru: passwordForm.confirm_password,
+      }, {
+        token: auth.token,
+        headers: auth.headers
+      });
+
+      setSaved(true);
+      setShowPasswordForm(false);
+      setPasswordForm({ old_password: '', new_password: '', confirm_password: '' });
+      setTimeout(() => setSaved(false), 3000);
+    } catch (err: any) {
+      setError(err.message || 'Gagal mengubah password.');
+    } finally {
+      setChangingPassword(false);
+    }
   };
 
   useEffect(() => { fetchProfile(); }, []);
@@ -85,59 +137,140 @@ export default function StudentProfilePage() {
       {loading ? (
         <div style={s.centered}><Loader2 size={32} style={{ animation: 'spin 1s linear infinite' }} /><p>Memuat profil...</p></div>
       ) : profile && (
-        <div style={s.card} className="glass-panel">
-          {/* Avatar & basic info */}
-          <div style={s.avatarRow}>
-            {profile.avatar_url ? (
-              <img src={profile.avatar_url} alt="Avatar" style={s.avatar} />
-            ) : (
-              <div style={s.avatarFallback}>{initials}</div>
-            )}
-            <div>
-              <h2 style={s.name}>{profile.full_name}</h2>
-              <span style={s.roleBadge}>{profile.role}</span>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 24, maxWidth: 580 }}>
+          <div style={s.card} className="glass-panel">
+            {/* Avatar & basic info */}
+            <div style={s.avatarRow}>
+              {profile.avatar_url ? (
+                <img src={profile.avatar_url} alt="Avatar" style={s.avatar} />
+              ) : (
+                <div style={s.avatarFallback}>{initials}</div>
+              )}
+              <div>
+                <h2 style={s.name}>{profile.full_name}</h2>
+                <span style={s.roleBadge}>{profile.role}</span>
+              </div>
             </div>
-          </div>
 
-          {/* Info rows */}
-          <div style={s.infoGrid}>
-            {[
-              { icon: <User size={15} color="var(--azure)" />, label: 'Username', value: `@${profile.username}` },
-              { icon: <Mail size={15} color="var(--azure)" />, label: 'Email', value: profile.email },
-              { icon: <Shield size={15} color="var(--azure)" />, label: 'Role', value: profile.role },
-              profile.created_at && { icon: null, label: 'Bergabung', value: new Date(profile.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }) },
-            ].filter(Boolean).map((item: any) => (
-              <div key={item.label} style={s.infoRow}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 120 }}>
-                  {item.icon}
-                  <span style={s.infoLabel}>{item.label}</span>
+            {/* Info rows */}
+            <div style={s.infoGrid}>
+              {[
+                { icon: <User size={15} color="var(--azure)" />, label: 'Username', value: `@${profile.username}` },
+                { icon: <Mail size={15} color="var(--azure)" />, label: 'Email', value: profile.email },
+                { icon: <Shield size={15} color="var(--azure)" />, label: 'Role', value: profile.role },
+                profile.created_at && { icon: null, label: 'Bergabung', value: new Date(profile.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }) },
+              ].filter(Boolean).map((item: any) => (
+                <div key={item.label} style={s.infoRow}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 120 }}>
+                    {item.icon}
+                    <span style={s.infoLabel}>{item.label}</span>
+                  </div>
+                  <span style={s.infoValue}>{item.value}</span>
                 </div>
-                <span style={s.infoValue}>{item.value}</span>
-              </div>
-            ))}
+              ))}
+            </div>
+
+            {/* Edit */}
+            {!editing ? (
+              <button onClick={() => setEditing(true)} style={s.btnEdit}>
+                <Edit2 size={14} /><span>Edit Profil</span>
+              </button>
+            ) : (
+              <form onSubmit={handleSave} style={s.form}>
+                <div style={s.fg}>
+                  <label style={s.label}>Nama Lengkap</label>
+                  <input value={form.full_name} onChange={e => setForm({ ...form, full_name: e.target.value })} style={s.input} required />
+                </div>
+                <div style={s.fg}>
+                  <label style={s.label}>Username</label>
+                  <input value={form.username} onChange={e => setForm({ ...form, username: e.target.value })} style={s.input} required />
+                </div>
+                <div style={{ display: 'flex', gap: 10 }}>
+                  <button type="button" onClick={() => setEditing(false)} style={s.btnGhost}>Batal</button>
+                  <button type="submit" disabled={saving} style={s.btnPrimary}>{saving ? 'Menyimpan...' : 'Simpan'}</button>
+                </div>
+              </form>
+            )}
           </div>
 
-          {/* Edit */}
-          {!editing ? (
-            <button onClick={() => setEditing(true)} style={s.btnEdit}>
-              <Edit2 size={14} /><span>Edit Profil</span>
-            </button>
-          ) : (
-            <form onSubmit={handleSave} style={s.form}>
-              <div style={s.fg}>
-                <label style={s.label}>Nama Lengkap</label>
-                <input value={form.full_name} onChange={e => setForm({ ...form, full_name: e.target.value })} style={s.input} required />
-              </div>
-              <div style={s.fg}>
-                <label style={s.label}>Username</label>
-                <input value={form.username} onChange={e => setForm({ ...form, username: e.target.value })} style={s.input} required />
-              </div>
-              <div style={{ display: 'flex', gap: 10 }}>
-                <button type="button" onClick={() => setEditing(false)} style={s.btnGhost}>Batal</button>
-                <button type="submit" disabled={saving} style={s.btnPrimary}>{saving ? 'Menyimpan...' : 'Simpan'}</button>
-              </div>
-            </form>
-          )}
+          <div style={s.card} className="glass-panel">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: showPasswordForm ? 16 : 0 }}>
+              <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 600, color: '#fff' }}>Keamanan</h3>
+              {!showPasswordForm && (
+                <button onClick={() => setShowPasswordForm(true)} style={s.btnEdit}>
+                  <Lock size={12} /><span>Ganti Password</span>
+                </button>
+              )}
+            </div>
+
+            {showPasswordForm ? (
+              <form onSubmit={handleChangePassword} style={s.form}>
+                <div style={s.fg}>
+                  <label style={s.label}>Password Lama</label>
+                  <input
+                    type="password"
+                    required
+                    value={passwordForm.old_password}
+                    onChange={(e) => setPasswordForm({ ...passwordForm, old_password: e.target.value })}
+                    placeholder="Masukkan password lama..."
+                    style={s.input}
+                  />
+                </div>
+                <div style={s.fg}>
+                  <label style={s.label}>Password Baru</label>
+                  <div style={{ position: 'relative' }}>
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      required
+                      minLength={8}
+                      value={passwordForm.new_password}
+                      onChange={(e) => setPasswordForm({ ...passwordForm, new_password: e.target.value })}
+                      placeholder="Min. 8 karakter (kapital, angka, simbol)"
+                      style={{ ...s.input, width: '100%', paddingRight: '40px' }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      style={{
+                        position: 'absolute',
+                        right: '10px',
+                        top: '50%',
+                        transform: 'translateY(-50%)',
+                        background: 'none',
+                        border: 'none',
+                        cursor: 'pointer',
+                        color: 'var(--grey-blue)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      {showPassword ? <EyeOff size={14} /> : <Eye size={14} />}
+                    </button>
+                  </div>
+                </div>
+                <div style={s.fg}>
+                  <label style={s.label}>Konfirmasi Password Baru</label>
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    required
+                    value={passwordForm.confirm_password}
+                    onChange={(e) => setPasswordForm({ ...passwordForm, confirm_password: e.target.value })}
+                    placeholder="Ulangi password baru..."
+                    style={s.input}
+                  />
+                </div>
+                <div style={{ display: 'flex', gap: 10, marginTop: 6 }}>
+                  <button type="button" onClick={() => { setShowPasswordForm(false); setPasswordForm({ old_password: '', new_password: '', confirm_password: '' }); }} style={s.btnGhost}>Batal</button>
+                  <button type="submit" disabled={changingPassword} style={s.btnPrimary}>{changingPassword ? 'Memproses...' : 'Perbarui Password'}</button>
+                </div>
+              </form>
+            ) : (
+              <p style={{ margin: 0, fontSize: '0.82rem', color: 'var(--grey-blue)' }}>
+                Untuk menjaga keamanan akun Anda, pastikan password Anda kuat dengan kombinasi huruf besar, kecil, angka, dan simbol.
+              </p>
+            )}
+          </div>
         </div>
       )}
       <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>

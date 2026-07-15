@@ -9,6 +9,8 @@ import {
 import { useRouter, useSearchParams } from 'next/navigation';
 import { apiGet, apiUploadPost, apiDelete, apiPut } from '@/lib/api';
 import { getStoredToken } from '@/services/auth';
+import Portal from '@/components/common/Portal';
+import { CheckCircle2 } from 'lucide-react';
 
 interface MateriFile {
   nama_file?: string;
@@ -330,6 +332,12 @@ export default function MateriDetailClient() {
   const [savingYoutube, setSavingYoutube] = useState(false);
   const [editYoutubeMode, setEditYoutubeMode] = useState(false);
 
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+  const showToast = (message: string, type: 'success' | 'error' = 'success') => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 4000);
+  };
+
   // Helper to parse any YouTube URL into embed format
   const getYoutubeEmbedUrl = (url?: string | null): string | null => {
     if (!url) return null;
@@ -352,8 +360,10 @@ export default function MateriDetailClient() {
       }, { token: auth.token, headers: auth.headers });
       setEditYoutubeMode(false);
       await fetchMateri();
+      showToast('Link YouTube berhasil disimpan!');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Gagal menyimpan link YouTube.');
+      showToast(err instanceof Error ? err.message : 'Gagal menyimpan link YouTube.', 'error');
     } finally {
       setSavingYoutube(false);
     }
@@ -399,8 +409,10 @@ export default function MateriDetailClient() {
       await apiDelete(`/api/materi/${tugasId}/file`, { token: auth.token, headers: auth.headers });
       await fetchMateri();
       setShowUpload(false);
+      showToast('File materi berhasil dihapus!');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Gagal menghapus file');
+      showToast(err instanceof Error ? err.message : 'Gagal menghapus file', 'error');
     } finally {
       setDeletingFile(false);
     }
@@ -633,6 +645,7 @@ export default function MateriDetailClient() {
                 onSuccess={async () => {
                   setShowUpload(false);
                   await fetchMateri();
+                  showToast('File materi berhasil diupload!');
                 }}
               />
             )}
@@ -648,8 +661,77 @@ export default function MateriDetailClient() {
               </div>
             )}
           </div>
-
         </div>
+      )}
+      {toast && (
+        <Portal>
+          <div style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0, 0, 0, 0.4)',
+            backdropFilter: 'blur(4px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 99999,
+          }}>
+            <div style={{
+              background: '#1e1e2e',
+              border: '1px solid rgba(255, 255, 255, 0.08)',
+              borderRadius: '16px',
+              padding: '24px 32px',
+              width: '100%',
+              maxWidth: '380px',
+              textAlign: 'center',
+              boxShadow: '0 20px 50px rgba(0,0,0,0.5)',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: 16,
+            }}>
+              <div style={{
+                width: '56px',
+                height: '56px',
+                borderRadius: '50%',
+                background: toast.type === 'success' ? 'rgba(0, 200, 83, 0.12)' : 'rgba(255, 82, 82, 0.12)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}>
+                {toast.type === 'success' ? (
+                  <CheckCircle2 size={28} color="#00C853" />
+                ) : (
+                  <AlertCircle size={28} color="#FF5252" />
+                )}
+              </div>
+              <div>
+                <h3 style={{ margin: '0 0 6px 0', color: '#fff', fontSize: '1.15rem', fontWeight: 700 }}>
+                  {toast.type === 'success' ? 'Berhasil' : 'Gagal'}
+                </h3>
+                <p style={{ margin: 0, color: '#94a3b8', fontSize: '0.88rem', lineHeight: 1.5 }}>
+                  {toast.message}
+                </p>
+              </div>
+              <button 
+                onClick={() => setToast(null)} 
+                style={{
+                  width: '100%',
+                  padding: '10px 0',
+                  borderRadius: '8px',
+                  border: 'none',
+                  background: toast.type === 'success' ? 'linear-gradient(135deg, #00C853, #009624)' : 'linear-gradient(135deg, #FF5252, #D32F2F)',
+                  color: '#fff',
+                  fontSize: '0.9rem',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  transition: 'opacity 0.2s',
+                }}
+              >
+                Tutup
+              </button>
+            </div>
+          </div>
+        </Portal>
       )}
     </div>
   );

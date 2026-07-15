@@ -291,7 +291,7 @@ export default function Sidebar({
             </div>
             <ul style={s.menuList}>
               {group.items.map((item: any, itemIndex: number) => {
-                const isActive = pathname === item.href;
+                const isActive = pathname === item.href || (item.href !== '/' && pathname.startsWith(item.href + '/'));
                 const Icon = item.icon;
                 return (
                   <li key={itemIndex} style={{ listStyle: 'none' }}>
