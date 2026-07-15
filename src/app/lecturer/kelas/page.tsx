@@ -9,6 +9,7 @@ import {
 import { useRouter } from 'next/navigation';
 import { apiGet, apiPost } from '@/lib/api';
 import { getStoredToken } from '@/services/auth';
+import Portal from '@/components/common/Portal';
 
 interface Course {
   id: string;
@@ -66,6 +67,12 @@ export default function CoursesPage() {
   const [courseSchedules, setCourseSchedules] = useState<Record<string, { scheduledAt: string; studentIds: string[] }>>({});
   const [scheduleMode, setScheduleMode] = useState<'now' | 'schedule'>('now');
   const [scheduleDatetime, setScheduleDatetime] = useState('');
+
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+  const showToast = (message: string, type: 'success' | 'error' = 'success') => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 4000);
+  };
 
   const getAuthHeaders = () => {
     const token = getStoredToken();
@@ -262,8 +269,10 @@ export default function CoursesPage() {
       setShowCreateModal(false);
       setForm({ title: '', description: '' });
       fetchCourses();
+      showToast('Kelas berhasil dibuat!');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Gagal membuat pembelajaran.');
+      showToast(err instanceof Error ? err.message : 'Gagal membuat pembelajaran.', 'error');
     }
   };
 
@@ -298,8 +307,10 @@ export default function CoursesPage() {
       setCurrentCourse(null);
       setForm({ title: '', description: '' });
       fetchCourses();
+      showToast('Kelas berhasil diperbarui!');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Gagal memperbarui pembelajaran.');
+      showToast(err instanceof Error ? err.message : 'Gagal memperbarui pembelajaran.', 'error');
     }
   };
 
@@ -322,8 +333,10 @@ export default function CoursesPage() {
 
       if (!res.ok) throw new Error('Gagal menghapus pembelajaran.');
       fetchCourses();
+      showToast('Kelas berhasil dihapus!');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Gagal menghapus pembelajaran.');
+      showToast(err instanceof Error ? err.message : 'Gagal menghapus pembelajaran.', 'error');
     }
   };
 
@@ -361,10 +374,6 @@ export default function CoursesPage() {
 
   const submitPublish = async () => {
     if (!publishCourseId) return;
-    if (selectedStudents.length === 0) {
-      alert("Harap pilih minimal satu mahasiswa untuk diberikan akses kelas.");
-      return;
-    }
 
     if (scheduleMode === 'schedule') {
       if (!scheduleDatetime) {
@@ -375,7 +384,7 @@ export default function CoursesPage() {
       const updated = { ...courseSchedules };
       updated[publishCourseId] = {
         scheduledAt: new Date(scheduleDatetime).toISOString(),
-        studentIds: selectedStudents,
+        studentIds: [],
       };
       setCourseSchedules(updated);
       localStorage.setItem('nalara_course_schedules', JSON.stringify(updated));
@@ -390,7 +399,7 @@ export default function CoursesPage() {
       const auth = getAuthHeaders();
       await apiPost('/api/enroll', {
         course_id: publishCourseId,
-        student_ids: selectedStudents
+        student_ids: []
       }, {
         token: auth.token,
         headers: auth.headers
@@ -404,8 +413,10 @@ export default function CoursesPage() {
       setCourseSchedules(updated);
       localStorage.setItem('nalara_course_schedules', JSON.stringify(updated));
       setPublishCourseId(null);
+      showToast('Kelas berhasil dipublish!');
     } catch (err) {
       alert(err instanceof Error ? err.message : 'Gagal memberikan akses kelas.');
+      showToast(err instanceof Error ? err.message : 'Gagal memberikan akses kelas.', 'error');
     } finally {
       setPublishing(false);
     }
@@ -481,10 +492,6 @@ export default function CoursesPage() {
           <p style={s.subtitle}>Create and manage courses, and generate smart lesson materials via AI</p>
         </div>
         <div style={s.headerActions}>
-          <button onClick={() => setShowAiModal(true)} style={s.aiBtn}>
-            <Sparkles size={16} color="var(--lemon)" />
-            <span>AI Lesson Creator</span>
-          </button>
           <button onClick={openCreateModal} style={s.createBtn}>
             <Plus size={16} />
             <span>New Course</span>
@@ -518,7 +525,7 @@ export default function CoursesPage() {
               key={course.id} 
               className="glass-panel" 
               style={{ ...s.card as React.CSSProperties, cursor: 'pointer' }}
-              onClick={() => router.push(`/lecturer/courses/detail?id=${course.id}`)}
+              onClick={() => router.push(`/lecturer/kelas/detail?id=${course.id}`)}
             >
               <div style={s.cardHeader}>
                 <div style={s.bookIconBox}>
@@ -604,48 +611,18 @@ export default function CoursesPage() {
 
       {/* Publish & Assign Modal */}
       {publishCourseId && (
-        <div style={s.modalOverlay}>
-          <div style={{ ...s.modalContent, maxWidth: 540 }} className="glass-panel">
-            <div style={s.modalHeader}>
-              <h3>Publish & Assign Course</h3>
-              <button onClick={() => setPublishCourseId(null)} style={s.closeBtn}>
-                <X size={18} />
-              </button>
-            </div>
-            {loadingStudents ? (
-              <div style={{ padding: '40px', display: 'flex', justifyContent: 'center' }}>
-                <Loader2 size={24} color="var(--azure)" style={{ animation: 'spin 1s linear infinite' }} />
+        <Portal>
+          <div style={s.modalOverlay}>
+            <div style={{ ...s.modalContent, maxWidth: 440 }} className="glass-panel">
+              <div style={s.modalHeader}>
+                <h3>Publish Course</h3>
+                <button onClick={() => setPublishCourseId(null)} style={s.closeBtn}>
+                  <X size={18} />
+                </button>
               </div>
-            ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-                <div style={s.searchBar}>
-                  <Search size={14} color="var(--grey)" />
-                  <input
-                    type="text"
-                    placeholder="Search students..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    style={s.searchBarInput}
-                  />
-                </div>
-                <div style={s.studentsList}>
-                  {filteredStudents.map(student => (
-                    <label key={student.id} style={s.studentItem}>
-                      <input
-                        type="checkbox"
-                        checked={selectedStudents.includes(student.id)}
-                        onChange={() => handleToggleStudent(student.id)}
-                        style={s.checkbox}
-                      />
-                      <div>
-                        <strong style={{ fontSize: '0.85rem', color: '#fff' }}>{student.full_name}</strong>
-                        <span style={{ fontSize: '0.75rem', color: 'var(--grey-blue)', display: 'block' }}>{student.email}</span>
-                      </div>
-                    </label>
-                  ))}
-                </div>
                 {/* Schedule Options */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: '10px 0', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: '10px 0' }}>
                   <label style={s.label}>Waktu Publikasi Kelas</label>
                   <div style={{ display: 'flex', gap: 16 }}>
                     <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: '0.85rem' }}>
@@ -684,281 +661,217 @@ export default function CoursesPage() {
                 <div style={s.modalFooter}>
                   <button onClick={() => setPublishCourseId(null)} style={s.cancelBtn}>Cancel</button>
                   <button onClick={submitPublish} disabled={publishing} style={s.submitBtn}>
-                    {publishing ? 'Processing...' : scheduleMode === 'schedule' ? 'Jadwalkan' : 'Publish & Enroll'}
+                    {publishing ? 'Processing...' : scheduleMode === 'schedule' ? 'Jadwalkan' : 'Publish Kelas'}
                   </button>
                 </div>
               </div>
-            )}
+            </div>
           </div>
-        </div>
+        </Portal>
       )}
 
       {/* Create Modal */}
       {showCreateModal && (
-        <div style={s.modalOverlay}>
-          <div style={s.modalContent} className="glass-panel">
-            <div style={s.modalHeader}>
-              <h3>Create New Course</h3>
-              <button onClick={() => setShowCreateModal(false)} style={s.closeBtn}>
-                <X size={18} />
-              </button>
+        <Portal>
+          <div style={s.modalOverlay}>
+            <div style={s.modalContent} className="glass-panel">
+              <div style={s.modalHeader}>
+                <h3>Create New Course</h3>
+                <button onClick={() => setShowCreateModal(false)} style={s.closeBtn}>
+                  <X size={18} />
+                </button>
+              </div>
+              <form onSubmit={handleCreate} style={s.form}>
+                <div style={s.formGroup}>
+                  <label style={s.label}>Course Title</label>
+                  <input
+                    type="text"
+                    required
+                    value={form.title}
+                    onChange={(e) => setForm({ ...form, title: e.target.value })}
+                    placeholder="e.g., Akuntansi Pengantar I"
+                    style={s.input}
+                  />
+                </div>
+                <div style={s.formGroup}>
+                  <label style={s.label}>Description</label>
+                  <textarea
+                    value={form.description}
+                    onChange={(e) => setForm({ ...form, description: e.target.value })}
+                    placeholder="Describe the course outcomes and topics..."
+                    style={{ ...s.input, minHeight: 100, resize: 'vertical' }}
+                  />
+                </div>
+                <div style={s.modalFooter}>
+                  <button type="button" onClick={() => setShowCreateModal(false)} style={s.cancelBtn}>Cancel</button>
+                  <button type="submit" style={s.submitBtn}>Create Course</button>
+                </div>
+              </form>
             </div>
-            <form onSubmit={handleCreate} style={s.form}>
-              <div style={s.formGroup}>
-                <label style={s.label}>Course Title</label>
-                <input
-                  type="text"
-                  required
-                  value={form.title}
-                  onChange={(e) => setForm({ ...form, title: e.target.value })}
-                  placeholder="e.g., Akuntansi Pengantar I"
-                  style={s.input}
-                />
-              </div>
-              <div style={s.formGroup}>
-                <label style={s.label}>Description</label>
-                <textarea
-                  value={form.description}
-                  onChange={(e) => setForm({ ...form, description: e.target.value })}
-                  placeholder="Describe the course outcomes and topics..."
-                  style={{ ...s.input, minHeight: 100, resize: 'vertical' }}
-                />
-              </div>
-              <div style={s.modalFooter}>
-                <button type="button" onClick={() => setShowCreateModal(false)} style={s.cancelBtn}>Cancel</button>
-                <button type="submit" style={s.submitBtn}>Create Course</button>
-              </div>
-            </form>
           </div>
-        </div>
+        </Portal>
       )}
 
       {/* Edit Modal */}
       {showEditModal && (
-        <div style={s.modalOverlay}>
-          <div style={s.modalContent} className="glass-panel">
-            <div style={s.modalHeader}>
-              <h3>Edit Course</h3>
-              <button onClick={() => setShowEditModal(false)} style={s.closeBtn}>
-                <X size={18} />
-              </button>
-            </div>
-            <form onSubmit={handleEdit} style={s.form}>
-              <div style={s.formGroup}>
-                <label style={s.label}>Course Title</label>
-                <input
-                  type="text"
-                  required
-                  value={form.title}
-                  onChange={(e) => setForm({ ...form, title: e.target.value })}
-                  style={s.input}
-                />
+        <Portal>
+          <div style={s.modalOverlay}>
+            <div style={s.modalContent} className="glass-panel">
+              <div style={s.modalHeader}>
+                <h3>Edit Course</h3>
+                <button onClick={() => setShowEditModal(false)} style={s.closeBtn}>
+                  <X size={18} />
+                </button>
               </div>
-              <div style={s.formGroup}>
-                <label style={s.label}>Description</label>
-                <textarea
-                  value={form.description}
-                  onChange={(e) => setForm({ ...form, description: e.target.value })}
-                  style={{ ...s.input, minHeight: 100, resize: 'vertical' }}
-                />
-              </div>
-              <div style={s.modalFooter}>
-                <button type="button" onClick={() => {
-                  setShowEditModal(false);
-                  setCurrentCourse(null);
-                }} style={s.cancelBtn}>Cancel</button>
-                <button type="submit" style={s.submitBtn}>Save Changes</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* AI Lesson Creator Modal */}
-      {showAiModal && (
-        <div style={s.modalOverlay}>
-          <div style={{ ...s.modalContent, maxWidth: 900 }} className="glass-panel">
-            <div style={s.modalHeader}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <Sparkles size={18} color="var(--lemon)" />
-                <h3>AI Reading Lesson Generator</h3>
-              </div>
-              <button onClick={() => setShowAiModal(false)} style={s.closeBtn}>
-                <X size={18} />
-              </button>
-            </div>
-            <div style={s.modalBody}>
-              <div style={s.aiGrid}>
-                <div style={s.aiInputs}>
-                  <div style={s.formGroup}>
-                    <label style={s.label}>Lesson Title</label>
-                    <input
-                      type="text"
-                      value={aiTitle}
-                      onChange={(e) => setAiTitle(e.target.value)}
-                      placeholder="e.g., Konsep Aset & Liabilitas"
-                      style={s.input}
-                    />
-                  </div>
-                  <div style={s.formGroup}>
-                    <label style={s.label}>Language</label>
-                    <div style={{ display: 'flex', gap: 8 }}>
-                      <button
-                        type="button"
-                        onClick={() => setAiLang('id')}
-                        style={{ ...s.langBtn, ...(aiLang === 'id' ? s.langBtnActive : {}) }}
-                      >
-                        Indonesian
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setAiLang('en')}
-                        style={{ ...s.langBtn, ...(aiLang === 'en' ? s.langBtnActive : {}) }}
-                      >
-                        English
-                      </button>
-                    </div>
-                  </div>
-                  <div style={s.formGroup}>
-                    <label style={s.label}>AI Writing Prompt / Topic Guidance</label>
-                    <textarea
-                      value={aiPrompt}
-                      onChange={(e) => setAiPrompt(e.target.value)}
-                      placeholder="e.g., Jelaskan pengertian aset lancar dan aset tetap dengan contoh riil..."
-                      style={{ ...s.input, minHeight: 140, resize: 'vertical' }}
-                    />
-                  </div>
-                  <button
-                    onClick={handleGenerateAiReading}
-                    disabled={aiGenerating || !aiPrompt || !aiTitle}
-                    style={{
-                      ...s.generateBtn,
-                      opacity: (aiGenerating || !aiPrompt || !aiTitle) ? 0.6 : 1
-                    }}
-                  >
-                    {aiGenerating ? (
-                      <>
-                        <Loader2 size={16} style={{ animation: 'spin 1s linear infinite' }} />
-                        <span>Generating...</span>
-                      </>
-                    ) : (
-                      <>
-                        <Sparkles size={16} />
-                        <span>Generate Lesson Content</span>
-                      </>
-                    )}
-                  </button>
+              <form onSubmit={handleEdit} style={s.form}>
+                <div style={s.formGroup}>
+                  <label style={s.label}>Course Title</label>
+                  <input
+                    type="text"
+                    required
+                    value={form.title}
+                    onChange={(e) => setForm({ ...form, title: e.target.value })}
+                    style={s.input}
+                  />
                 </div>
-
-                <div style={s.aiPreview}>
-                  <h4 style={s.previewLabel}>Generated HTML Output</h4>
-                  <div style={s.previewArea}>
-                    {generatedHtml ? (
-                      <div 
-                        style={s.htmlContent}
-                        dangerouslySetInnerHTML={{ __html: generatedHtml }}
-                      />
-                    ) : (
-                      <div style={s.previewPlaceholder}>
-                        {aiGenerating ? 'AI is drafting your lesson content...' : 'Generated lesson preview will appear here.'}
-                      </div>
-                    )}
-                  </div>
+                <div style={s.formGroup}>
+                  <label style={s.label}>Description</label>
+                  <textarea
+                    value={form.description}
+                    onChange={(e) => setForm({ ...form, description: e.target.value })}
+                    style={{ ...s.input, minHeight: 100, resize: 'vertical' }}
+                  />
                 </div>
-              </div>
+                <div style={s.modalFooter}>
+                  <button type="button" onClick={() => {
+                    setShowEditModal(false);
+                    setCurrentCourse(null);
+                  }} style={s.cancelBtn}>Cancel</button>
+                  <button type="submit" style={s.submitBtn}>Save Changes</button>
+                </div>
+              </form>
             </div>
           </div>
-        </div>
+        </Portal>
       )}
+
+
 
       {/* Detail Kelas Modal */}
       {detailCourse && (
-        <div style={s.modalOverlay}>
-          <div style={{ ...s.modalContent, maxWidth: 640 }} className="glass-panel">
-            <div style={s.modalHeader}>
-              <h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#fff', margin: 0 }}>{detailCourse.title}</h3>
-              <button onClick={() => setDetailCourse(null)} style={s.closeBtn}>
-                <X size={18} />
-              </button>
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-              <div>
-                <h4 style={{ fontSize: '0.9rem', color: 'var(--grey-blue)', fontWeight: 600, marginBottom: 6 }}>Deskripsi Kelas</h4>
-                <p style={{ fontSize: '0.88rem', color: '#e2e8f0', lineHeight: 1.5, margin: 0 }}>
-                  {detailCourse.description || 'Tidak ada deskripsi.'}
-                </p>
+        <Portal>
+          <div style={s.modalOverlay}>
+            <div style={{ ...s.modalContent, maxWidth: 640 }} className="glass-panel">
+              <div style={s.modalHeader}>
+                <h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#fff', margin: 0 }}>{detailCourse.title}</h3>
+                <button onClick={() => setDetailCourse(null)} style={s.closeBtn}>
+                  <X size={18} />
+                </button>
               </div>
-
-              <div>
-                <h4 style={{ fontSize: '0.9rem', color: 'var(--grey-blue)', fontWeight: 600, marginBottom: 12 }}>Modul & Materi</h4>
-                {loadingDetail ? (
-                  <div style={{ display: 'flex', justifyContent: 'center', padding: '24px 0' }}>
-                    <Loader2 size={24} color="var(--azure)" style={{ animation: 'spin 1s linear infinite' }} />
-                  </div>
-                ) : detailModuls.length === 0 ? (
-                  <p style={{ fontSize: '0.85rem', color: 'var(--grey)', fontStyle: 'italic', margin: 0 }}>
-                    Belum ada modul di kelas ini.
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+                <div>
+                  <h4 style={{ fontSize: '0.9rem', color: 'var(--grey-blue)', fontWeight: 600, marginBottom: 6 }}>Deskripsi Kelas</h4>
+                  <p style={{ fontSize: '0.88rem', color: '#e2e8f0', lineHeight: 1.5, margin: 0 }}>
+                    {detailCourse.description || 'Tidak ada deskripsi.'}
                   </p>
-                ) : (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-                    {detailModuls.map((m) => (
-                      <div key={m.id} style={{
-                        padding: 14,
-                        background: 'rgba(255, 255, 255, 0.02)',
-                        border: '1px solid rgba(255, 255, 255, 0.06)',
-                        borderRadius: 8
-                      }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-                          <h5 style={{ fontSize: '0.95rem', fontWeight: 600, color: '#fff', margin: 0 }}>{m.title}</h5>
-                          {m.difficulty && (
-                            <span style={{
-                              fontSize: '0.72rem',
-                              padding: '2px 8px',
-                              borderRadius: 4,
-                              background: m.difficulty === 'Beginner' ? 'rgba(0, 200, 83, 0.1)' : m.difficulty === 'Intermediate' ? 'rgba(255, 178, 64, 0.1)' : 'rgba(239, 68, 68, 0.1)',
-                              color: m.difficulty === 'Beginner' ? '#00C853' : m.difficulty === 'Intermediate' ? 'var(--lemon)' : '#ff4d4d',
-                              border: `1px solid ${m.difficulty === 'Beginner' ? 'rgba(0, 200, 83, 0.2)' : m.difficulty === 'Intermediate' ? 'rgba(255, 178, 64, 0.2)' : 'rgba(239, 68, 68, 0.2)'}`
-                            }}>{m.difficulty}</span>
+                </div>
+
+                <div>
+                  <h4 style={{ fontSize: '0.9rem', color: 'var(--grey-blue)', fontWeight: 600, marginBottom: 12 }}>Modul & Materi</h4>
+                  {loadingDetail ? (
+                    <div style={{ display: 'flex', justifyContent: 'center', padding: '24px 0' }}>
+                      <Loader2 size={24} color="var(--azure)" style={{ animation: 'spin 1s linear infinite' }} />
+                    </div>
+                  ) : detailModuls.length === 0 ? (
+                    <p style={{ fontSize: '0.85rem', color: 'var(--grey)', fontStyle: 'italic', margin: 0 }}>
+                      Belum ada modul di kelas ini.
+                    </p>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                      {detailModuls.map((m) => (
+                        <div key={m.id} style={{
+                          padding: 14,
+                          background: 'rgba(255, 255, 255, 0.02)',
+                          border: '1px solid rgba(255, 255, 255, 0.06)',
+                          borderRadius: 8
+                        }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                            <h5 style={{ fontSize: '0.95rem', fontWeight: 600, color: '#fff', margin: 0 }}>{m.title}</h5>
+                            {m.difficulty && (
+                              <span style={{
+                                fontSize: '0.72rem',
+                                padding: '2px 8px',
+                                borderRadius: 4,
+                                background: m.difficulty === 'Beginner' ? 'rgba(0, 200, 83, 0.1)' : m.difficulty === 'Intermediate' ? 'rgba(255, 178, 64, 0.1)' : 'rgba(239, 68, 68, 0.1)',
+                                color: m.difficulty === 'Beginner' ? '#00C853' : m.difficulty === 'Intermediate' ? 'var(--lemon)' : '#ff4d4d',
+                                border: `1px solid ${m.difficulty === 'Beginner' ? 'rgba(0, 200, 83, 0.2)' : m.difficulty === 'Intermediate' ? 'rgba(255, 178, 64, 0.2)' : 'rgba(239, 68, 68, 0.2)'}`
+                              }}>{m.difficulty}</span>
+                            )}
+                          </div>
+                          {m.description && (
+                            <p style={{ fontSize: '0.82rem', color: 'var(--grey-blue)', margin: '0 0 10px 0', lineHeight: 1.4 }}>{m.description}</p>
                           )}
+                          
+                          {/* Section / Tugas List per modul */}
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 8, paddingLeft: 10, borderLeft: '2px solid rgba(255, 255, 255, 0.1)' }}>
+                            <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--grey)' }}>Materi / Tugas:</span>
+                            {!detailTugasMap[m.id] || detailTugasMap[m.id].length === 0 ? (
+                              <span style={{ fontSize: '0.78rem', color: 'var(--grey)', fontStyle: 'italic' }}>Belum ada materi</span>
+                            ) : (
+                              detailTugasMap[m.id].map(t => (
+                                <div key={t.id} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                  <div style={{ width: 4, height: 4, borderRadius: '50%', background: 'var(--azure)' }} />
+                                  <span style={{ fontSize: '0.8rem', color: '#cbd5e1' }}>{t.title}</span>
+                                  {t.type && (
+                                    <span style={{
+                                      fontSize: '0.65rem',
+                                      color: 'var(--grey-blue)',
+                                      background: 'rgba(255, 255, 255, 0.05)',
+                                      padding: '1px 5px',
+                                      borderRadius: 3
+                                    }}>{t.type}</span>
+                                  )}
+                                </div>
+                              ))
+                            )}
+                          </div>
                         </div>
-                        {m.description && (
-                          <p style={{ fontSize: '0.82rem', color: 'var(--grey-blue)', margin: '0 0 10px 0', lineHeight: 1.4 }}>{m.description}</p>
-                        )}
-                        
-                        {/* Section / Tugas List per modul */}
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 8, paddingLeft: 10, borderLeft: '2px solid rgba(255, 255, 255, 0.1)' }}>
-                          <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--grey)' }}>Materi / Tugas:</span>
-                          {!detailTugasMap[m.id] || detailTugasMap[m.id].length === 0 ? (
-                            <span style={{ fontSize: '0.78rem', color: 'var(--grey)', fontStyle: 'italic' }}>Belum ada materi</span>
-                          ) : (
-                            detailTugasMap[m.id].map(t => (
-                              <div key={t.id} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                                <div style={{ width: 4, height: 4, borderRadius: '50%', background: 'var(--azure)' }} />
-                                <span style={{ fontSize: '0.8rem', color: '#cbd5e1' }}>{t.title}</span>
-                                {t.type && (
-                                  <span style={{
-                                    fontSize: '0.65rem',
-                                    color: 'var(--grey-blue)',
-                                    background: 'rgba(255, 255, 255, 0.05)',
-                                    padding: '1px 5px',
-                                    borderRadius: 3
-                                  }}>{t.type}</span>
-                                )}
-                              </div>
-                            ))
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
-            <div style={s.modalFooter}>
-              <button onClick={() => setDetailCourse(null)} style={s.cancelBtn}>Tutup</button>
+              <div style={s.modalFooter}>
+                <button onClick={() => setDetailCourse(null)} style={s.cancelBtn}>Tutup</button>
+              </div>
             </div>
           </div>
-        </div>
+        </Portal>
+      )}
+
+      {toast && (
+        <Portal>
+          <div style={{
+            position: 'fixed',
+            bottom: 24,
+            right: 24,
+            background: toast.type === 'success' ? '#00C853' : '#FF5252',
+            color: '#fff',
+            padding: '12px 18px',
+            borderRadius: '10px',
+            boxShadow: '0 8px 30px rgba(0,0,0,0.3)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 10,
+            zIndex: 99999,
+            fontSize: '0.88rem',
+            fontWeight: 600,
+          }}>
+            {toast.type === 'success' ? <CheckCircle2 size={16} /> : <AlertCircle size={16} />}
+            <span>{toast.message}</span>
+            <button onClick={() => setToast(null)} style={{ background: 'none', border: 'none', color: '#fff', cursor: 'pointer', fontSize: '1.1rem', marginLeft: 8, lineHeight: 1 }}>✕</button>
+          </div>
+        </Portal>
       )}
 
       <style>{`
@@ -1262,7 +1175,7 @@ const s: Record<string, React.CSSProperties> = {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    zIndex: 100,
+    zIndex: 9999,
     padding: '20px',
   },
   modalContent: {
@@ -1271,7 +1184,7 @@ const s: Record<string, React.CSSProperties> = {
     padding: '24px',
     display: 'flex',
     flexDirection: 'column',
-    maxHeight: '90vh',
+    maxHeight: '85vh',
     overflowY: 'auto',
   },
   modalHeader: {

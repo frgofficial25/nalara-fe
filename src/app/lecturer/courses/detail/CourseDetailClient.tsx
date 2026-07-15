@@ -3,12 +3,13 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import {
   ArrowLeft, BookOpen, Layers, Plus, Trash2, FileText,
-  ChevronRight, X, AlertCircle, Loader2, Upload, Eye,
-  Download, Package
+  ChevronRight, X, AlertCircle, CheckCircle2, Loader2, Upload, Eye,
+  Download, Package, Edit
 } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { apiGet, apiPost, apiDelete } from '@/lib/api';
+import { apiGet, apiPost, apiDelete, apiPut } from '@/lib/api';
 import { getStoredToken } from '@/services/auth';
+import Portal from '@/components/common/Portal';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface Pembelajaran {
@@ -66,21 +67,23 @@ function ConfirmModal({
   onCancel: () => void;
 }) {
   return (
-    <div style={overlay}>
-      <div style={{ ...modal, maxWidth: 400 }}>
-        <div style={{ textAlign: 'center', padding: '8px 0 20px' }}>
-          <div style={{ width: 52, height: 52, borderRadius: '50%', background: 'rgba(239,68,68,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
-            <Trash2 size={22} color="#ef4444" />
+    <Portal>
+      <div style={overlay}>
+        <div style={{ ...modal, maxWidth: 400 }}>
+          <div style={{ textAlign: 'center', padding: '8px 0 20px' }}>
+            <div style={{ width: 52, height: 52, borderRadius: '50%', background: 'rgba(239,68,68,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
+              <Trash2 size={22} color="#ef4444" />
+            </div>
+            <h3 style={{ color: '#fff', fontSize: '1rem', fontWeight: 700, margin: '0 0 8px' }}>Konfirmasi Hapus</h3>
+            <p style={{ color: '#94a3b8', fontSize: '0.85rem', margin: 0 }}>{message}</p>
           </div>
-          <h3 style={{ color: '#fff', fontSize: '1rem', fontWeight: 700, margin: '0 0 8px' }}>Konfirmasi Hapus</h3>
-          <p style={{ color: '#94a3b8', fontSize: '0.85rem', margin: 0 }}>{message}</p>
-        </div>
-        <div style={{ display: 'flex', gap: 10 }}>
-          <button onClick={onCancel} style={{ ...btnBase, flex: 1, background: 'rgba(255,255,255,0.06)', color: '#cbd5e1' }}>Batal</button>
-          <button onClick={onConfirm} style={{ ...btnBase, flex: 1, background: 'linear-gradient(135deg,#ef4444,#dc2626)', color: '#fff' }}>Hapus</button>
+          <div style={{ display: 'flex', gap: 10 }}>
+            <button onClick={onCancel} style={{ ...btnBase, flex: 1, background: 'rgba(255,255,255,0.06)', color: '#cbd5e1' }}>Batal</button>
+            <button onClick={onConfirm} style={{ ...btnBase, flex: 1, background: 'linear-gradient(135deg,#ef4444,#dc2626)', color: '#fff' }}>Hapus</button>
+          </div>
         </div>
       </div>
-    </div>
+    </Portal>
   );
 }
 
@@ -123,48 +126,50 @@ function AddMateriModal({
   };
 
   return (
-    <div style={overlay}>
-      <div style={modal}>
-        <div style={modalHeader}>
-          <h3 style={modalTitle}>Tambah Materi</h3>
-          <button onClick={onClose} style={closeBtn}><X size={18} /></button>
+    <Portal>
+      <div style={overlay}>
+        <div style={modal}>
+          <div style={modalHeader}>
+            <h3 style={modalTitle}>Tambah Materi</h3>
+            <button onClick={onClose} style={closeBtn}><X size={18} /></button>
+          </div>
+          {error && (
+            <div style={errBox}>
+              <AlertCircle size={16} />
+              <span>{error}</span>
+            </div>
+          )}
+          <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            <div style={formGroup}>
+              <label style={label}>Judul Materi</label>
+              <input
+                type="text"
+                required
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder="e.g., Bacaan Bab 1 — Pengantar Akuntansi"
+                style={input}
+              />
+            </div>
+            <div style={formGroup}>
+              <label style={label}>Tipe Materi</label>
+              <select value={type} onChange={(e) => setType(e.target.value as typeof type)} style={input}>
+                <option value="Reading">Reading</option>
+                <option value="Video">Video</option>
+                <option value="CaseStudy">Case Study</option>
+                <option value="Practice">Practice</option>
+              </select>
+            </div>
+            <div style={{ display: 'flex', gap: 10, marginTop: 4 }}>
+              <button type="button" onClick={onClose} style={{ ...btnBase, flex: 1, background: 'rgba(255,255,255,0.06)', color: '#cbd5e1' }}>Batal</button>
+              <button type="submit" disabled={loading} style={{ ...btnBase, flex: 2, background: 'linear-gradient(135deg,#6366f1,#8b5cf6)', color: '#fff' }}>
+                {loading ? <Loader2 size={15} style={{ animation: 'spin 1s linear infinite' }} /> : 'Tambah Materi'}
+              </button>
+            </div>
+          </form>
         </div>
-        {error && (
-          <div style={errBox}>
-            <AlertCircle size={16} />
-            <span>{error}</span>
-          </div>
-        )}
-        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-          <div style={formGroup}>
-            <label style={label}>Nama Materi</label>
-            <input
-              type="text"
-              required
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="e.g., Bacaan Bab 1 — Pengantar Akuntansi"
-              style={input}
-            />
-          </div>
-          <div style={formGroup}>
-            <label style={label}>Tipe Materi</label>
-            <select value={type} onChange={(e) => setType(e.target.value as typeof type)} style={input}>
-              <option value="Reading">Reading</option>
-              <option value="Video">Video</option>
-              <option value="CaseStudy">Case Study</option>
-              <option value="Practice">Practice</option>
-            </select>
-          </div>
-          <div style={{ display: 'flex', gap: 10, marginTop: 4 }}>
-            <button type="button" onClick={onClose} style={{ ...btnBase, flex: 1, background: 'rgba(255,255,255,0.06)', color: '#cbd5e1' }}>Batal</button>
-            <button type="submit" disabled={loading} style={{ ...btnBase, flex: 2, background: 'linear-gradient(135deg,#6366f1,#8b5cf6)', color: '#fff' }}>
-              {loading ? <Loader2 size={15} style={{ animation: 'spin 1s linear infinite' }} /> : 'Tambah Materi'}
-            </button>
-          </div>
-        </form>
       </div>
-    </div>
+    </Portal>
   );
 }
 
@@ -206,56 +211,150 @@ function AddModulModal({
   };
 
   return (
-    <div style={overlay}>
-      <div style={modal}>
-        <div style={modalHeader}>
-          <h3 style={modalTitle}>Tambah Modul</h3>
-          <button onClick={onClose} style={closeBtn}><X size={18} /></button>
+    <Portal>
+      <div style={overlay}>
+        <div style={modal}>
+          <div style={modalHeader}>
+            <h3 style={modalTitle}>Tambah Modul</h3>
+            <button onClick={onClose} style={closeBtn}><X size={18} /></button>
+          </div>
+          {error && (
+            <div style={errBox}>
+              <AlertCircle size={16} />
+              <span>{error}</span>
+            </div>
+          )}
+          <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            <div style={formGroup}>
+              <label style={label}>Nama Modul</label>
+              <input
+                type="text"
+                required
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder="e.g., Modul 1 — Pengantar Akuntansi"
+                style={input}
+              />
+            </div>
+            <div style={formGroup}>
+              <label style={label}>Deskripsi (opsional)</label>
+              <textarea
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="Deskripsi singkat modul..."
+                style={{ ...input, minHeight: 80, resize: 'vertical' }}
+              />
+            </div>
+            <div style={formGroup}>
+              <label style={label}>Tingkat Kesulitan</label>
+              <select value={difficulty} onChange={(e) => setDifficulty(e.target.value as typeof difficulty)} style={input}>
+                <option value="Beginner">Beginner</option>
+                <option value="Intermediate">Intermediate</option>
+                <option value="Advanced">Advanced</option>
+              </select>
+            </div>
+            <div style={{ display: 'flex', gap: 10, marginTop: 4 }}>
+              <button type="button" onClick={onClose} style={{ ...btnBase, flex: 1, background: 'rgba(255,255,255,0.06)', color: '#cbd5e1' }}>Batal</button>
+              <button type="submit" disabled={loading} style={{ ...btnBase, flex: 2, background: 'linear-gradient(135deg,#6366f1,#8b5cf6)', color: '#fff' }}>
+                {loading ? <Loader2 size={15} style={{ animation: 'spin 1s linear infinite' }} /> : 'Buat Modul'}
+              </button>
+            </div>
+          </form>
         </div>
-        {error && (
-          <div style={errBox}>
-            <AlertCircle size={16} />
-            <span>{error}</span>
-          </div>
-        )}
-        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-          <div style={formGroup}>
-            <label style={label}>Nama Modul</label>
-            <input
-              type="text"
-              required
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="e.g., Modul 1 — Pengantar Akuntansi"
-              style={input}
-            />
-          </div>
-          <div style={formGroup}>
-            <label style={label}>Deskripsi (opsional)</label>
-            <textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Deskripsi singkat modul..."
-              style={{ ...input, minHeight: 80, resize: 'vertical' }}
-            />
-          </div>
-          <div style={formGroup}>
-            <label style={label}>Tingkat Kesulitan</label>
-            <select value={difficulty} onChange={(e) => setDifficulty(e.target.value as typeof difficulty)} style={input}>
-              <option value="Beginner">Beginner</option>
-              <option value="Intermediate">Intermediate</option>
-              <option value="Advanced">Advanced</option>
-            </select>
-          </div>
-          <div style={{ display: 'flex', gap: 10, marginTop: 4 }}>
-            <button type="button" onClick={onClose} style={{ ...btnBase, flex: 1, background: 'rgba(255,255,255,0.06)', color: '#cbd5e1' }}>Batal</button>
-            <button type="submit" disabled={loading} style={{ ...btnBase, flex: 2, background: 'linear-gradient(135deg,#6366f1,#8b5cf6)', color: '#fff' }}>
-              {loading ? <Loader2 size={15} style={{ animation: 'spin 1s linear infinite' }} /> : 'Buat Modul'}
-            </button>
-          </div>
-        </form>
       </div>
-    </div>
+    </Portal>
+  );
+}
+
+// ─── Edit Modul Modal ───────────────────────────────────────────────────────────
+function EditModulModal({
+  modul,
+  onSuccess,
+  onClose,
+}: {
+  modul: Modul;
+  onSuccess: () => void;
+  onClose: () => void;
+}) {
+  const [title, setTitle] = useState(modul.title);
+  const [description, setDescription] = useState(modul.description || '');
+  const [difficulty, setDifficulty] = useState<'Beginner' | 'Intermediate' | 'Advanced'>(
+    (modul.difficulty as any) || 'Beginner'
+  );
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!title.trim()) return;
+    setLoading(true);
+    setError(null);
+    try {
+      const auth = getAuth();
+      await apiPut(`/api/modul/${modul.id}`, {
+        title,
+        description,
+        difficulty,
+      }, { token: auth.token, headers: auth.headers });
+      onSuccess();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Gagal memperbarui modul.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <Portal>
+      <div style={overlay}>
+        <div style={modal}>
+          <div style={modalHeader}>
+            <h3 style={modalTitle}>Edit Modul</h3>
+            <button onClick={onClose} style={closeBtn}><X size={18} /></button>
+          </div>
+          {error && (
+            <div style={errBox}>
+              <AlertCircle size={16} />
+              <span>{error}</span>
+            </div>
+          )}
+          <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            <div style={formGroup}>
+              <label style={label}>Nama Modul</label>
+              <input
+                type="text"
+                required
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                style={input}
+              />
+            </div>
+            <div style={formGroup}>
+              <label style={label}>Deskripsi (opsional)</label>
+              <textarea
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                style={{ ...input, minHeight: 80, resize: 'vertical' }}
+              />
+            </div>
+            <div style={formGroup}>
+              <label style={label}>Tingkat Kesulitan</label>
+              <select value={difficulty} onChange={(e) => setDifficulty(e.target.value as any)} style={input}>
+                <option value="Beginner">Beginner</option>
+                <option value="Intermediate">Intermediate</option>
+                <option value="Advanced">Advanced</option>
+              </select>
+            </div>
+            <div style={{ display: 'flex', gap: 10, marginTop: 4 }}>
+              <button type="button" onClick={onClose} style={{ ...btnBase, flex: 1, background: 'rgba(255,255,255,0.06)', color: '#cbd5e1' }}>Batal</button>
+              <button type="submit" disabled={loading} style={{ ...btnBase, flex: 2, background: 'linear-gradient(135deg,#6366f1,#8b5cf6)', color: '#fff' }}>
+                {loading ? <Loader2 size={15} style={{ animation: 'spin 1s linear infinite' }} /> : 'Simpan'}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </Portal>
   );
 }
 
@@ -276,6 +375,13 @@ export default function CourseDetailClient() {
   const [addMateriForModul, setAddMateriForModul] = useState<string | null>(null);
   const [deleteModul, setDeleteModul] = useState<Modul | null>(null);
   const [deleteTugas, setDeleteTugas] = useState<{ tugas: Tugas; modulId: string } | null>(null);
+  const [editModul, setEditModul] = useState<Modul | null>(null);
+
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+  const showToast = (message: string, type: 'success' | 'error' = 'success') => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 4000);
+  };
 
   // ── Fetch ────────────────────────────────────────────────────────────────────
   const fetchAll = useCallback(async () => {
@@ -356,8 +462,10 @@ export default function CourseDetailClient() {
       await apiDelete(`/api/modul/${deleteModul.id}`, { token: auth.token, headers: auth.headers });
       setDeleteModul(null);
       fetchAll();
+      showToast('Modul berhasil dihapus!');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Gagal menghapus modul.');
+      showToast(err instanceof Error ? err.message : 'Gagal menghapus modul.', 'error');
       setDeleteModul(null);
     }
   };
@@ -369,8 +477,10 @@ export default function CourseDetailClient() {
       await apiDelete(`/api/materi/${deleteTugas.tugas.id}`, { token: auth.token, headers: auth.headers });
       setDeleteTugas(null);
       fetchAll();
+      showToast('Materi berhasil dihapus!');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Gagal menghapus materi.');
+      showToast(err instanceof Error ? err.message : 'Gagal menghapus materi.', 'error');
       setDeleteTugas(null);
     }
   };
@@ -394,7 +504,7 @@ export default function CourseDetailClient() {
 
       {/* Breadcrumb / Back */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 24 }}>
-        <button onClick={() => router.push('/lecturer/courses')} style={backBtn}>
+        <button onClick={() => router.push('/lecturer/kelas')} style={backBtn}>
           <ArrowLeft size={16} />
         </button>
         <span style={{ color: '#64748b', fontSize: '0.85rem' }}>Courses</span>
@@ -462,6 +572,9 @@ export default function CourseDetailClient() {
                     <button onClick={() => setAddMateriForModul(modul.id)} style={addMateriBtn}>
                       <Plus size={13} /> Tambah Materi
                     </button>
+                    <button onClick={() => setEditModul(modul)} style={iconEdit}>
+                      <Edit size={14} />
+                    </button>
                     <button onClick={() => setDeleteModul(modul)} style={iconDanger}>
                       <Trash2 size={14} />
                     </button>
@@ -487,7 +600,7 @@ export default function CourseDetailClient() {
                         </div>
                         <div style={{ display: 'flex', gap: 8 }}>
                           <button
-                            onClick={() => router.push(`/lecturer/courses/materi?courseId=${courseId}&tugasId=${t.id}`)}
+                            onClick={() => router.push(`/lecturer/kelas/materi?courseId=${courseId}&tugasId=${t.id}`)}
                             style={detailBtn}
                           >
                             <Eye size={13} /> Detail
@@ -513,7 +626,7 @@ export default function CourseDetailClient() {
       {showAddModul && (
         <AddModulModal
           pembelajaranId={courseId}
-          onSuccess={() => { setShowAddModul(false); fetchAll(); }}
+          onSuccess={() => { setShowAddModul(false); fetchAll(); showToast('Modul berhasil ditambahkan!'); }}
           onClose={() => setShowAddModul(false)}
         />
       )}
@@ -521,7 +634,7 @@ export default function CourseDetailClient() {
         <AddMateriModal
           modulId={addMateriForModul}
           pembelajaranId={courseId}
-          onSuccess={() => { setAddMateriForModul(null); fetchAll(); }}
+          onSuccess={() => { setAddMateriForModul(null); fetchAll(); showToast('Materi berhasil ditambahkan!'); }}
           onClose={() => setAddMateriForModul(null)}
         />
       )}
@@ -538,6 +651,37 @@ export default function CourseDetailClient() {
           onConfirm={confirmDeleteTugas}
           onCancel={() => setDeleteTugas(null)}
         />
+      )}
+      {editModul && (
+        <EditModulModal
+          modul={editModul}
+          onSuccess={() => { setEditModul(null); fetchAll(); showToast('Modul berhasil diperbarui!'); }}
+          onClose={() => setEditModul(null)}
+        />
+      )}
+      {toast && (
+        <Portal>
+          <div style={{
+            position: 'fixed',
+            bottom: 24,
+            right: 24,
+            background: toast.type === 'success' ? '#00C853' : '#FF5252',
+            color: '#fff',
+            padding: '12px 18px',
+            borderRadius: '10px',
+            boxShadow: '0 8px 30px rgba(0,0,0,0.3)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 10,
+            zIndex: 99999,
+            fontSize: '0.88rem',
+            fontWeight: 600,
+          }}>
+            {toast.type === 'success' ? <CheckCircle2 size={16} /> : <AlertCircle size={16} />}
+            <span>{toast.message}</span>
+            <button onClick={() => setToast(null)} style={{ background: 'none', border: 'none', color: '#fff', cursor: 'pointer', fontSize: '1.1rem', marginLeft: 8, lineHeight: 1 }}>✕</button>
+          </div>
+        </Portal>
       )}
     </div>
   );
@@ -678,6 +822,13 @@ const iconDanger: React.CSSProperties = {
   borderRadius: 7, width: 30, height: 30,
   display: 'flex', alignItems: 'center', justifyContent: 'center',
   cursor: 'pointer', color: '#f87171',
+};
+
+const iconEdit: React.CSSProperties = {
+  background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.2)',
+  borderRadius: 7, width: 30, height: 30,
+  display: 'flex', alignItems: 'center', justifyContent: 'center',
+  cursor: 'pointer', color: '#fbbf24',
 };
 
 const emptyMateri: React.CSSProperties = {

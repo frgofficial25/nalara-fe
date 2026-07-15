@@ -30,6 +30,7 @@ interface MateriDetail {
   video_url?: string | null;
   tanggal_dibuat?: string;
   terakhir_diperbarui?: string;
+  uuid_modul?: string;
 }
 
 function getFileExtension(url?: string) {
@@ -400,13 +401,17 @@ export default function MateriDetailClient() {
 
       {/* Breadcrumb */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 28, flexWrap: 'wrap' }}>
-        <button onClick={() => router.push('/lecturer/courses')} style={backBtn}>
+        <button onClick={() => router.push(`/lecturer/kelas/detail?id=${courseId}`)} style={backBtn}>
           <ArrowLeft size={15} />
         </button>
-        <span style={crumb} onClick={() => router.push('/lecturer/courses')}>Courses</span>
+        <span style={crumb} onClick={() => router.push('/lecturer/kelas')}>Kelas</span>
         <ChevronRight size={13} color="#475569" />
-        <span style={crumb} onClick={() => router.push(`/lecturer/courses/detail?id=${courseId}`)}>
+        <span style={crumb} onClick={() => router.push(`/lecturer/kelas/detail?id=${courseId}`)}>
           {materi?.nama_pembelajaran ?? 'Detail Kelas'}
+        </span>
+        <ChevronRight size={13} color="#475569" />
+        <span style={{ ...crumb, cursor: 'default' }}>
+          {materi?.nama_modul ?? 'Detail Modul'}
         </span>
         <ChevronRight size={13} color="#475569" />
         <span style={{ ...crumb, color: '#e2e8f0', cursor: 'default' }}>{materi?.nama_materi ?? 'Detail Materi'}</span>
@@ -445,17 +450,17 @@ export default function MateriDetailClient() {
                   )}
                 </div>
                 <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
-                  {materi.nama_pembelajaran && <span style={metaItem}>📚 {materi.nama_pembelajaran}</span>}
-                  {materi.nama_modul && <span style={metaItem}>📦 {materi.nama_modul}</span>}
+                  {materi.nama_pembelajaran && <span style={metaItem}>Kelas: {materi.nama_pembelajaran}</span>}
+                  {materi.nama_modul && <span style={metaItem}>Modul: {materi.nama_modul}</span>}
                   {materi.tanggal_dibuat && (
-                    <span style={metaItem}>🕐 {new Date(materi.tanggal_dibuat).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
+                    <span style={metaItem}>Dibuat: {new Date(materi.tanggal_dibuat).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
                   )}
                 </div>
               </div>
             </div>
 
             <div style={{ display: 'flex', gap: 10, marginTop: 20, flexWrap: 'wrap' }}>
-              <button onClick={() => router.push(`/lecturer/courses/detail?id=${courseId}`)} style={secondaryBtn}>
+              <button onClick={() => router.push(`/lecturer/kelas/detail?id=${courseId}`)} style={secondaryBtn}>
                 <ArrowLeft size={14} /> Kembali ke Kelas
               </button>
               {hasFile && !showUpload && (

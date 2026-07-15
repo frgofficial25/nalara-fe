@@ -10,6 +10,7 @@ import { getStoredToken } from '@/services/auth';
 import type {
   Tugas, TugasType, Pembelajaran, Modul,
 } from '@/types/lecturer.types';
+import Portal from '@/components/common/Portal';
 
 export default function TugasPage() {
   const [tugasList, setTugasList] = useState<Tugas[]>([]);
@@ -17,6 +18,12 @@ export default function TugasPage() {
   const [modules, setModules] = useState<Modul[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+  const showToast = (message: string, type: 'success' | 'error' = 'success') => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 4000);
+  };
 
   // Tabs & Submissions Review Queue
   const [activeTab, setActiveTab] = useState<'tugas' | 'submissions'>('tugas');
@@ -37,7 +44,7 @@ export default function TugasPage() {
   const [currentTugas, setCurrentTugas] = useState<Tugas | null>(null);
   const [form, setForm] = useState({
     title: '',
-    type: 'Reading' as TugasType,
+    type: 'CaseStudy' as TugasType,
     youtube_link: '',
     content_text: '', // Simplified content input for Reading
     uuid_pembelajaran: '',
@@ -307,7 +314,7 @@ export default function TugasPage() {
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.title || !form.uuid_pembelajaran || !form.uuid_modul) return;
+    if (!form.title || !form.uuid_pembelajaran) return;
 
     setSubmitting(true);
     try {
@@ -317,7 +324,7 @@ export default function TugasPage() {
         title: form.title,
         type: form.type,
         uuid_pembelajaran: form.uuid_pembelajaran,
-        uuid_modul: form.uuid_modul,
+        uuid_modul: form.uuid_modul || null,
       };
       if (form.type === 'Video' && form.youtube_link) {
         payload.youtube_link = form.youtube_link;
@@ -334,8 +341,10 @@ export default function TugasPage() {
       setShowCreateModal(false);
       resetForm();
       fetchTugas();
+      showToast('Tugas berhasil dibuat!');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Gagal membuat tugas.');
+      showToast(err instanceof Error ? err.message : 'Gagal membuat tugas.', 'error');
     } finally {
       setSubmitting(false);
     }
@@ -371,8 +380,10 @@ export default function TugasPage() {
       setCurrentTugas(null);
       resetForm();
       fetchTugas();
+      showToast('Tugas berhasil diperbarui!');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Gagal memperbarui tugas.');
+      showToast(err instanceof Error ? err.message : 'Gagal memperbarui tugas.', 'error');
     } finally {
       setSubmitting(false);
     }
@@ -389,8 +400,10 @@ export default function TugasPage() {
         headers: auth.headers
       });
       fetchTugas();
+      showToast('Tugas berhasil dihapus!');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Gagal menghapus tugas.');
+      showToast(err instanceof Error ? err.message : 'Gagal menghapus tugas.', 'error');
     }
   };
 
@@ -420,7 +433,7 @@ export default function TugasPage() {
   const resetForm = () => {
     setForm({
       title: '',
-      type: 'Reading',
+      type: 'CaseStudy',
       youtube_link: '',
       content_text: '',
       uuid_pembelajaran: '',
@@ -720,242 +733,234 @@ export default function TugasPage() {
 
       {/* Create Modal */}
       {showCreateModal && (
-        <div style={s.modalOverlay}>
-          <div style={s.modalContent} className="glass-panel">
-            <div style={s.modalHeader}>
-              <h3>Create New Assignment</h3>
-              <button onClick={() => setShowCreateModal(false)} style={s.closeBtn}>
-                <X size={18} />
-              </button>
-            </div>
-            <form onSubmit={handleCreate} style={s.form}>
-              <div style={s.formGroup}>
-                <label style={s.label}>Title</label>
-                <input
-                  type="text"
-                  required
-                  value={form.title}
-                  onChange={(e) => setForm({ ...form, title: e.target.value })}
-                  placeholder="e.g., Tugas Membaca Bab 1"
-                  style={s.input}
-                />
+        <Portal>
+          <div style={s.modalOverlay}>
+            <div style={s.modalContent} className="glass-panel">
+              <div style={s.modalHeader}>
+                <h3>Create New Assignment</h3>
+                <button onClick={() => setShowCreateModal(false)} style={s.closeBtn}>
+                  <X size={18} />
+                </button>
               </div>
-              <div style={s.formGroup}>
-                <label style={s.label}>Type</label>
-                <div style={s.typeGrid}>
-                  {(['Reading', 'Video', 'CaseStudy', 'Practice'] as TugasType[]).map(t => (
-                    <button
-                      key={t}
-                      type="button"
-                      onClick={() => setForm({ ...form, type: t })}
-                      style={{
-                        ...s.typeOption,
-                        ...(form.type === t ? { border: `1px solid ${typeColors[t].text}`, background: typeColors[t].bg } : {}),
-                      }}
-                    >
-                      {typeIcons[t]}
-                      <span style={{ fontSize: '0.78rem', color: form.type === t ? '#fff' : 'var(--grey-blue)' }}>{t}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <div style={s.formGroup}>
-                <label style={s.label}>Course (Pembelajaran)</label>
-                <select
-                  required
-                  value={form.uuid_pembelajaran}
-                  onChange={(e) => setForm({ ...form, uuid_pembelajaran: e.target.value, uuid_modul: '' })}
-                  style={s.select}
-                >
-                  <option value="" style={{ background: '#191919', color: '#fff' }}>Select course...</option>
-                  {courses.map((c, idx) => (
-                    <option key={c.id || (c as any).uuid_pembelajaran || idx} value={c.id || (c as any).uuid_pembelajaran} style={{ background: '#191919', color: '#fff' }}>{c.title}</option>
-                  ))}
-                </select>
-              </div>
-              <div style={s.formGroup}>
-                <label style={s.label}>Module</label>
-                <select
-                  required
-                  value={form.uuid_modul}
-                  onChange={(e) => setForm({ ...form, uuid_modul: e.target.value })}
-                  style={s.select}
-                >
-                  <option value="" style={{ background: '#191919', color: '#fff' }}>Select module...</option>
-                  {getFormModules().map((m, idx) => (
-                    <option key={m.id || (m as any).uuid_modul || idx} value={m.id || (m as any).uuid_modul} style={{ background: '#191919', color: '#fff' }}>{m.title}</option>
-                  ))}
-                </select>
-              </div>
-              {form.type === 'Video' && (
+              <form onSubmit={handleCreate} style={s.form}>
                 <div style={s.formGroup}>
-                  <label style={s.label}>YouTube Link</label>
+                  <label style={s.label}>Title</label>
                   <input
-                    type="url"
-                    value={form.youtube_link}
-                    onChange={(e) => setForm({ ...form, youtube_link: e.target.value })}
-                    placeholder="https://www.youtube.com/watch?v=..."
+                    type="text"
+                    required
+                    value={form.title}
+                    onChange={(e) => setForm({ ...form, title: e.target.value })}
+                    placeholder="e.g., Tugas Membaca Bab 1"
                     style={s.input}
                   />
                 </div>
-              )}
-              {form.type === 'Reading' && (
                 <div style={s.formGroup}>
-                  <label style={s.label}>Content</label>
-                  <textarea
-                    value={form.content_text}
-                    onChange={(e) => setForm({ ...form, content_text: e.target.value })}
-                    placeholder="Enter the reading content..."
-                    style={{ ...s.input, minHeight: 100, resize: 'vertical' as const }}
-                  />
+                  <label style={s.label}>Course (Pembelajaran)</label>
+                  <select
+                    required
+                    value={form.uuid_pembelajaran}
+                    onChange={(e) => setForm({ ...form, uuid_pembelajaran: e.target.value, uuid_modul: '' })}
+                    style={s.select}
+                  >
+                    <option value="" style={{ background: '#191919', color: '#fff' }}>Select course...</option>
+                    {courses.map((c, idx) => (
+                      <option key={c.id || (c as any).uuid_pembelajaran || idx} value={c.id || (c as any).uuid_pembelajaran} style={{ background: '#191919', color: '#fff' }}>{c.title}</option>
+                    ))}
+                  </select>
                 </div>
-              )}
-              <div style={s.modalFooter}>
-                <button type="button" onClick={() => setShowCreateModal(false)} style={s.cancelBtn}>Cancel</button>
-                <button type="submit" disabled={submitting} style={{ ...s.submitBtn, opacity: submitting ? 0.6 : 1 }}>
-                  {submitting ? 'Creating...' : 'Create Assignment'}
-                </button>
-              </div>
-            </form>
+                <div style={s.formGroup}>
+                  <label style={s.label}>Module (opsional)</label>
+                  <select
+                    value={form.uuid_modul}
+                    onChange={(e) => setForm({ ...form, uuid_modul: e.target.value })}
+                    style={s.select}
+                  >
+                    <option value="" style={{ background: '#191919', color: '#fff' }}>Select module...</option>
+                    {getFormModules().map((m, idx) => (
+                      <option key={m.id || (m as any).uuid_modul || idx} value={m.id || (m as any).uuid_modul} style={{ background: '#191919', color: '#fff' }}>{m.title}</option>
+                    ))}
+                  </select>
+                </div>
+                {form.type === 'Video' && (
+                  <div style={s.formGroup}>
+                    <label style={s.label}>YouTube Link</label>
+                    <input
+                      type="url"
+                      value={form.youtube_link}
+                      onChange={(e) => setForm({ ...form, youtube_link: e.target.value })}
+                      placeholder="https://www.youtube.com/watch?v=..."
+                      style={s.input}
+                    />
+                  </div>
+                )}
+                {form.type === 'Reading' && (
+                  <div style={s.formGroup}>
+                    <label style={s.label}>Content</label>
+                    <textarea
+                      value={form.content_text}
+                      onChange={(e) => setForm({ ...form, content_text: e.target.value })}
+                      placeholder="Tuliskan petunjuk atau materi tugas di sini..."
+                      style={{ ...s.input, minHeight: 120, resize: 'vertical' }}
+                    />
+                  </div>
+                )}
+                <div style={s.modalFooter}>
+                  <button type="button" onClick={() => setShowCreateModal(false)} style={s.cancelBtn}>Cancel</button>
+                  <button type="submit" disabled={submitting} style={{ ...s.submitBtn, opacity: submitting ? 0.6 : 1 }}>
+                    {submitting ? 'Creating...' : 'Create Assignment'}
+                  </button>
+                </div>
+              </form>
+            </div>
           </div>
-        </div>
+        </Portal>
       )}
 
       {/* Edit Modal */}
       {showEditModal && (
-        <div style={s.modalOverlay}>
-          <div style={s.modalContent} className="glass-panel">
-            <div style={s.modalHeader}>
-              <h3>Edit Assignment</h3>
-              <button onClick={() => { setShowEditModal(false); setCurrentTugas(null); }} style={s.closeBtn}>
-                <X size={18} />
-              </button>
-            </div>
-            <form onSubmit={handleEdit} style={s.form}>
-              <div style={s.formGroup}>
-                <label style={s.label}>Title</label>
-                <input
-                  type="text"
-                  required
-                  value={form.title}
-                  onChange={(e) => setForm({ ...form, title: e.target.value })}
-                  style={s.input}
-                />
+        <Portal>
+          <div style={s.modalOverlay}>
+            <div style={s.modalContent} className="glass-panel">
+              <div style={s.modalHeader}>
+                <h3>Edit Assignment</h3>
+                <button onClick={() => { setShowEditModal(false); setCurrentTugas(null); }} style={s.closeBtn}>
+                  <X size={18} />
+                </button>
               </div>
-              <div style={s.formGroup}>
-                <label style={s.label}>Type</label>
-                <div style={s.typeGrid}>
-                  {(['Reading', 'Video', 'CaseStudy', 'Practice'] as TugasType[]).map(t => (
-                    <button
-                      key={t}
-                      type="button"
-                      onClick={() => setForm({ ...form, type: t })}
-                      style={{
-                        ...s.typeOption,
-                        ...(form.type === t ? { border: `1px solid ${typeColors[t].text}`, background: typeColors[t].bg } : {}),
-                      }}
-                    >
-                      {typeIcons[t]}
-                      <span style={{ fontSize: '0.78rem', color: form.type === t ? '#fff' : 'var(--grey-blue)' }}>{t}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-              {form.type === 'Video' && (
+              <form onSubmit={handleEdit} style={s.form}>
                 <div style={s.formGroup}>
-                  <label style={s.label}>YouTube Link</label>
+                  <label style={s.label}>Title</label>
                   <input
-                    type="url"
-                    value={form.youtube_link}
-                    onChange={(e) => setForm({ ...form, youtube_link: e.target.value })}
+                    type="text"
+                    required
+                    value={form.title}
+                    onChange={(e) => setForm({ ...form, title: e.target.value })}
                     style={s.input}
                   />
                 </div>
-              )}
-              {form.type === 'Reading' && (
-                <div style={s.formGroup}>
-                  <label style={s.label}>Content</label>
-                  <textarea
-                    value={form.content_text}
-                    onChange={(e) => setForm({ ...form, content_text: e.target.value })}
-                    style={{ ...s.input, minHeight: 100, resize: 'vertical' as const }}
-                  />
+                {form.type === 'Video' && (
+                  <div style={s.formGroup}>
+                    <label style={s.label}>YouTube Link</label>
+                    <input
+                      type="url"
+                      value={form.youtube_link}
+                      onChange={(e) => setForm({ ...form, youtube_link: e.target.value })}
+                      style={s.input}
+                    />
+                  </div>
+                )}
+                {form.type === 'Reading' && (
+                  <div style={s.formGroup}>
+                    <label style={s.label}>Content</label>
+                    <textarea
+                      value={form.content_text}
+                      onChange={(e) => setForm({ ...form, content_text: e.target.value })}
+                      style={{ ...s.input, minHeight: 100, resize: 'vertical' as const }}
+                    />
+                  </div>
+                )}
+                <div style={s.modalFooter}>
+                  <button type="button" onClick={() => { setShowEditModal(false); setCurrentTugas(null); }} style={s.cancelBtn}>Cancel</button>
+                  <button type="submit" disabled={submitting} style={{ ...s.submitBtn, opacity: submitting ? 0.6 : 1 }}>
+                    {submitting ? 'Saving...' : 'Save Changes'}
+                  </button>
                 </div>
-              )}
-              <div style={s.modalFooter}>
-                <button type="button" onClick={() => { setShowEditModal(false); setCurrentTugas(null); }} style={s.cancelBtn}>Cancel</button>
-                <button type="submit" disabled={submitting} style={{ ...s.submitBtn, opacity: submitting ? 0.6 : 1 }}>
-                  {submitting ? 'Saving...' : 'Save Changes'}
-                </button>
-              </div>
-            </form>
+              </form>
+            </div>
           </div>
-        </div>
+        </Portal>
       )}
 
       {/* Detail Modal */}
       {showDetailModal && currentTugas && (
-        <div style={s.modalOverlay}>
-          <div style={{ ...s.modalContent, maxWidth: 600 }} className="glass-panel">
-            <div style={s.modalHeader}>
-              <h3>Assignment Detail</h3>
-              <button onClick={() => { setShowDetailModal(false); setCurrentTugas(null); }} style={s.closeBtn}>
-                <X size={18} />
-              </button>
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-              <div style={s.detailRow}>
-                <span style={s.detailLabel}>Title</span>
-                <span style={s.detailValue}>{currentTugas.title}</span>
+        <Portal>
+          <div style={s.modalOverlay}>
+            <div style={{ ...s.modalContent, maxWidth: 600 }} className="glass-panel">
+              <div style={s.modalHeader}>
+                <h3>Assignment Detail</h3>
+                <button onClick={() => { setShowDetailModal(false); setCurrentTugas(null); }} style={s.closeBtn}>
+                  <X size={18} />
+                </button>
               </div>
-              <div style={s.detailRow}>
-                <span style={s.detailLabel}>Type</span>
-                <span style={{
-                  ...s.typeBadge,
-                  background: typeColors[currentTugas.type]?.bg,
-                  color: typeColors[currentTugas.type]?.text,
-                  border: `1px solid ${typeColors[currentTugas.type]?.border}`,
-                }}>
-                  {currentTugas.type}
-                </span>
-              </div>
-              {currentTugas.slug && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                 <div style={s.detailRow}>
-                  <span style={s.detailLabel}>Slug</span>
-                  <span style={s.slugBadge}>/{currentTugas.slug}</span>
+                  <span style={s.detailLabel}>Title</span>
+                  <span style={s.detailValue}>{currentTugas.title}</span>
                 </div>
-              )}
-              {currentTugas.pembelajaran?.title && (
                 <div style={s.detailRow}>
-                  <span style={s.detailLabel}>Course</span>
-                  <span style={s.detailValue}>{currentTugas.pembelajaran.title}</span>
+                  <span style={s.detailLabel}>Type</span>
+                  <span style={{
+                    ...s.typeBadge,
+                    background: typeColors[currentTugas.type]?.bg,
+                    color: typeColors[currentTugas.type]?.text,
+                    border: `1px solid ${typeColors[currentTugas.type]?.border}`,
+                  }}>
+                    {currentTugas.type}
+                  </span>
                 </div>
-              )}
-              {currentTugas.modul?.title && (
-                <div style={s.detailRow}>
-                  <span style={s.detailLabel}>Module</span>
-                  <span style={s.detailValue}>{currentTugas.modul.title}</span>
-                </div>
-              )}
-              {currentTugas.youtube_link && (
-                <div style={s.detailRow}>
-                  <span style={s.detailLabel}>YouTube</span>
-                  <a href={currentTugas.youtube_link} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--azure)', fontSize: '0.85rem' }}>
-                    {currentTugas.youtube_link}
-                  </a>
-                </div>
-              )}
-              {currentTugas.content && (
-                <div style={s.detailRow}>
-                  <span style={s.detailLabel}>Content</span>
-                  <div style={s.contentPreview}>
-                    {JSON.stringify(currentTugas.content, null, 2)}
+                {currentTugas.slug && (
+                  <div style={s.detailRow}>
+                    <span style={s.detailLabel}>Slug</span>
+                    <span style={s.slugBadge}>/{currentTugas.slug}</span>
                   </div>
-                </div>
-              )}
+                )}
+                {currentTugas.pembelajaran?.title && (
+                  <div style={s.detailRow}>
+                    <span style={s.detailLabel}>Course</span>
+                    <span style={s.detailValue}>{currentTugas.pembelajaran.title}</span>
+                  </div>
+                )}
+                {currentTugas.modul?.title && (
+                  <div style={s.detailRow}>
+                    <span style={s.detailLabel}>Module</span>
+                    <span style={s.detailValue}>{currentTugas.modul.title}</span>
+                  </div>
+                )}
+                {currentTugas.youtube_link && (
+                  <div style={s.detailRow}>
+                    <span style={s.detailLabel}>YouTube</span>
+                    <a href={currentTugas.youtube_link} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--azure)', fontSize: '0.85rem' }}>
+                      {currentTugas.youtube_link}
+                    </a>
+                  </div>
+                )}
+                {currentTugas.content && (
+                  <div style={s.detailRow}>
+                    <span style={s.detailLabel}>Content</span>
+                    <div style={s.contentPreview}>
+                      {JSON.stringify(currentTugas.content, null, 2)}
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
-        </div>
+        </Portal>
+      )}
+
+      {toast && (
+        <Portal>
+          <div style={{
+            position: 'fixed',
+            bottom: 24,
+            right: 24,
+            background: toast.type === 'success' ? '#00C853' : '#FF5252',
+            color: '#fff',
+            padding: '12px 18px',
+            borderRadius: '10px',
+            boxShadow: '0 8px 30px rgba(0,0,0,0.3)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 10,
+            zIndex: 99999,
+            fontSize: '0.88rem',
+            fontWeight: 600,
+          }}>
+            {toast.type === 'success' ? <CheckCircle2 size={16} /> : <AlertCircle size={16} />}
+            <span>{toast.message}</span>
+            <button onClick={() => setToast(null)} style={{ background: 'none', border: 'none', color: '#fff', cursor: 'pointer', fontSize: '1.1rem', marginLeft: 8, lineHeight: 1 }}>✕</button>
+          </div>
+        </Portal>
       )}
 
       <style>{`
@@ -1175,7 +1180,7 @@ const s: Record<string, React.CSSProperties> = {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    zIndex: 100,
+    zIndex: 9999,
     padding: '20px',
   },
   modalContent: {
@@ -1184,7 +1189,7 @@ const s: Record<string, React.CSSProperties> = {
     padding: '24px',
     display: 'flex',
     flexDirection: 'column',
-    maxHeight: '90vh',
+    maxHeight: '85vh',
     overflowY: 'auto',
   },
   modalHeader: {

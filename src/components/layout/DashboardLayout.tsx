@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Sidebar from './Sidebar';
 import Header from './Header';
 import { useRouter, usePathname } from 'next/navigation';
+import { CheckCircle2, AlertCircle } from 'lucide-react';
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -12,8 +13,17 @@ interface DashboardLayoutProps {
 export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [userInfo, setUserInfo] = useState<{ name: string; email: string; role: string } | null>(null);
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const router = useRouter();
   const pathname = usePathname();
+
+  useEffect(() => {
+    if (typeof window !== 'undefined' && sessionStorage.getItem('show_login_toast') === 'true') {
+      setToast({ message: 'Login berhasil! Selamat datang.', type: 'success' });
+      sessionStorage.removeItem('show_login_toast');
+      setTimeout(() => setToast(null), 4000);
+    }
+  }, []);
 
   const getRoleName = (role?: string) => {
     if (!role) return "System Owner";
@@ -167,6 +177,29 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           </div>
         </main>
       </div>
+      {toast && (
+        <div style={{
+          position: 'fixed',
+          bottom: 24,
+          right: 24,
+          background: toast.type === 'success' ? '#00C853' : '#FF5252',
+          color: '#fff',
+          padding: '12px 18px',
+          borderRadius: '10px',
+          boxShadow: '0 8px 30px rgba(0,0,0,0.3)',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 10,
+          zIndex: 99999,
+          fontSize: '0.88rem',
+          fontWeight: 600,
+          animation: 'fadeInUpDashboard 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards'
+        }}>
+          {toast.type === 'success' ? <CheckCircle2 size={16} /> : <AlertCircle size={16} />}
+          <span>{toast.message}</span>
+          <button onClick={() => setToast(null)} style={{ background: 'none', border: 'none', color: '#fff', cursor: 'pointer', fontSize: '1.1rem', marginLeft: 8, lineHeight: 1 }}>✕</button>
+        </div>
+      )}
     </div>
   );
 }

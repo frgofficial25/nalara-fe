@@ -55,6 +55,7 @@ export default function LoginPage() {
         // Simpan data user ke storage untuk layout/header info
         const storage = rememberMe ? localStorage : sessionStorage;
         storage.setItem('nalara_user_info', JSON.stringify(response.data.user));
+        sessionStorage.setItem('show_login_toast', 'true');
         
         // Redirect based on role
         const role = response.data.user.role.toLowerCase();
