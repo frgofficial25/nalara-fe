@@ -68,12 +68,25 @@ function FilePreviewSection({ file, tipe }: { file: MateriFile; tipe?: string })
   const [previewNonce, setPreviewNonce] = useState(0);
   const [iframeLoaded, setIframeLoaded] = useState(false);
   const [autoFallback, setAutoFallback] = useState(false);
-  const url = file.preview_url || file.export_url || file.url || '';
-  const urlExt = getFileExtension(url);
-  const ext = urlExt || (file.format_file || '').toLowerCase();
+  const rawUrl = file.preview_url || file.export_url || file.url || '';
+  const urlExt = getFileExtension(rawUrl);
+  const ext = (urlExt || file.format_file || '').trim().toLowerCase();
+
+  const isPDF = ext === 'pdf' || ext.includes('pdf') || (file.nama_file && file.nama_file.toLowerCase().endsWith('.pdf'));
+  const isDoc = ['docx', 'doc', 'ppt', 'pptx'].includes(ext) || (file.nama_file && /\.(docx|doc|ppt|pptx)$/i.test(file.nama_file));
+  const isVideo = ['mp4', 'webm', 'mov', 'avi'].includes(ext) || tipe === 'Video' || (file.nama_file && /\.(mp4|webm|mov|avi)$/i.test(file.nama_file));
+
+  // Normalize URL to ensure it ends with the format extension (critical for Cloudinary raw uploads & Google Viewer)
+  let url = rawUrl;
+  const canonicalExt = isPDF ? 'pdf' : (isDoc ? ext : (isVideo ? ext : ''));
+  if (canonicalExt && !url.split('?')[0].split('#')[0].toLowerCase().endsWith(`.${canonicalExt}`)) {
+    const parts = url.split('?');
+    const base = parts[0] + `.${canonicalExt}`;
+    url = parts[1] ? `${base}?${parts[1]}` : base;
+  }
 
   useEffect(() => {
-    if (ext !== 'pdf') return;
+    if (!isPDF) return;
 
     setAutoFallback(false);
     setIframeLoaded(false);
@@ -91,97 +104,43 @@ function FilePreviewSection({ file, tipe }: { file: MateriFile; tipe?: string })
     }, 4500);
 
     return () => clearTimeout(fallbackTimer);
-  }, [ext, viewMode, previewNonce]);
+  }, [isPDF, viewMode, previewNonce]);
 
-  // PDF — Google Docs Viewer (handles cross-origin PDFs + built-in scrolling)
-  if (ext === 'pdf') {
-    const googleDocsUrl = `https://docs.google.com/viewer?url=${encodeURIComponent(url)}&embedded=true`;
-    const directUrl = `${url}#toolbar=1&navpanes=0&scrollbar=1&view=FitH`;
-    const iframeSrc = viewMode === 'google' ? googleDocsUrl : directUrl;
-    const previewHeight = fullscreen ? '88vh' : '700px';
-
+  // PDF — Google Docs Viewer proxy (handles Cloudinary CORS/X-Frame-Options)
+  if (isPDF) {
+    const pdfUrl = url.split('?')[0].toLowerCase().endsWith('.pdf')
+      ? url
+      : url.split('?')[0] + '.pdf' + (url.includes('?') ? '?' + url.split('?')[1] : '');
+    const googleViewerUrl = `https://docs.google.com/viewer?url=${encodeURIComponent(pdfUrl)}&embedded=true`;
     return (
-      <div style={{ display: 'flex', flexDirection: 'column' }}>
-        {/* Toolbar */}
-        <div style={previewToolbar}>
+      <div style={{ width: '100%', borderRadius: 12, overflow: 'hidden', background: '#1e1e2e', display: 'flex', flexDirection: 'column' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 14px', background: 'rgba(30,30,46,0.95)', borderBottom: '1px solid rgba(99,102,241,0.15)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <File size={14} color="#a5b4fc" />
-            <span style={{ fontSize: '0.8rem', color: '#94a3b8', fontWeight: 600 }}>
-              {file.nama_file || 'file.pdf'}
-            </span>
-            {file.ukuran_file && (
-              <span style={fileSizeBadge}>{formatFileSize(file.ukuran_file)}</span>
-            )}
-            <span style={{ ...fileSizeBadge, background: 'rgba(239,68,68,0.1)', color: '#f87171', borderColor: 'rgba(239,68,68,0.2)' }}>PDF</span>
+            <FileText size={14} color="#a5b4fc" />
+            <span style={{ fontSize: '0.8rem', color: '#94a3b8', fontWeight: 600 }}>{file.nama_file || 'PDF'}</span>
+            {file.ukuran_file && <span style={fileSizeBadge}>{formatFileSize(file.ukuran_file)}</span>}
+            <span style={{ ...fileSizeBadge, background: 'rgba(239,68,68,0.1)', color: '#fca5a5', borderColor: 'rgba(239,68,68,0.2)' }}>PDF</span>
           </div>
-          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-            {/* Toggle viewer */}
-            <button
-              onClick={() => setViewMode(v => v === 'google' ? 'direct' : 'google')}
-              style={{ ...toolbarBtn, fontSize: '0.65rem', width: 'auto', padding: '0 8px', gap: 4, display: 'flex', alignItems: 'center' }}
-              title={viewMode === 'google' ? 'Coba preview langsung' : 'Gunakan Google Viewer'}
-            >
-              {viewMode === 'google' ? '⚡ Direct' : '🔍 Google'}
-            </button>
-            <button onClick={() => setFullscreen(!fullscreen)} style={toolbarBtn} title="Toggle tinggi preview">
-              <ZoomIn size={13} />
-            </button>
-            <button onClick={() => setPreviewNonce(n => n + 1)} style={toolbarBtn} title="Muat ulang preview">
-              <RefreshCw size={13} />
-            </button>
-            <a href={url} target="_blank" rel="noopener noreferrer" style={toolbarBtn} title="Buka di tab baru">
-              <ExternalLink size={13} />
-            </a>
-            <a href={url} download style={toolbarBtn} title="Download">
-              <Download size={13} />
-            </a>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <a href={pdfUrl} target="_blank" rel="noopener noreferrer" style={toolbarBtn}><ExternalLink size={13} /></a>
+            <a href={pdfUrl} download style={toolbarBtn}><Download size={13} /></a>
           </div>
         </div>
-
-        {/* Preview iframe — scrolling handled inside iframe by Google Docs / browser PDF viewer */}
-        <div style={{
-          width: '100%',
-          height: previewHeight,
-          borderRadius: '0 0 14px 14px',
-          background: '#fff',
-          transition: 'height 0.35s ease',
-          position: 'relative',
-        }}>
+        <div style={{ width: '100%', height: '680px', background: '#fff' }}>
           <iframe
-            key={`${iframeSrc}-${fullscreen}-${previewNonce}`}
-            src={iframeSrc}
+            key={previewNonce}
+            src={googleViewerUrl}
             title={file.nama_file || 'PDF Preview'}
-            style={{
-              width: '100%',
-              height: '100%',
-              border: 'none',
-              display: 'block',
-            }}
+            style={{ width: '100%', height: '100%', border: 'none', display: 'block' }}
             allow="fullscreen"
-            onLoad={() => setIframeLoaded(true)}
-            onError={() => {
-              if (viewMode === 'google') {
-                setViewMode('direct');
-                setAutoFallback(true);
-              }
-            }}
           />
         </div>
-
-        <p style={{ fontSize: '0.72rem', color: '#475569', margin: '6px 0 0', textAlign: 'center' }}>
-          {viewMode === 'google'
-            ? '🔍 Menggunakan Google Docs Viewer — jika tidak muncul, klik "⚡ Direct" atau "Buka di tab baru"'
-            : '⚡ Preview langsung — jika tidak muncul, klik "🔍 Google" atau "Buka di tab baru"'
-          }
-          {viewMode === 'google' && !iframeLoaded ? ' • Memuat preview...' : ''}
-          {autoFallback ? ' • Mode direct dipilih otomatis karena viewer Google lambat/gagal dimuat.' : ''}
-        </p>
       </div>
     );
   }
 
   // DOCX / PPT / PPTX — Office Online viewer (handles scrolling internally)
-  if (['docx', 'doc', 'ppt', 'pptx'].includes(ext)) {
+  if (isDoc) {
     const officeUrl = `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(url)}`;
     return (
       <div style={{ display: 'flex', flexDirection: 'column' }}>
@@ -216,7 +175,7 @@ function FilePreviewSection({ file, tipe }: { file: MateriFile; tipe?: string })
   }
 
   // Video file — native HTML5 player with controls + scrollable page
-  if (['mp4', 'webm', 'mov', 'avi'].includes(ext) || tipe === 'Video') {
+  if (isVideo) {
     return (
       <div style={{ display: 'flex', flexDirection: 'column' }}>
         <div style={previewToolbar}>
