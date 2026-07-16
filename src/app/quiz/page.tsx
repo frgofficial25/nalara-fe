@@ -50,6 +50,47 @@ interface SubmitResult {
   skor: number;
 }
 
+function normalizeOptionId(raw: any, index: number): string {
+  if (raw && typeof raw === 'object') {
+    if (raw.id) return String(raw.id);
+    if (raw.option_id) return String(raw.option_id);
+    if (raw.key) return String(raw.key);
+    if (raw.label) return String(raw.label);
+  }
+  return String.fromCharCode(65 + index);
+}
+
+function normalizeQuestionOptions(rawOptions: any): { id: string; text: string; is_correct: boolean }[] {
+  if (Array.isArray(rawOptions)) {
+    return rawOptions.map((o: any, idx: number) => {
+      if (typeof o === 'string') {
+        return {
+          id: String.fromCharCode(65 + idx),
+          text: o,
+          is_correct: false,
+        };
+      }
+
+      return {
+        id: normalizeOptionId(o, idx),
+        text: String(o?.text ?? o?.option_text ?? o?.label ?? o?.value ?? ''),
+        is_correct: !!(o?.is_correct ?? o?.correct),
+      };
+    });
+  }
+
+  if (rawOptions && typeof rawOptions === 'object') {
+    const entries = Object.entries(rawOptions).filter(([k]) => k !== 'answer' && k !== 'correct' && k !== 'correct_answer');
+    return entries.map(([key, value], idx) => ({
+      id: key || String.fromCharCode(65 + idx),
+      text: String(value ?? ''),
+      is_correct: false,
+    }));
+  }
+
+  return [];
+}
+
 /* ═══════════════════════════════════════════════════════════════════════════
    AUTH HELPER
    ═══════════════════════════════════════════════════════════════════════════ */
@@ -184,9 +225,34 @@ function DetailQuizView({
               </div>
             )}
             {status === 'Ditugaskan' && (
-              <Button id="btn-start-quiz" onClick={onStart} variant="primary" style={{ padding: '16px 48px', fontSize: '1.1rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '12px', background: 'linear-gradient(135deg, var(--azure), var(--navy))', border: 'none', boxShadow: '0 8px 24px rgba(65, 150, 240, 0.3)' }}>
-                <Play size={20} fill="#fff" /> Mulai Kuis Sekarang
-              </Button>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
+                <Button
+                  id="btn-start-quiz"
+                  onClick={onStart}
+                  variant="primary"
+                  disabled={detail.questions.length === 0}
+                  style={{
+                    padding: '16px 48px',
+                    fontSize: '1.1rem',
+                    fontWeight: 700,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '12px',
+                    background: 'linear-gradient(135deg, var(--azure), var(--navy))',
+                    border: 'none',
+                    boxShadow: '0 8px 24px rgba(65, 150, 240, 0.3)',
+                    opacity: detail.questions.length === 0 ? 0.55 : 1,
+                    cursor: detail.questions.length === 0 ? 'not-allowed' : 'pointer'
+                  }}
+                >
+                  <Play size={20} fill="#fff" /> Mulai Kuis Sekarang
+                </Button>
+                {detail.questions.length === 0 && (
+                  <span style={{ fontSize: '0.8rem', color: '#FFB74D' }}>
+                    Soal kuis belum tersedia. Hubungi pengajar Anda.
+                  </span>
+                )}
+              </div>
             )}
             {status === 'Selesai' && (
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px', background: 'rgba(0,200,83,0.1)', color: '#00C853', padding: '16px 32px', borderRadius: '12px', fontSize: '0.95rem', fontWeight: 600, border: '1px solid rgba(0,200,83,0.2)' }}>
@@ -581,11 +647,7 @@ function QuizPageInner() {
             uuid_question: q.uuid_question || q.id,
             question_text: q.detail_soal || q.question_text || q.question || '',
             type: q.tipe_soal || q.type || 'MultipleChoice',
-            options: (q.opsi_jawaban || q.options || []).map((o: any) => ({
-              id: o.id || '',
-              text: o.text || o.option_text || '',
-              is_correct: !!o.is_correct
-            }))
+            options: normalizeQuestionOptions(q.opsi_jawaban || q.options || [])
           })),
           uuid_pembelajaran: d.uuid_pembelajaran || '',
         };
@@ -654,6 +716,11 @@ function QuizPageInner() {
   /* ─── Start quiz ─────────────────────────────────────────────────────── */
   const handleStart = () => {
     if (!detail || !quizId) return;
+    if (!detail.questions.length) {
+      setError('Kuis belum memiliki soal yang valid. Silakan hubungi pengajar Anda.');
+      return;
+    }
+
     const endMs = Date.now() + detail.waktu_pengerjaan * 60 * 1000;
     setPersistedEndTime(quizId, endMs);
     setTimeLeft(detail.waktu_pengerjaan * 60);
@@ -743,9 +810,9 @@ function QuizPageInner() {
   const goBack = () => {
     const courseId = searchParams.get('courseId') || detail?.uuid_pembelajaran;
     if (courseId) {
-      router.push(`/student/courses/detail?id=${courseId}`);
+      router.push(`/student/kelas/detail?id=${courseId}`);
     } else {
-      router.push('/student/courses');
+      router.push('/student/kelas');
     }
   };
 

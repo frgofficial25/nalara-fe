@@ -65,9 +65,33 @@ function getAuth() {
 function FilePreviewSection({ file, tipe }: { file: MateriFile; tipe?: string }) {
   const [fullscreen, setFullscreen] = useState(false);
   const [viewMode, setViewMode] = useState<'google' | 'direct'>('google');
+  const [previewNonce, setPreviewNonce] = useState(0);
+  const [iframeLoaded, setIframeLoaded] = useState(false);
+  const [autoFallback, setAutoFallback] = useState(false);
   const url = file.preview_url || file.export_url || file.url || '';
   const urlExt = getFileExtension(url);
   const ext = urlExt || (file.format_file || '').toLowerCase();
+
+  useEffect(() => {
+    if (ext !== 'pdf') return;
+
+    setAutoFallback(false);
+    setIframeLoaded(false);
+
+    if (viewMode !== 'google') return;
+
+    const fallbackTimer = setTimeout(() => {
+      setIframeLoaded(currentLoaded => {
+        if (!currentLoaded) {
+          setViewMode('direct');
+          setAutoFallback(true);
+        }
+        return currentLoaded;
+      });
+    }, 4500);
+
+    return () => clearTimeout(fallbackTimer);
+  }, [ext, viewMode, previewNonce]);
 
   // PDF — Google Docs Viewer (handles cross-origin PDFs + built-in scrolling)
   if (ext === 'pdf') {
@@ -102,6 +126,9 @@ function FilePreviewSection({ file, tipe }: { file: MateriFile; tipe?: string })
             <button onClick={() => setFullscreen(!fullscreen)} style={toolbarBtn} title="Toggle tinggi preview">
               <ZoomIn size={13} />
             </button>
+            <button onClick={() => setPreviewNonce(n => n + 1)} style={toolbarBtn} title="Muat ulang preview">
+              <RefreshCw size={13} />
+            </button>
             <a href={url} target="_blank" rel="noopener noreferrer" style={toolbarBtn} title="Buka di tab baru">
               <ExternalLink size={13} />
             </a>
@@ -121,7 +148,7 @@ function FilePreviewSection({ file, tipe }: { file: MateriFile; tipe?: string })
           position: 'relative',
         }}>
           <iframe
-            key={`${iframeSrc}-${fullscreen}`}
+            key={`${iframeSrc}-${fullscreen}-${previewNonce}`}
             src={iframeSrc}
             title={file.nama_file || 'PDF Preview'}
             style={{
@@ -131,6 +158,13 @@ function FilePreviewSection({ file, tipe }: { file: MateriFile; tipe?: string })
               display: 'block',
             }}
             allow="fullscreen"
+            onLoad={() => setIframeLoaded(true)}
+            onError={() => {
+              if (viewMode === 'google') {
+                setViewMode('direct');
+                setAutoFallback(true);
+              }
+            }}
           />
         </div>
 
@@ -139,6 +173,8 @@ function FilePreviewSection({ file, tipe }: { file: MateriFile; tipe?: string })
             ? '🔍 Menggunakan Google Docs Viewer — jika tidak muncul, klik "⚡ Direct" atau "Buka di tab baru"'
             : '⚡ Preview langsung — jika tidak muncul, klik "🔍 Google" atau "Buka di tab baru"'
           }
+          {viewMode === 'google' && !iframeLoaded ? ' • Memuat preview...' : ''}
+          {autoFallback ? ' • Mode direct dipilih otomatis karena viewer Google lambat/gagal dimuat.' : ''}
         </p>
       </div>
     );

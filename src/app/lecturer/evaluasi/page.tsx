@@ -167,12 +167,26 @@ export default function EvaluasiPage() {
       const auth = getAuthHeaders();
       const res = await apiGet<any>('/api/quiz', { token: auth.token, headers: auth.headers });
       const list = Array.isArray(res) ? res : (res?.data || []);
-      setQuizzes(list.map((q: any) => ({
+      const mapped: QuizListItem[] = list.map((q: any) => ({
         id: q.uuid_quiz || q.id || '',
         title: q.nama_quiz || q.title || 'Untitled Quiz',
         moduleTitle: q.asal_modul || q.modul?.title || q.asal_pembelajaran || q.pembelajaran?.title || '-',
-        count: q.questions?.length || 0,
-      })));
+        count: q.question_count || q.questions?.length || q._count?.questions || q.count || 0,
+      }));
+
+      const finalized = await Promise.all(mapped.map(async (quiz: QuizListItem) => {
+        if (quiz.count > 0) return quiz;
+        try {
+          const detailRes = await apiGet<any>(`/api/quiz/${quiz.id}`, { token: auth.token, headers: auth.headers });
+          const d = detailRes?.data || detailRes;
+          const detailCount = (d.questions || d.daftar_soal || []).length || 0;
+          return { ...quiz, count: detailCount };
+        } catch {
+          return quiz;
+        }
+      }));
+
+      setQuizzes(finalized);
     } catch (e: any) { setError(e.message || 'Gagal memuat kuis.'); }
     finally { setQuizLoading(false); }
   };

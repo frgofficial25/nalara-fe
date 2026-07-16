@@ -162,13 +162,13 @@ export default function CourseDetailClient() {
     if (tugas.type === 'CaseStudy' || tugas.type === 'Practice') {
       router.push('/student/study-case-submissions');
     } else {
-      router.push(`/student/courses/materi?courseId=${courseId}&tugasId=${tugas.id}`);
+      router.push(`/student/kelas/materi?courseId=${courseId}&tugasId=${tugas.id}`);
     }
   };
 
   return (
     <div style={s.container}>
-      <button onClick={() => router.push('/student/courses')} style={s.backBtn}>
+      <button onClick={() => router.push('/student/kelas')} style={s.backBtn}>
         <ArrowLeft size={16} />
         <span>Kembali ke Kelas</span>
       </button>

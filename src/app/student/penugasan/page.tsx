@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { apiGet, apiPost } from '@/lib/api';
 import { getStoredToken } from '@/services/auth';
+import { useRouter } from 'next/navigation';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface UrgentTask {
@@ -40,6 +41,7 @@ interface QuizListItem {
   time_limit?: number;
   deadline?: string;
   is_published: boolean;
+  courseId?: string;
   moduleTitle: string;
   questionCount: number;
 }
@@ -83,6 +85,7 @@ function getUserId(): string {
 
 // ═════════════════════════════════════════════════════════════════════════════
 export default function PenugasanPage() {
+  const router = useRouter();
   const [mainTab, setMainTab] = useState<'studycase' | 'quiz'>('studycase');
 
   // Toast state
@@ -186,16 +189,31 @@ export default function PenugasanPage() {
       ]);
 
       const quizList = Array.isArray(quizRes) ? quizRes : (quizRes?.data || []);
-      setQuizzes(quizList.filter((q: any) => q.is_published !== false).map((q: any) => ({
+      const mapped: QuizListItem[] = quizList.filter((q: any) => q.is_published !== false).map((q: any) => ({
         id: q.uuid_quiz || q.id,
         title: q.nama_quiz || q.title || 'Untitled Quiz',
         description: q.description || q.deskripsi || '',
         time_limit: q.time_limit || q.waktu_pengerjaan || null,
         deadline: q.deadline || q.tenggat || null,
         is_published: q.is_published ?? true,
+        courseId: q.uuid_pembelajaran || q.course_id || q.courseId || undefined,
         moduleTitle: q.asal_modul || q.modul?.title || q.pembelajaran?.title || q.asal_pembelajaran || '-',
-        questionCount: q.questions?.length || q._count?.questions || 0,
-      })));
+        questionCount: q.question_count || q.questions?.length || q._count?.questions || q.count || 0,
+      }));
+
+      const finalized = await Promise.all(mapped.map(async (quiz: QuizListItem) => {
+        if (quiz.questionCount > 0) return quiz;
+        try {
+          const detailRes = await apiGet<any>(`/api/quiz/${quiz.id}`, { token: auth.token, headers: auth.headers });
+          const d = detailRes?.data || detailRes;
+          const detailCount = (d.questions || d.daftar_soal || []).length || 0;
+          return { ...quiz, questionCount: detailCount };
+        } catch {
+          return quiz;
+        }
+      }));
+
+      setQuizzes(finalized);
 
       const rekapList = Array.isArray(rekapRes) ? rekapRes : (rekapRes?.data || []);
       setMyQuizRekap(rekapList);
@@ -238,41 +256,23 @@ export default function PenugasanPage() {
   };
 
   // ── Open Quiz ──────────────────────────────────────────────────────────────
-  const openQuiz = async (quizId: string) => {
+  const openQuiz = async (quiz: QuizListItem) => {
     // Check if already attempted
-    const already = myQuizRekap.find((r: any) => (r.uuid_quiz || r.quiz_id) === quizId);
+    const already = myQuizRekap.find((r: any) => (r.uuid_quiz || r.quiz_id) === quiz.id);
     if (already) { 
       showToast('Kamu sudah pernah mengerjakan kuis ini. Hanya boleh dikerjakan 1 kali.', 'info'); 
       return; 
     }
 
-    try {
-      setLoadingQuizDetail(true);
-      const auth = getAuthHeaders();
-      const res = await apiGet<any>(`/api/quiz/${quizId}`, { token: auth.token, headers: auth.headers });
-      const d = res.data || res;
-      setActiveQuiz({
-        id: d.uuid_quiz || d.id,
-        title: d.nama_quiz || d.title,
-        description: d.description || d.deskripsi || '',
-        time_limit: d.time_limit || d.waktu_pengerjaan || null,
-        questions: (d.questions || []).map((q: any) => ({
-          uuid_question: q.uuid_question || q.id,
-          question_text: q.question_text,
-          type: q.type,
-          options: (q.options || []).map((o: any) => ({ id: o.id || o.choice_label, text: o.text || o.choice_text })),
-        })),
-      });
-      setAnswers({});
-      setQuizResult(null);
-      // Start timer
-      if (d.time_limit) {
-        setTimeLeft(d.time_limit * 60);
-      }
-    } catch (e: any) { 
-      showToast(e.message || 'Gagal memuat kuis.', 'error'); 
+    const isExpired = !!quiz.deadline && new Date(quiz.deadline) < new Date();
+    if (isExpired) {
+      showToast('Kuis sudah kedaluwarsa.', 'info');
+      return;
     }
-    finally { setLoadingQuizDetail(false); }
+
+    setLoadingQuizDetail(true);
+    const courseQuery = quiz.courseId ? `&courseId=${encodeURIComponent(quiz.courseId)}` : '';
+    router.push(`/quiz?id=${encodeURIComponent(quiz.id)}${courseQuery}`);
   };
 
   // Timer countdown
@@ -475,9 +475,12 @@ export default function PenugasanPage() {
                       </div>
                     </div>
                     {!attempt && !isExpired && (
-                      <button onClick={() => openQuiz(quiz.id)} disabled={loadingQuizDetail} style={s.btnStart}>
+                      <button onClick={() => openQuiz(quiz)} disabled={loadingQuizDetail || quiz.questionCount === 0} style={{ ...s.btnStart, opacity: (loadingQuizDetail || quiz.questionCount === 0) ? 0.6 : 1, cursor: (loadingQuizDetail || quiz.questionCount === 0) ? 'not-allowed' : 'pointer' }}>
                         <Play size={14} /><span>Mulai Kuis</span>
                       </button>
+                    )}
+                    {!attempt && !isExpired && quiz.questionCount === 0 && (
+                      <div style={{ textAlign: 'center', fontSize: '0.78rem', color: '#FFB240' }}>Soal belum tersedia</div>
                     )}
                     {attempt && (
                       <div style={{ textAlign: 'center', fontSize: '0.8rem', color: 'var(--grey-blue)' }}>Selesai dikerjakan</div>

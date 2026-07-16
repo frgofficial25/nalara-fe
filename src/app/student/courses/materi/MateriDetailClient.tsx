@@ -87,9 +87,33 @@ function FilePreviewSection({
 }) {
   const [fullscreen, setFullscreen] = useState(false);
   const [viewMode, setViewMode] = useState<'google' | 'direct'>('google');
+  const [previewNonce, setPreviewNonce] = useState(0);
+  const [iframeLoaded, setIframeLoaded] = useState(false);
+  const [autoFallback, setAutoFallback] = useState(false);
 
   const urlExt = getFileExtension(fileUrl);
   const ext = urlExt || (fileFormat || '').toLowerCase();
+
+  useEffect(() => {
+    if (ext !== 'pdf') return;
+
+    setAutoFallback(false);
+    setIframeLoaded(false);
+
+    if (viewMode !== 'google') return;
+
+    const fallbackTimer = setTimeout(() => {
+      setIframeLoaded(currentLoaded => {
+        if (!currentLoaded) {
+          setViewMode('direct');
+          setAutoFallback(true);
+        }
+        return currentLoaded;
+      });
+    }, 4500);
+
+    return () => clearTimeout(fallbackTimer);
+  }, [ext, viewMode, previewNonce]);
 
   // ── PDF ──────────────────────────────────────────────────────────────────────
   if (ext === 'pdf') {
@@ -121,6 +145,9 @@ function FilePreviewSection({
             <button onClick={() => setFullscreen(!fullscreen)} style={toolbarBtn} title="Toggle tinggi preview">
               <ZoomIn size={13} />
             </button>
+            <button onClick={() => setPreviewNonce(n => n + 1)} style={toolbarBtn} title="Muat ulang preview">
+              <RefreshCw size={13} />
+            </button>
             <a href={fileUrl} target="_blank" rel="noopener noreferrer" style={toolbarBtn} title="Buka di tab baru">
               <ExternalLink size={13} />
             </a>
@@ -138,11 +165,18 @@ function FilePreviewSection({
           position: 'relative',
         }}>
           <iframe
-            key={`${iframeSrc}-${fullscreen}`}
+            key={`${iframeSrc}-${fullscreen}-${previewNonce}`}
             src={iframeSrc}
             title={fileName || 'PDF Preview'}
             style={{ width: '100%', height: '100%', border: 'none', display: 'block' }}
             allow="fullscreen"
+            onLoad={() => setIframeLoaded(true)}
+            onError={() => {
+              if (viewMode === 'google') {
+                setViewMode('direct');
+                setAutoFallback(true);
+              }
+            }}
           />
         </div>
         <p style={{ fontSize: '0.72rem', color: '#475569', margin: '6px 0 0', textAlign: 'center' }}>
@@ -150,6 +184,8 @@ function FilePreviewSection({
             ? '🔍 Menggunakan Google Docs Viewer — jika tidak muncul, klik "⚡ Direct" atau "Buka di tab baru"'
             : '⚡ Preview langsung — jika tidak muncul, klik "🔍 Google" atau "Buka di tab baru"'
           }
+          {viewMode === 'google' && !iframeLoaded ? ' • Memuat preview...' : ''}
+          {autoFallback ? ' • Mode direct dipilih otomatis karena viewer Google lambat/gagal dimuat.' : ''}
         </p>
       </div>
     );
@@ -363,12 +399,12 @@ export default function MateriDetailClient() {
 
       {/* Breadcrumb */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 28, flexWrap: 'wrap' }}>
-        <button onClick={() => router.push('/student/courses')} style={backBtn}>
+        <button onClick={() => router.push('/student/kelas')} style={backBtn}>
           <ArrowLeft size={15} />
         </button>
-        <span style={crumb} onClick={() => router.push('/student/courses')}>Courses</span>
+        <span style={crumb} onClick={() => router.push('/student/kelas')}>Kelas</span>
         <ChevronRight size={13} color="#475569" />
-        <span style={crumb} onClick={() => router.push(`/student/courses/detail?id=${courseId}`)}>
+        <span style={crumb} onClick={() => router.push(`/student/kelas/detail?id=${courseId}`)}>
           {tugas?.pembelajaran?.title ?? 'Detail Kelas'}
         </span>
         <ChevronRight size={13} color="#475569" />
@@ -421,7 +457,7 @@ export default function MateriDetailClient() {
 
             {/* Actions */}
             <div style={{ display: 'flex', gap: 10, marginTop: 20, flexWrap: 'wrap' }}>
-              <button onClick={() => router.push(`/student/courses/detail?id=${courseId}`)} style={secondaryBtn}>
+              <button onClick={() => router.push(`/student/kelas/detail?id=${courseId}`)} style={secondaryBtn}>
                 <ArrowLeft size={14} /> Kembali ke Kelas
               </button>
               {hasFile && fileUrl && (

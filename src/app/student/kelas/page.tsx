@@ -169,7 +169,7 @@ export default function StudentKelasPage() {
   const openMateri = (materi: Materi) => {
     const courseId = selectedCourse?.id || '';
     // Semua tipe materi (termasuk Video YouTube) → navigasi ke halaman detail
-    router.push(`/student/courses/materi?courseId=${courseId}&tugasId=${materi.id}`);
+    router.push(`/student/kelas/materi?courseId=${courseId}&tugasId=${materi.id}`);
   };
 
   const goBack = () => {
