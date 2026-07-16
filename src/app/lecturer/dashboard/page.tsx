@@ -54,78 +54,35 @@ export default function LecturerDashboard() {
         headers['x-api-key'] = token;
       }
 
-      let lecturerData: LecturerData;
-      try {
-        const response = await apiGet<{ success: boolean; data: any }>(
-          '/api/dashboard/lecturer',
-          { token: token || undefined, headers }
-        );
-        const rawData = response.data || response;
-        const rawTasks = rawData.tasks_to_grade || rawData.tugas_mendesak || [];
-        const mappedTasks = rawTasks.map((t: any, idx: number) => {
-          let totalSub = 0;
-          if (t.rasio_pengumpulan && typeof t.rasio_pengumpulan === 'string') {
-            const parts = t.rasio_pengumpulan.split('/');
-            totalSub = parseInt(parts[1]) || 0;
-          }
-          return {
-            id: t.id_tugas || t.id || idx + 1,
-            task_name: t.nama_tugas || t.task_name || '',
-            course_name: t.kelas_asal || t.course_name || '',
-            module_name: t.modul_asal || t.module_name || '',
-            ungraded_count: t.jumlah_belum_dinilai !== undefined ? t.jumlah_belum_dinilai : t.ungraded_count || 0,
-            total_submissions: totalSub || t.total_submissions || 0,
-            deadline: t.tenggat_verifikasi || t.deadline || null
-          };
-        });
-        lecturerData = {
-          online_students: rawData.online_students || 0,
-          active_courses: rawData.active_courses || 0,
-          total_students: rawData.total_students || 0,
-          pending_submissions: rawData.pending_submissions || 0,
-          tasks_to_grade: mappedTasks
-        };
-      } catch (err: any) {
-        if (err.message?.includes('Forbidden') || err.message?.includes('403')) {
-          console.warn('Lecturer dashboard forbidden, falling back to tentor dashboard');
-          const tentorRes = await apiGet<{ success: boolean; data: any } | any>(
-            '/api/dashboard/tentor',
-            { token: token || undefined, headers }
-          );
-          const rawData = tentorRes.data || tentorRes;
-          lecturerData = {
-            online_students: rawData.online_students || 0,
-            active_courses: rawData.managed_courses || rawData.active_courses || 0,
-            total_students: rawData.total_students || 0,
-            pending_submissions: rawData.pending_submissions || 0,
-            tasks_to_grade: rawData.tasks_to_grade || []
-          };
-        } else {
-          throw err;
+      const response = await apiGet<{ success: boolean; data: any }>(
+        '/api/dashboard/lecturer',
+        { token: token || undefined, headers }
+      );
+      const rawData = response.data || response;
+      const rawTasks = rawData.tasks_to_grade || rawData.tugas_mendesak || [];
+      const mappedTasks = rawTasks.map((t: any, idx: number) => {
+        let totalSub = 0;
+        if (t.rasio_pengumpulan && typeof t.rasio_pengumpulan === 'string') {
+          const parts = t.rasio_pengumpulan.split('/');
+          totalSub = parseInt(parts[1]) || 0;
         }
-      }
-
-      const coursesRes = await apiGet<any[] | { success: boolean; data: any[] }>(
-        '/api/pembelajaran',
-        { token: token || undefined, headers }
-      );
-      let realActiveCourses = 0;
-      if (Array.isArray(coursesRes)) {
-        realActiveCourses = coursesRes.length;
-      } else if (coursesRes && 'data' in coursesRes && Array.isArray(coursesRes.data)) {
-        realActiveCourses = coursesRes.data.length;
-      }
-
-      const studentsRes = await apiGet<any[] | { success: boolean; data: any[] }>(
-        '/api/enroll',
-        { token: token || undefined, headers }
-      );
-      let realTotalStudents = 0;
-      if (Array.isArray(studentsRes)) {
-        realTotalStudents = studentsRes.length;
-      } else if (studentsRes && 'data' in studentsRes && Array.isArray(studentsRes.data)) {
-        realTotalStudents = studentsRes.data.length;
-      }
+        return {
+          id: t.id_tugas || t.id || idx + 1,
+          task_name: t.nama_tugas || t.task_name || '',
+          course_name: t.kelas_asal || t.course_name || '',
+          module_name: t.modul_asal || t.module_name || '',
+          ungraded_count: t.jumlah_belum_dinilai !== undefined ? t.jumlah_belum_dinilai : t.ungraded_count || 0,
+          total_submissions: totalSub || t.total_submissions || 0,
+          deadline: t.tenggat_verifikasi || t.deadline || null
+        };
+      });
+      const lecturerData = {
+        online_students: rawData.online_students || 0,
+        active_courses: rawData.active_courses || 0,
+        total_students: rawData.total_students || 0,
+        pending_submissions: rawData.pending_submissions || 0,
+        tasks_to_grade: mappedTasks
+      };
 
       const localUser = localStorage.getItem('nalara_user_info') || sessionStorage.getItem('nalara_user_info');
       if (localUser) {
@@ -140,9 +97,7 @@ export default function LecturerDashboard() {
       if (lecturerData) {
         const computedData = {
           ...lecturerData,
-          active_courses: realActiveCourses,
-          total_students: realTotalStudents,
-          online_students: Math.max(1, Math.round(realTotalStudents * 0.3))
+          online_students: Math.max(1, Math.round(lecturerData.total_students * 0.3))
         };
         setData(computedData);
       } else {

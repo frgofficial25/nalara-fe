@@ -79,58 +79,13 @@ export default function StudentDashboard() {
         } catch {}
       }
 
-      let response: any;
-      try {
-        response = await apiGet<any>(
-          '/api/dashboard/student',
-          {
-            token: token || undefined,
-            headers
-          }
-        );
-      } catch (dashboardErr) {
-        console.warn('Dashboard API failed, loading from fallback endpoints...', dashboardErr);
-        if (!userId) {
-          throw dashboardErr;
+      const response = await apiGet<any>(
+        '/api/dashboard/student',
+        {
+          token: token || undefined,
+          headers
         }
-
-        // Fetch detail, tasks, and courses in parallel
-        const [studentRes, tasksRes, coursesRes] = await Promise.all([
-          apiGet<any>(`/api/students/${userId}`, { token: token || undefined, headers }),
-          apiGet<any>(`/api/students/${userId}/urgent-tasks`, { token: token || undefined, headers }),
-          apiGet<any>(`/api/pembelajaran`, { token: token || undefined, headers })
-        ]);
-
-        const student = studentRes.data || studentRes;
-        const tasks = Array.isArray(tasksRes) ? tasksRes : (tasksRes.data || []);
-        const courses = Array.isArray(coursesRes) ? coursesRes : (coursesRes.data || []);
-
-        const upcoming_tasks = tasks.map((t: any, idx: number) => ({
-          id: idx + 1,
-          task_name: t.nama_tugas || t.task_name || 'Tugas Baru',
-          course_name: t.nama_pembelajaran || t.course_name || 'Kelas',
-          module_name: t.nama_modul || t.module_name || 'Modul',
-          deadline: new Date(Date.now() + (idx + 1) * 24 * 60 * 60 * 1000).toISOString()
-        }));
-
-        response = {
-          success: true,
-          data: {
-            current_level: student.current_level || 'Pemula',
-            enrolled_courses: courses.length,
-            completed_materials: student.completedLessons ?? 1,
-            pending_exams: upcoming_tasks.filter((t: any) => t.task_name.includes('Quiz') || t.task_name.includes('Ujian')).length,
-            pending_assignments: {
-              done: student.completedLessons ?? 1,
-              ongoing: student.totalLessons ? (student.totalLessons - (student.completedLessons ?? 1)) : 5,
-              overdue: 0
-            },
-            learning_streak: student.login_streak ?? 1,
-            longest_streak: student.login_streak ?? 1,
-            upcoming_tasks
-          }
-        };
-      }
+      );
 
       if (response && response.data) {
         const rawData = response.data;

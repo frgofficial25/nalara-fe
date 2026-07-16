@@ -37,39 +37,26 @@ export default function SuperadminDashboard() {
       }
 
       let responseData: any = null;
-      try {
-        const response = await apiGet<any>(
-          '/api/dashboard/superadmin',
-          {
-            token: token || undefined,
-            headers
-          }
-        );
-        responseData = response?.data || response;
-      } catch (apiErr) {
-        console.warn("Failed fetching from server, falling back to mock data", apiErr);
-      }
+      const response = await apiGet<any>(
+        '/api/dashboard/superadmin',
+        {
+          token: token || undefined,
+          headers
+        }
+      );
+      responseData = response?.data || response;
 
-      // If response is valid, map it. Otherwise use mock data conforming to PRD.
       if (responseData && typeof responseData === 'object') {
         setData({
-          total_users: responseData.total_users ?? 6,
-          total_students: responseData.total_students ?? 3,
-          total_lecturers: responseData.total_lecturers ?? 1,
-          total_tentors: responseData.total_tentors ?? 1,
-          signed_in_users: responseData.signed_in_users ?? 2,
-          inactive_users: responseData.inactive_users ?? 1
+          total_users: responseData.total_users ?? 0,
+          total_students: responseData.total_students ?? 0,
+          total_lecturers: responseData.total_lecturers ?? 0,
+          total_tentors: responseData.total_tentors ?? 0,
+          signed_in_users: responseData.signed_in_users ?? 0,
+          inactive_users: responseData.inactive_users ?? 0
         });
       } else {
-        // Mock fallback statistics matching constraints
-        setData({
-          total_users: 6,
-          total_students: 3,
-          total_lecturers: 1,
-          total_tentors: 1,
-          signed_in_users: 2,
-          inactive_users: 1
-        });
+        throw new Error('Data dashboard tidak valid');
       }
     } catch (err) {
       console.error('Failed to fetch dashboard data:', err);
