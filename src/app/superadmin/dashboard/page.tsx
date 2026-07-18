@@ -1,8 +1,8 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { 
-  Users, Activity, Ban, RefreshCw, ShieldAlert, Award, 
+import {
+  Users, Activity, Ban, RefreshCw, ShieldAlert, Award,
   GraduationCap, BookOpen, AlertTriangle, CheckCircle, Mail, Key, UserCheck, HelpCircle
 } from 'lucide-react';
 import { apiGet } from '@/lib/api';
@@ -28,7 +28,7 @@ export default function SuperadminDashboard() {
       setError(null);
       const token = getStoredToken();
       const apiKey = process.env.NEXT_PUBLIC_API_KEY;
-      
+
       const headers: Record<string, string> = {};
       if (apiKey) {
         headers['x-api-key'] = apiKey;
@@ -140,7 +140,7 @@ export default function SuperadminDashboard() {
           <h1 style={s.title}>SuperAdmin Overview</h1>
           <p style={s.subtitle}>Agregat pengguna, statistik sistem, dan monitor otomatisasi</p>
         </div>
-        <button 
+        <button
           onClick={handleRefresh}
           disabled={loading || isRefreshing}
           style={{
@@ -149,12 +149,12 @@ export default function SuperadminDashboard() {
             cursor: loading || isRefreshing ? 'not-allowed' : 'pointer'
           }}
         >
-          <RefreshCw 
-            size={15} 
-            color="var(--silver)" 
-            style={{ 
-              animation: isRefreshing ? 'spin 1s linear infinite' : 'none' 
-            }} 
+          <RefreshCw
+            size={15}
+            color="var(--silver)"
+            style={{
+              animation: isRefreshing ? 'spin 1s linear infinite' : 'none'
+            }}
           />
           <span>{isRefreshing ? 'Syncing...' : 'Refresh Data'}</span>
         </button>
@@ -311,7 +311,7 @@ const s: Record<string, React.CSSProperties> = {
     color: '#ffffff',
     margin: '32px 0 16px 0',
   },
-  
+
   // Alerts Panel
   alertsPanel: {
     background: 'rgba(33, 33, 33, 0.4)',

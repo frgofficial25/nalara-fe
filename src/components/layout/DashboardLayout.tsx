@@ -13,7 +13,18 @@ interface DashboardLayoutProps {
 
 export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
   const [userInfo, setUserInfo] = useState<{ name?: string; nama_lengkap?: string; username?: string; email: string; role: string } | null>(null);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth <= 768);
+    };
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const router = useRouter();
   const pathname = usePathname();
@@ -152,13 +163,56 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         .animate-fade-in-up {
           animation: fadeInUpDashboard 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
         }
+        @media (max-width: 768px) {
+          .header-burger-btn {
+            display: flex !important;
+          }
+          .sidebar-layout {
+            position: fixed !important;
+            left: -260px;
+            width: 260px !important;
+            top: 0;
+            bottom: 0;
+            z-index: 1000 !important;
+            transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+            box-shadow: 10px 0 30px rgba(0, 0, 0, 0.5);
+          }
+          .sidebar-layout.open {
+            left: 0 !important;
+          }
+          .sidebar-collapse-btn {
+            display: none !important;
+          }
+          .mobile-sidebar-backdrop {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.55);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            z-index: 999;
+          }
+          /* Adjust padding for scrollable content on mobile */
+          main {
+            padding: 16px 12px !important;
+          }
+        }
       `}} />
+
+      {/* Backdrop for mobile sidebar */}
+      {isMobileSidebarOpen && (
+        <div 
+          className="mobile-sidebar-backdrop" 
+          onClick={() => setIsMobileSidebarOpen(false)}
+        />
+      )}
 
       {/* Sidebar */}
       <Sidebar 
         roleName={getRoleName(userInfo?.role)}
-        isCollapsed={isSidebarCollapsed} 
+        isCollapsed={isMobile ? false : isSidebarCollapsed} 
         onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)} 
+        onClickLink={() => setIsMobileSidebarOpen(false)}
+        isMobileOpen={isMobileSidebarOpen}
       />
 
       {/* Main Content Area */}
@@ -182,6 +236,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
               userInfo?.name ? userInfo.name.charAt(0).toUpperCase() :
               userInfo?.username ? userInfo.username.charAt(0).toUpperCase() : "N"
             }
+            onToggleMobileMenu={() => setIsMobileSidebarOpen(!isMobileSidebarOpen)}
           />
         </div>
         

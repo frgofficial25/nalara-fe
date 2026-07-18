@@ -98,13 +98,17 @@ interface SidebarProps {
   roleName?: string;
   isCollapsed?: boolean;
   onToggleCollapse?: () => void;
+  onClickLink?: () => void;
+  isMobileOpen?: boolean;
 }
 
 export default function Sidebar({ 
   menu, 
   roleName = "System Owner",
   isCollapsed = false,
-  onToggleCollapse
+  onToggleCollapse,
+  onClickLink,
+  isMobileOpen = false
 }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
@@ -125,10 +129,13 @@ export default function Sidebar({
   const activeMenu = menu || getMenuForRole(roleName);
 
   return (
-    <aside style={{
-      ...s.sidebar,
-      width: isCollapsed ? '72px' : '260px',
-    }}>
+    <aside 
+      className={`sidebar-layout ${isMobileOpen ? 'open' : ''}`}
+      style={{
+        ...s.sidebar,
+        width: isCollapsed ? '72px' : '260px',
+      }}
+    >
       <style dangerouslySetInnerHTML={{__html: `
         @keyframes pulseGlow {
           0% {
@@ -233,6 +240,7 @@ export default function Sidebar({
         {/* Collapse toggle button next to logo */}
         {onToggleCollapse && (
           <button
+            className="sidebar-collapse-btn"
             onClick={onToggleCollapse}
             onMouseEnter={() => setIsBtnHovered(true)}
             onMouseLeave={() => setIsBtnHovered(false)}
@@ -297,6 +305,7 @@ export default function Sidebar({
                   <li key={itemIndex} style={{ listStyle: 'none' }}>
                     <Link
                       href={item.href}
+                      onClick={onClickLink}
                       className={`menu-item-transition ${isActive ? 'menu-item-active' : ''}`}
                       style={{
                         ...s.menuItem,

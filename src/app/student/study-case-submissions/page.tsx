@@ -370,10 +370,15 @@ export default function StudyCaseSubmissionsPage() {
                   <button type="submit" disabled={submitting} style={s.submitActionBtn}>
                     {submitting ? (
                       <>
-                        <Loader2 size={15} style={{ animation: 'spin 1s linear infinite' }} />
-                        <span>Mengirim...</span>
+                        <Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} />
+                        <span>Mengunggah...</span>
                       </>
-                    ) : 'Kirim Sekarang'}
+                    ) : (
+                      <>
+                        <Upload size={14} />
+                        <span>Kirim Tugas</span>
+                      </>
+                    )}
                   </button>
                 </div>
               </form>
@@ -382,33 +387,38 @@ export default function StudyCaseSubmissionsPage() {
         </div>
       )}
 
-      {/* Submission Detail Modal */}
+      {/* Detail Modal */}
       {selectedSub && (
         <div style={s.overlay}>
           <div style={{ ...s.modal, maxWidth: 520 }} className="glass-panel">
-            <h3 style={s.modalTitle}>{selectedSub.tugas?.title || 'Detail Pengumpulan'}</h3>
-            <p style={{ color: 'var(--grey-blue)', fontSize: '0.82rem', marginBottom: 18 }}>
-              Berikut adalah berkas pengumpulan dan status verifikasi nilai Anda.
-            </p>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18, borderBottom: '1px solid rgba(255,255,255,0.08)', paddingBottom: 12 }}>
+              <h3 style={{ margin: 0, color: '#fff', fontSize: '1.1rem' }}>Detail Pengumpulan</h3>
+              <button onClick={() => setSelectedSub(null)} style={{ background: 'none', border: 'none', color: 'var(--grey-blue)', cursor: 'pointer' }}>Close</button>
+            </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
               <div>
-                <span style={s.detailLabel}>Berkas Terlampir:</span>
-                <div style={{ display: 'flex', gap: 10, marginTop: 6 }}>
-                  {selectedSub.ipynb_url && (
-                    <a href={selectedSub.ipynb_url} target="_blank" rel="noopener noreferrer" style={s.fileLink}>
-                      <FileText size={13} />
-                      <span>Notebook (.ipynb)</span>
-                      <ExternalLink size={11} />
-                    </a>
-                  )}
-                  {selectedSub.pdf_url && (
-                    <a href={selectedSub.pdf_url} target="_blank" rel="noopener noreferrer" style={s.fileLink}>
-                      <FileText size={13} />
-                      <span>Laporan (.pdf)</span>
-                      <ExternalLink size={11} />
-                    </a>
-                  )}
+                <span style={s.detailLabel}>Nama Tugas:</span>
+                <p style={{ fontSize: '0.9rem', color: '#fff', margin: '4px 0 0 0', fontWeight: 600 }}>{selectedSub.tugas?.title}</p>
+              </div>
+
+              <div style={{ display: 'flex', gap: 20 }}>
+                <div style={{ flex: 1 }}>
+                  <span style={s.detailLabel}>File Pengumpulan:</span>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 6 }}>
+                    {selectedSub.ipynb_url && (
+                      <a href={selectedSub.ipynb_url} target="_blank" rel="noopener noreferrer" style={s.fileLink}>
+                        <FileText size={14} />
+                        <span>Notebook</span>
+                      </a>
+                    )}
+                    {selectedSub.pdf_url && (
+                      <a href={selectedSub.pdf_url} target="_blank" rel="noopener noreferrer" style={s.fileLink}>
+                        <FileText size={14} />
+                        <span>PDF Report</span>
+                      </a>
+                    )}
+                  </div>
                 </div>
               </div>
 
@@ -425,19 +435,9 @@ export default function StudyCaseSubmissionsPage() {
                 <span style={s.detailLabel}>Status Evaluasi & Verifikasi:</span>
                 <div style={s.statusGrid}>
                   <div style={s.statusItem}>
-                    <span>Koreksi Otomatis AI</span>
-                    <strong style={{ color: 'var(--white)' }}>{selectedSub.ai_score ?? '-'}</strong>
-                  </div>
-                  <div style={s.statusItem}>
-                    <span>Verifikasi Dosen (Lecturer)</span>
-                    <strong style={{ color: selectedSub.lecturer_verified ? '#00C853' : 'var(--lemon)' }}>
-                      {selectedSub.lecturer_verified ? `Verified (${selectedSub.lecturer_score ?? ''})` : 'Pending'}
-                    </strong>
-                  </div>
-                  <div style={s.statusItem}>
-                    <span>Verifikasi Asisten (Mentor)</span>
-                    <strong style={{ color: selectedSub.mentor_verified ? '#00C853' : 'var(--lemon)' }}>
-                      {selectedSub.mentor_verified ? `Verified (${selectedSub.mentor_score ?? ''})` : 'Pending'}
+                    <span>Status Verifikasi</span>
+                    <strong style={{ color: (selectedSub.lecturer_verified || selectedSub.mentor_verified) ? '#00C853' : 'var(--lemon)' }}>
+                      {(selectedSub.lecturer_verified || selectedSub.mentor_verified) ? 'Verified' : 'Pending'}
                     </strong>
                   </div>
                   <div style={s.statusItem}>

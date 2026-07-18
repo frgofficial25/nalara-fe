@@ -7,7 +7,7 @@ import {
   Calendar, Layers
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { apiGet, apiPost } from '@/lib/api';
+import { apiGet, apiPost, apiPut } from '@/lib/api';
 import { getStoredToken } from '@/services/auth';
 import Portal from '@/components/common/Portal';
 
@@ -398,23 +398,44 @@ export default function CoursesPage() {
         alert("Harap pilih tanggal dan waktu untuk penjadwalan.");
         return;
       }
-      // Save schedule to localStorage
-      const updated = { ...courseSchedules };
-      updated[publishCourseId] = {
-        scheduledAt: new Date(scheduleDatetime).toISOString(),
-        studentIds: [],
-      };
-      setCourseSchedules(updated);
-      localStorage.setItem('nalara_course_schedules', JSON.stringify(updated));
-      setPublishCourseId(null);
-      setScheduleMode('now');
-      setScheduleDatetime('');
+      setPublishing(true);
+      try {
+        const auth = getAuthHeaders();
+        // Update database with status "scheduled" and the datetime
+        await apiPut(`/api/pembelajaran/${publishCourseId}`, {
+          status: 'scheduled',
+          scheduled_at: new Date(scheduleDatetime).toISOString()
+        }, { token: auth.token, headers: auth.headers });
+
+        // Save schedule to localStorage
+        const updated = { ...courseSchedules };
+        updated[publishCourseId] = {
+          scheduledAt: new Date(scheduleDatetime).toISOString(),
+          studentIds: [],
+        };
+        setCourseSchedules(updated);
+        localStorage.setItem('nalara_course_schedules', JSON.stringify(updated));
+        setPublishCourseId(null);
+        setScheduleMode('now');
+        setScheduleDatetime('');
+        showToast('Kelas berhasil dijadwalkan!');
+      } catch (err) {
+        alert(err instanceof Error ? err.message : 'Gagal menjadwalkan kelas.');
+      } finally {
+        setPublishing(false);
+      }
       return;
     }
 
     setPublishing(true);
     try {
       const auth = getAuthHeaders();
+      // Update database with status "published"
+      await apiPut(`/api/pembelajaran/${publishCourseId}`, {
+        status: 'published',
+        scheduled_at: null
+      }, { token: auth.token, headers: auth.headers });
+
       await apiPost('/api/enroll', {
         course_id: publishCourseId,
         student_ids: []

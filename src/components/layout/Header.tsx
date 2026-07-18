@@ -1,21 +1,32 @@
 "use client";
 
 import React from 'react';
-import { ChevronDown } from 'lucide-react';
+import { ChevronDown, Menu } from 'lucide-react';
 
 interface HeaderProps {
   userName?: string;
   userRole?: string;
   userInitial?: string;
+  onToggleMobileMenu?: () => void;
 }
 
 export default function Header({
   userName = "Nalara Chief Administrator",
   userRole = "Owner",
-  userInitial = "N"
+  userInitial = "N",
+  onToggleMobileMenu
 }: HeaderProps) {
   return (
     <header style={s.header}>
+      <button 
+        className="header-burger-btn" 
+        onClick={onToggleMobileMenu} 
+        style={s.burgerBtn}
+        aria-label="Toggle Menu"
+      >
+        <Menu size={20} color="#fff" />
+      </button>
+
       {/* User Profile */}
       <div style={s.userProfile}>
         <div style={s.userAvatar}>
@@ -81,5 +92,15 @@ const s: Record<string, React.CSSProperties> = {
   userRoleText: {
     fontSize: '0.68rem',
     color: 'var(--grey-blue)',
+  },
+  burgerBtn: {
+    display: 'none',
+    background: 'none',
+    border: 'none',
+    cursor: 'pointer',
+    padding: '8px',
+    marginRight: 'auto',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 };

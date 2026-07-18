@@ -653,9 +653,6 @@ export default function TugasPage() {
                   }}>
                     {sub.is_verified_by_me ? 'Verified' : 'Pending Verification'}
                   </span>
-                  <span style={{ fontSize: '0.72rem', color: 'var(--grey-blue)' }}>
-                    AI Score: <strong>{sub.ai_score ?? '-'}</strong>
-                  </span>
                 </div>
 
                 <div style={s.cardBody}>

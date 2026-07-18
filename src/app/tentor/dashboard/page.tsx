@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { 
+import {
   Users, BookOpen, FileText, RefreshCw, ShieldAlert, ChevronRight, FileCheck, Flame, Clock, Layers, ArrowRight, CheckCircle
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
@@ -51,7 +51,7 @@ export default function TentorDashboard() {
           const userObj = JSON.parse(localUser);
           const name = userObj.nama_lengkap || userObj.name || userObj.username;
           if (name) setUserName(name);
-        } catch {}
+        } catch { }
       }
 
       const response = await apiGet<{ success: boolean; data: any } | any>(
@@ -63,7 +63,7 @@ export default function TentorDashboard() {
 
       setData({
         managed_courses: raw?.managed_courses ?? 0,
-        total_students:  raw?.total_students  ?? 0,
+        total_students: raw?.total_students ?? 0,
         pending_submissions: raw?.pending_submissions ?? 0,
         verified_by_me: raw?.verified_by_me ?? 0,
         tasks_to_grade: (raw?.tasks_to_grade ?? []).map((t: any, i: number) => ({
@@ -105,12 +105,12 @@ export default function TentorDashboard() {
   // FIFO sorting: Get task with ungraded_count > 0 having the closest deadline date
   const urgentTask = data?.tasks_to_grade
     ? [...data.tasks_to_grade]
-        .filter(t => t.ungraded_count > 0)
-        .sort((a, b) => {
-          if (!a.deadline) return 1;
-          if (!b.deadline) return -1;
-          return new Date(a.deadline).getTime() - new Date(b.deadline).getTime();
-        })[0]
+      .filter(t => t.ungraded_count > 0)
+      .sort((a, b) => {
+        if (!a.deadline) return 1;
+        if (!b.deadline) return -1;
+        return new Date(a.deadline).getTime() - new Date(b.deadline).getTime();
+      })[0]
     : undefined;
 
   const kpiCards = [
@@ -156,7 +156,7 @@ export default function TentorDashboard() {
           <h1 style={s.title}>Tentor Dashboard</h1>
           <p style={s.subtitle}>Overview kelas, data student, dan penilaian tugas peserta</p>
         </div>
-        <button 
+        <button
           onClick={handleRefresh}
           disabled={loading || isRefreshing}
           style={{
@@ -165,12 +165,12 @@ export default function TentorDashboard() {
             cursor: loading || isRefreshing ? 'not-allowed' : 'pointer'
           }}
         >
-          <RefreshCw 
-            size={14} 
-            color="var(--silver)" 
-            style={{ 
-              animation: isRefreshing ? 'spin 1s linear infinite' : 'none' 
-            }} 
+          <RefreshCw
+            size={14}
+            color="var(--silver)"
+            style={{
+              animation: isRefreshing ? 'spin 1s linear infinite' : 'none'
+            }}
           />
           <span>{isRefreshing ? 'Syncing...' : 'Refresh'}</span>
         </button>
@@ -192,7 +192,7 @@ export default function TentorDashboard() {
         <div style={s.heroLeft}>
           <h2 style={s.heroGreeting}>Welcome back, {userName}!</h2>
           <p style={s.heroSubtitle}>
-            {urgentTask 
+            {urgentTask
               ? "Terdapat tugas mendesak yang menunggu penilaian Anda. Selesaikan segera!"
               : "Semua pengumpulan tugas telah dinilai dengan sukses. Kerja bagus!"}
           </p>
@@ -221,7 +221,7 @@ export default function TentorDashboard() {
                   <Flame size={12} style={{ marginRight: 4 }} /> Tugas Paling Mendesak
                 </span>
                 <span style={s.deadlineLabel}>
-                  <Clock size={12} style={{ marginRight: 4 }} /> 
+                  <Clock size={12} style={{ marginRight: 4 }} />
                   Deadline: {urgentTask.deadline ? new Date(urgentTask.deadline).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' }) : "Segera"}
                 </span>
               </div>
@@ -242,7 +242,7 @@ export default function TentorDashboard() {
                     <span style={{ opacity: 0.6 }}> / {formatNumber(urgentTask.total_submissions)} belum dinilai</span>
                   </span>
                 </div>
-                <button 
+                <button
                   onClick={() => router.push(`/tentor/tugas`)}
                   style={s.ctaBtn}
                 >
@@ -321,8 +321,8 @@ export default function TentorDashboard() {
                   </span>
                 </div>
                 <div style={s.taskSubmissionCol}>
-                  <span style={{ 
-                    ...s.ungradedTag, 
+                  <span style={{
+                    ...s.ungradedTag,
                     background: task.ungraded_count > 0 ? 'rgba(255, 168, 38, 0.1)' : 'rgba(16, 185, 129, 0.1)',
                     color: task.ungraded_count > 0 ? '#FFA826' : '#10b981',
                     border: task.ungraded_count > 0 ? '1px solid rgba(255, 168, 38, 0.2)' : '1px solid rgba(16, 185, 129, 0.2)'
@@ -330,7 +330,7 @@ export default function TentorDashboard() {
                     {task.ungraded_count > 0 ? `${formatNumber(task.ungraded_count)} Belum Dinilai` : 'Selesai'}
                   </span>
                 </div>
-                <button 
+                <button
                   onClick={() => router.push(`/tentor/tugas`)}
                   style={s.startTaskBtn}
                 >
@@ -430,7 +430,7 @@ const s: Record<string, React.CSSProperties> = {
     fontWeight: 600,
     cursor: 'pointer',
   },
-  
+
   // Hero Card
   heroCard: {
     background: 'linear-gradient(135deg, rgba(33, 33, 33, 0.6) 0%, rgba(20, 20, 22, 0.8) 100%)',

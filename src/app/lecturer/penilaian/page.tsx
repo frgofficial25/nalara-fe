@@ -216,7 +216,15 @@ export default function PenilaianPage() {
       const auth = getAuth();
       const body: Record<string, any> = { verifier_role: userRole };
       if (modalNotes.trim()) body.notes = modalNotes.trim();
-      if (modalScore !== '') body.score_override = Number(modalScore);
+      if (modalScore !== '') {
+        const scoreNum = Number(modalScore);
+        if (isNaN(scoreNum) || scoreNum < 0 || scoreNum > 100) {
+          showToast('Nilai tidak boleh lebih dari 100 atau kurang dari 0', 'error');
+          setVerifying(false);
+          return;
+        }
+        body.score_override = scoreNum;
+      }
       if (modalReason.trim()) body.reason_override = modalReason.trim();
 
       await apiPatch<any>(
@@ -225,7 +233,7 @@ export default function PenilaianPage() {
         { token: auth.token, headers: auth.headers },
       );
 
-      showToast(`Verifikasi berhasil disimpan! Nilai akan dirilis jika kedua verifikator sudah verifikasi.`, 'success');
+      showToast(`Verifikasi berhasil disimpan! Nilai dirilis ke siswa.`, 'success');
       setModal(null);
       setModalNotes(''); setModalScore(''); setModalReason('');
       await fetchQueue();
@@ -548,7 +556,7 @@ export default function PenilaianPage() {
 
                 return (
                   <div key={sub.id} className="glass-panel" style={s.subCard}>
-                    {/* Top: status badge + AI score */}
+                    {/* Top: status badge */}
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <span style={{
                         display: 'inline-flex', padding: '3px 10px', borderRadius: 12, fontSize: '0.74rem', fontWeight: 600,
@@ -557,11 +565,6 @@ export default function PenilaianPage() {
                       }}>
                         {verifiedByMe ? `✓ Terverifikasi (${userRole})` : `⏳ Menunggu (${userRole})`}
                       </span>
-                      {sub.ai_score !== undefined && (
-                        <span style={{ fontSize: '0.75rem', color: 'var(--grey-blue)' }}>
-                          AI: <strong style={{ color: '#fff' }}>{sub.ai_score}</strong>/100
-                        </span>
-                      )}
                     </div>
 
                     {/* Student & tugas info */}
@@ -888,19 +891,19 @@ export default function PenilaianPage() {
               <div style={{ background: 'rgba(6,113,224,0.07)', border: '1px solid rgba(6,113,224,0.15)', borderRadius: 8, padding: '10px 14px', fontSize: '0.82rem', color: 'var(--azure)' }}>
                 Anda login sebagai <strong>{userRole}</strong>. Verifikasi ini akan mencatat
                 <code style={{ margin: '0 4px' }}>{userRole === 'Lecturer' ? 'lecture_status' : 'mentor_status'} = "Verified"</code>
-                pada submission. Nilai dirilis ke siswa setelah <em>keduanya (Lecturer & Mentor)</em> memverifikasi.
+                pada submission. Nilai dirilis ke siswa setelah Lecturer atau Mentor memverifikasi.
               </div>
 
               {/* Score override */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                 <label style={s.formLabel}>
-                  Override Nilai <span style={{ fontWeight: 400, color: 'var(--grey)' }}>(opsional — default: AI Score {modal.ai_score ?? '-'})</span>
+                  Masukkan Nilai <span style={{ fontWeight: 400, color: 'var(--grey)' }}>(Maksimal 100)</span>
                 </label>
                 <input
                   type="number" min="0" max="100"
                   value={modalScore}
                   onChange={e => setModalScore(e.target.value)}
-                  placeholder={`AI Score: ${modal.ai_score ?? '-'}`}
+                  placeholder="Masukkan nilai (0-100)"
                   style={s.input}
                 />
               </div>

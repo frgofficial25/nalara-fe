@@ -415,18 +415,11 @@ export default function PenugasanPage() {
                       <h3 style={s.taskTitle}>{sub.tugas?.title || 'Study Case'}</h3>
                       {sub.submitted_at && <p style={s.taskMeta}><Calendar size={11} /> {new Date(sub.submitted_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</p>}
                       <div style={{ display: 'flex', gap: 16, marginTop: 10 }}>
-                        <div style={s.scoreItem}><span style={s.scoreLabel}>AI Score</span><span style={s.scoreVal}>{sub.ai_score ?? '-'}</span></div>
                         <div style={s.scoreItem}><span style={s.scoreLabel}>Final Score</span><span style={{ ...s.scoreVal, color: sub.is_released ? 'var(--azure)' : 'var(--grey-blue)' }}>{sub.released_score ?? '-'}</span></div>
                         <div style={s.scoreItem}>
-                          <span style={s.scoreLabel}>Lecturer</span>
-                          <span style={{ fontSize: '0.78rem', color: sub.lecture_status === 'Verified' ? '#00C853' : 'var(--grey-blue)' }}>
-                            {sub.lecture_status === 'Verified' ? '✓' : '○'}
-                          </span>
-                        </div>
-                        <div style={s.scoreItem}>
-                          <span style={s.scoreLabel}>Mentor</span>
-                          <span style={{ fontSize: '0.78rem', color: sub.mentor_status === 'Verified' ? '#00C853' : 'var(--grey-blue)' }}>
-                            {sub.mentor_status === 'Verified' ? '✓' : '○'}
+                          <span style={s.scoreLabel}>Status Verifikasi</span>
+                          <span style={{ fontSize: '0.78rem', color: (sub.lecture_status === 'Verified' || sub.mentor_status === 'Verified') ? '#00C853' : 'var(--grey-blue)' }}>
+                            {(sub.lecture_status === 'Verified' || sub.mentor_status === 'Verified') ? '✓ Diverifikasi' : '○ Pending'}
                           </span>
                         </div>
                       </div>
@@ -449,11 +442,11 @@ export default function PenugasanPage() {
 
           {loadingQuiz ? (
             <div style={s.centered}><Loader2 size={32} style={{ animation: 'spin 1s linear infinite' }} /><p>Memuat kuis...</p></div>
-          ) : quizzes.length === 0 ? (
-            <div style={s.emptyState}><Brain size={48} color="var(--border-color)" /><h3>Belum ada kuis tersedia</h3><p>Dosen belum mempublikasikan kuis apapun.</p></div>
+          ) : quizzes.filter(quiz => !getAttempt(quiz.id)).length === 0 ? (
+            <div style={s.emptyState}><Brain size={48} color="var(--border-color)" /><h3>Belum ada kuis tersedia</h3><p>Semua kuis yang ditugaskan telah Anda selesaikan.</p></div>
           ) : (
             <div style={s.cardList}>
-              {quizzes.map(quiz => {
+              {quizzes.filter(quiz => !getAttempt(quiz.id)).map(quiz => {
                 const attempt = getAttempt(quiz.id);
                 const isExpired = quiz.deadline && new Date(quiz.deadline) < new Date();
                 return (
@@ -557,7 +550,6 @@ export default function PenugasanPage() {
                 { label: 'Status', value: selectedSub.is_released ? '✓ Nilai Dirilis' : '⏳ Menunggu Verifikasi' },
                 { label: 'Kelas', value: selectedSub.tugas?.pembelajaran?.title || '-' },
                 { label: 'Modul', value: selectedSub.tugas?.modul?.title || '-' },
-                { label: 'AI Score', value: selectedSub.ai_score ?? '-' },
                 { label: 'Final Score', value: selectedSub.released_score ?? (selectedSub.is_released ? 0 : '-') },
               ].map(({ label, value }) => (
                 <div key={label} style={{ display: 'flex', gap: 12, borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: 10 }}>

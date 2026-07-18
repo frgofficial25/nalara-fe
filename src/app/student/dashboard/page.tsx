@@ -1,8 +1,8 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { 
-  GraduationCap, BookOpen, Clock, Flame, 
+import {
+  GraduationCap, BookOpen, Clock, Flame,
   RefreshCw, ShieldAlert, ChevronRight, Play, Award
 } from 'lucide-react';
 import { apiGet } from '@/lib/api';
@@ -76,7 +76,7 @@ export default function StudentDashboard() {
           if (userObj.id) {
             userId = userObj.id;
           }
-        } catch {}
+        } catch { }
       }
 
       const response = await apiGet<any>(
@@ -142,7 +142,7 @@ export default function StudentDashboard() {
   const streak = data?.learning_streak ?? 0;
   const longestStreak = (data as any)?.longest_streak ?? 0;
 
-  const urgentTask = data?.upcoming_tasks && data.upcoming_tasks.length > 0 
+  const urgentTask = data?.upcoming_tasks && data.upcoming_tasks.length > 0
     ? [...data.upcoming_tasks].sort((a, b) => new Date(a.deadline).getTime() - new Date(b.deadline).getTime())[0]
     : null;
 
@@ -189,7 +189,7 @@ export default function StudentDashboard() {
           <h1 style={s.title}>Learning Dashboard</h1>
           <p style={s.subtitle}>Overview of your academic progress and tasks</p>
         </div>
-        <button 
+        <button
           onClick={handleRefresh}
           disabled={loading || isRefreshing}
           style={{
@@ -197,12 +197,12 @@ export default function StudentDashboard() {
             opacity: loading || isRefreshing ? 0.6 : 1,
           }}
         >
-          <RefreshCw 
-            size={14} 
-            color="var(--silver)" 
-            style={{ 
-              animation: isRefreshing ? 'spin 1s linear infinite' : 'none' 
-            }} 
+          <RefreshCw
+            size={14}
+            color="var(--silver)"
+            style={{
+              animation: isRefreshing ? 'spin 1s linear infinite' : 'none'
+            }}
           />
           <span>{isRefreshing ? 'Syncing...' : 'Refresh'}</span>
         </button>
