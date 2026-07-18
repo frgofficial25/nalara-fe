@@ -7,7 +7,7 @@ import {
   ExternalLink, RefreshCw, ZoomIn
 } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { apiGet, apiUploadPost, apiDelete } from '@/lib/api';
+import { apiGet, apiUploadPost, apiDelete, apiPut } from '@/lib/api';
 import { getStoredToken } from '@/services/auth';
 import Portal from '@/components/common/Portal';
 import { CheckCircle2 } from 'lucide-react';
@@ -326,11 +326,69 @@ export default function MateriDetailClient() {
   const [error, setError] = useState<string | null>(null);
   const [deletingFile, setDeletingFile] = useState(false);
   const [showUpload, setShowUpload] = useState(false);
+  const [youtubeUrl, setYoutubeUrl] = useState('');
+  const [savingYoutube, setSavingYoutube] = useState(false);
+  const [editYoutubeMode, setEditYoutubeMode] = useState(false);
+  const [editTitleModalOpen, setEditTitleModalOpen] = useState(false);
+  const [newMateriTitle, setNewMateriTitle] = useState('');
+  const [savingTitle, setSavingTitle] = useState(false);
+
+  const handleSaveTitle = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!tugasId || !newMateriTitle.trim()) return;
+    setSavingTitle(true);
+    setError(null);
+    try {
+      const auth = getAuth();
+      await apiPut(`/api/materi/${tugasId}`, {
+        title: newMateriTitle.trim()
+      }, { token: auth.token, headers: auth.headers });
+      setEditTitleModalOpen(false);
+      await fetchMateri();
+      showToast('Judul materi berhasil diperbarui!');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Gagal memperbarui judul materi.');
+      showToast(err instanceof Error ? err.message : 'Gagal memperbarui judul materi.', 'error');
+    } finally {
+      setSavingTitle(false);
+    }
+  };
 
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const showToast = (message: string, type: 'success' | 'error' = 'success') => {
     setToast({ message, type });
     setTimeout(() => setToast(null), 4000);
+  };
+
+  // Helper to parse any YouTube URL into embed format
+  const getYoutubeEmbedUrl = (url?: string | null): string | null => {
+    if (!url) return null;
+    const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+    const match = url.match(regExp);
+    if (match && match[2].length === 11) {
+      return `https://www.youtube.com/embed/${match[2]}`;
+    }
+    return null;
+  };
+
+  const handleSaveYoutube = async () => {
+    if (!tugasId) return;
+    setSavingYoutube(true);
+    setError(null);
+    try {
+      const auth = getAuth();
+      await apiPut(`/api/materi/${tugasId}`, {
+        video_url: youtubeUrl.trim() || null
+      }, { token: auth.token, headers: auth.headers });
+      setEditYoutubeMode(false);
+      await fetchMateri();
+      showToast('Link YouTube berhasil disimpan!');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Gagal menyimpan link YouTube.');
+      showToast(err instanceof Error ? err.message : 'Gagal menyimpan link YouTube.', 'error');
+    } finally {
+      setSavingYoutube(false);
+    }
   };
 
   const fetchMateri = useCallback(async () => {
@@ -355,6 +413,7 @@ export default function MateriDetailClient() {
         terakhir_diperbarui: raw.terakhir_diperbarui,
       };
       setMateri(data);
+      if (data.video_url) setYoutubeUrl(data.video_url);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Gagal memuat detail materi.');
     } finally {
@@ -471,7 +530,10 @@ export default function MateriDetailClient() {
               <button onClick={() => router.push(`/lecturer/kelas/detail?id=${courseId}`)} style={secondaryBtn}>
                 <ArrowLeft size={14} /> Kembali ke Kelas
               </button>
-              {hasFile && !showUpload && (
+              <button onClick={() => { setNewMateriTitle(materi.nama_materi || ''); setEditTitleModalOpen(true); }} style={secondaryBtn}>
+                <RefreshCw size={14} /> Edit Judul
+              </button>
+              {materi.tipe !== 'Video' && hasFile && !showUpload && (
                 <>
                   <button onClick={() => setShowUpload(true)} style={secondaryBtn}>
                     <RefreshCw size={14} /> Ganti File
@@ -492,12 +554,12 @@ export default function MateriDetailClient() {
                   </a>
                 </>
               )}
-              {!hasFile && !showUpload && (
+              {materi.tipe !== 'Video' && !hasFile && !showUpload && (
                 <button onClick={() => setShowUpload(true)} style={primaryBtn}>
                   <Upload size={14} /> Upload File
                 </button>
               )}
-              {showUpload && (
+              {materi.tipe !== 'Video' && showUpload && (
                 <button onClick={() => setShowUpload(false)} style={secondaryBtn}>
                   Batal Upload
                 </button>
@@ -524,19 +586,85 @@ export default function MateriDetailClient() {
             )}
 
             {/* YouTube / Video URL embed */}
-            {materi.tipe === 'Video' && materi.video_url && !hasFile && !showUpload && (
-              <div style={{ width: '100%', aspectRatio: '16/9', borderRadius: 12, overflow: 'hidden', background: '#000' }}>
-                <iframe
-                  src={materi.video_url.replace('watch?v=', 'embed/')}
-                  style={{ width: '100%', height: '100%', border: 'none' }}
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                  allowFullScreen
-                />
+            {materi.tipe === 'Video' && materi.video_url && !hasFile && !showUpload && !editYoutubeMode && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                {getYoutubeEmbedUrl(materi.video_url) ? (
+                  <div style={{ width: '100%', aspectRatio: '16/9', borderRadius: 12, overflow: 'hidden', background: '#000' }}>
+                    <iframe
+                      src={getYoutubeEmbedUrl(materi.video_url)!}
+                      style={{ width: '100%', height: '100%', border: 'none' }}
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                      allowFullScreen
+                    />
+                  </div>
+                ) : (
+                  <div style={{ padding: 12, background: 'rgba(239,68,68,0.1)', color: '#f87171', borderRadius: 8, fontSize: '0.85rem' }}>
+                    Link video tidak valid: {materi.video_url}
+                  </div>
+                )}
+                <div style={{ display: 'flex', gap: 10 }}>
+                  <button onClick={() => setEditYoutubeMode(true)} style={secondaryBtn}>Edit Link YouTube</button>
+                  <button 
+                    onClick={async () => {
+                      if (confirm('Hapus link YouTube ini?')) {
+                        setSavingYoutube(true);
+                        try {
+                          const auth = getAuth();
+                          await apiPut(`/api/materi/${tugasId}`, { video_url: null }, { token: auth.token, headers: auth.headers });
+                          setYoutubeUrl('');
+                          await fetchMateri();
+                        } catch (err) {
+                          setError(err instanceof Error ? err.message : 'Gagal menghapus link YouTube.');
+                        } finally {
+                          setSavingYoutube(false);
+                        }
+                      }
+                    }} 
+                    style={{ ...secondaryBtn, color: '#f87171', borderColor: 'rgba(239,68,68,0.3)' }}
+                  >
+                    Hapus Link YouTube
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {materi.tipe === 'Video' && (editYoutubeMode || !materi.video_url) && !hasFile && !showUpload && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10, background: 'rgba(255,255,255,0.02)', padding: 16, borderRadius: 12, border: '1px solid rgba(255,255,255,0.06)' }}>
+                <label style={{ fontSize: '0.85rem', color: '#cbd5e1', fontWeight: 600 }}>Link YouTube / Video URL</label>
+                <div style={{ display: 'flex', gap: 10 }}>
+                  <input
+                    type="text"
+                    value={youtubeUrl}
+                    onChange={(e) => setYoutubeUrl(e.target.value)}
+                    placeholder="e.g., https://www.youtube.com/watch?v=dQw4w9WgXcQ"
+                    style={{
+                      flex: 1,
+                      background: 'rgba(0,0,0,0.2)',
+                      border: '1px solid rgba(255,255,255,0.1)',
+                      borderRadius: 8,
+                      padding: '8px 12px',
+                      color: '#fff',
+                      fontSize: '0.85rem'
+                    }}
+                  />
+                  <button 
+                    onClick={handleSaveYoutube} 
+                    disabled={savingYoutube || !youtubeUrl.trim()} 
+                    style={primaryBtn}
+                  >
+                    {savingYoutube ? 'Menyimpan...' : 'Simpan Link'}
+                  </button>
+                  {materi.video_url && (
+                    <button onClick={() => { setEditYoutubeMode(false); setYoutubeUrl(materi.video_url || ''); }} style={secondaryBtn}>
+                      Batal
+                    </button>
+                  )}
+                </div>
               </div>
             )}
 
             {/* Upload Section */}
-            {(showUpload || !hasFile) && !materi.video_url && (
+            {materi.tipe !== 'Video' && (showUpload || !hasFile) && (
               <UploadSection
                 tugasId={tugasId}
                 onSuccess={async () => {
@@ -548,7 +676,7 @@ export default function MateriDetailClient() {
             )}
 
             {/* Empty state */}
-            {!hasFile && !materi.video_url && !showUpload && (
+            {materi.tipe !== 'Video' && !hasFile && !showUpload && (
               <div style={emptyContent}>
                 <div style={{ width: 64, height: 64, borderRadius: '50%', background: 'rgba(99,102,241,0.06)', border: '1px solid rgba(99,102,241,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 16 }}>
                   <FileText size={28} color="#4a5568" />
@@ -628,6 +756,58 @@ export default function MateriDetailClient() {
               >
                 Tutup
               </button>
+            </div>
+          </div>
+        </Portal>
+      )}
+      {editTitleModalOpen && (
+        <Portal>
+          <div style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0, 0, 0, 0.6)',
+            backdropFilter: 'blur(5px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 99999,
+          }}>
+            <div style={{
+              background: '#131324',
+              border: '1px solid rgba(255, 255, 255, 0.08)',
+              borderRadius: '16px',
+              padding: '24px',
+              width: '100%',
+              maxWidth: '440px',
+              boxShadow: '0 20px 50px rgba(0,0,0,0.4)',
+            }}>
+              <h3 style={{ fontSize: '1.2rem', fontWeight: 700, color: '#fff', margin: '0 0 16px 0' }}>Edit Judul Materi</h3>
+              <form onSubmit={handleSaveTitle} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  <label style={{ fontSize: '0.85rem', color: '#cbd5e1', fontWeight: 600 }}>Judul Baru</label>
+                  <input
+                    type="text"
+                    required
+                    value={newMateriTitle}
+                    onChange={(e) => setNewMateriTitle(e.target.value)}
+                    style={{
+                      width: '100%',
+                      background: 'rgba(0,0,0,0.2)',
+                      border: '1px solid rgba(255,255,255,0.1)',
+                      borderRadius: 8,
+                      padding: '10px 14px',
+                      color: '#fff',
+                      fontSize: '0.9rem',
+                    }}
+                  />
+                </div>
+                <div style={{ display: 'flex', gap: 10, marginTop: 4 }}>
+                  <button type="button" onClick={() => setEditTitleModalOpen(false)} style={{ ...secondaryBtn, flex: 1 }}>Batal</button>
+                  <button type="submit" disabled={savingTitle} style={{ ...primaryBtn, flex: 2 }}>
+                    {savingTitle ? 'Menyimpan...' : 'Simpan'}
+                  </button>
+                </div>
+              </form>
             </div>
           </div>
         </Portal>
