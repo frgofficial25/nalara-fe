@@ -113,22 +113,49 @@ export default function PenilaianPage() {
         apiGet<any>('/api/grade-center/students', { token: auth.token, headers: auth.headers }),
       ]);
       setCourses(Array.isArray(cRes) ? cRes : (cRes?.data ?? []));
-      const list: any[] = Array.isArray(gRes) ? gRes : (gRes?.data ?? []);
-      setGrades(list.map(g => ({
-        studentName: g.studentName || g.full_name || 'Unknown',
-        studentEmail: g.studentEmail || g.email || '-',
-        completedCount: g.completedCount ?? 0,
-        averageScore: g.averageScore ?? 0,
-        status: (g.status === 'Passed' || g.status === 'Lulus') ? 'Passed' : 'Failed',
-        attempts: (g.attempts ?? []).map((a: any) => ({
-          quizTitle: a.quizTitle || a.title || '-',
-          courseTitle: a.courseTitle || '-',
-          score: a.score ?? 0,
-          passingScore: a.passingScore ?? 70,
-          isPassed: a.isPassed || a.status === 'Passed',
-          date: a.date ? new Date(a.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : '-',
-        })),
-      })));
+
+      // Backend returns flat array of QuizAttempt records — group by student
+      const rawAttempts: any[] = Array.isArray(gRes) ? gRes : (gRes?.data ?? []);
+      const byUser = new Map<string, any>();
+      rawAttempts.forEach(attempt => {
+        const userId = attempt.user?.uuid_user || attempt.uuid_user || attempt.user?.email || '';
+        if (!byUser.has(userId)) {
+          byUser.set(userId, {
+            studentName: attempt.user?.full_name || attempt.user?.username || 'Unknown',
+            studentEmail: attempt.user?.email || '-',
+            attempts: [],
+          });
+        }
+        byUser.get(userId).attempts.push(attempt);
+      });
+
+      const grouped: GradeRow[] = Array.from(byUser.values()).map(u => {
+        const attempts = u.attempts;
+        const avg = attempts.length > 0
+          ? Math.round(attempts.reduce((sum: number, a: any) => sum + (a.score ?? 0), 0) / attempts.length)
+          : 0;
+        const anyPassed = attempts.some((a: any) => a.is_passed);
+        return {
+          studentName: u.studentName,
+          studentEmail: u.studentEmail,
+          completedCount: attempts.length,
+          averageScore: avg,
+          status: anyPassed ? 'Passed' : 'Failed',
+          attempts: attempts.map((a: any) => ({
+            quizTitle: a.quiz?.title || '-',
+            courseTitle: '-', // not in backend response
+            score: a.score ?? 0,
+            passingScore: 75, // backend hardcodes 75
+            isPassed: !!a.is_passed,
+            date: a.completed_at
+              ? new Date(a.completed_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })
+              : a.started_at
+              ? new Date(a.started_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })
+              : '-',
+          })),
+        };
+      });
+      setGrades(grouped);
     } catch (e: any) {
       setQuizError(e.message || 'Gagal memuat data nilai kuis.');
     } finally {
@@ -196,12 +223,15 @@ export default function PenilaianPage() {
 
   // PATCH /api/study-case-submissions/:id/verify
   // Body: { verifier_role, notes?, score_override?, reason_override? }
+  // Backend expects verifier_role as lowercase: 'lecturer' or 'mentor'
   const handleVerify = async () => {
     if (!modal) return;
     setVerifying(true);
     try {
       const auth = getAuth();
-      const body: Record<string, any> = { verifier_role: userRole };
+      // Backend verifier_role must be lowercase
+      const verifierRole = userRole === 'Mentor' ? 'mentor' : 'lecturer';
+      const body: Record<string, any> = { verifier_role: verifierRole };
       if (modalNotes.trim()) body.notes = modalNotes.trim();
       if (modalScore !== '') {
         const scoreNum = Number(modalScore);
@@ -214,13 +244,17 @@ export default function PenilaianPage() {
       }
       if (modalReason.trim()) body.reason_override = modalReason.trim();
 
-      await apiPatch<any>(
+      const result = await apiPatch<any>(
         `/api/study-case-submissions/${modal.id}/verify`,
         body,
         { token: auth.token, headers: auth.headers },
       );
 
-      showToast(`Verifikasi berhasil disimpan! Nilai dirilis ke siswa.`, 'success');
+      const msg = result?.message ||
+        (body.score_override !== undefined
+          ? 'Verifikasi & nilai berhasil disimpan!'
+          : 'Verifikasi berhasil disimpan!');
+      showToast(msg, 'success');
       setModal(null);
       setModalNotes(''); setModalScore(''); setModalReason('');
       await fetchQueue();
@@ -250,7 +284,9 @@ export default function PenilaianPage() {
     return nameMatch && (!course || g.attempts.some(a => a.courseTitle === course.title));
   });
 
-  const getLetter = (s: number) => s >= 85 ? 'A' : s >= 75 ? 'B' : s >= 60 ? 'C' : s > 0 ? 'D' : '-';
+  // Grade letter thresholds match backend deriveGradeLetter
+  const getLetter = (s: number) =>
+    s >= 85 ? 'A' : s >= 80 ? 'B+' : s >= 70 ? 'B' : s >= 65 ? 'C+' : s >= 55 ? 'C' : s >= 45 ? 'D' : s > 0 ? 'E' : '-';
 
   // ── Open verify modal ─────────────────────────────────────────────────────
   const openModal = (sub: StudyCaseSubmission) => {

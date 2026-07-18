@@ -63,6 +63,7 @@ export const getMenuForRole = (role?: string) => {
         items: [
           { label: 'Dashboard', href: '/tentor/dashboard', icon: LayoutDashboard },
           { label: 'Tugas (Review)', href: '/tentor/tugas', icon: FileText },
+          { label: 'Penilaian', href: '/tentor/penilaian', icon: TrendingUp },
         ],
       },
       {

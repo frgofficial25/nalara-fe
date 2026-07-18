@@ -762,12 +762,21 @@ function QuizPageInner() {
         };
         setDetail(mapped);
 
-        // 2) Try to fetch rekap
+        // 2) Try to fetch rekap — backend now returns uuid_quiz in each attempt record
         try {
           const rekapRes = await apiGet<any>('/api/quiz/rekap', { token: auth.token, headers: auth.headers });
-          const rekapList = Array.isArray(rekapRes) ? rekapRes : (rekapRes.data || []);
+          const rekapList: any[] = Array.isArray(rekapRes) ? rekapRes : (rekapRes?.data || []);
+          // Match by uuid_quiz (backend fix ensures this field is present)
           const match = rekapList.find((r: any) => r.uuid_quiz === quizId);
-          if (match) setRekap(match);
+          if (match) {
+            setRekap({
+              uuid_quiz: match.uuid_quiz,
+              skor: match.score ?? match.skor,
+              benar: match.benar,
+              salah: match.salah,
+              status: match.is_passed ? 'Selesai' : 'Tidak Lulus',
+            });
+          }
         } catch { /* silently ignore */ }
 
         // 3) Check if there's a persisted timer (user was doing the quiz before)

@@ -189,16 +189,17 @@ export default function PenugasanPage() {
       ]);
 
       const quizList = Array.isArray(quizRes) ? quizRes : (quizRes?.data || []);
-      const mapped: QuizListItem[] = quizList.filter((q: any) => q.is_published !== false).map((q: any) => ({
+      // Backend /api/quiz returns: uuid_quiz, nama_quiz, asal_pembelajaran, asal_modul, waktu_pengerjaan, tenggat_pengerjaan
+      const mapped: QuizListItem[] = quizList.map((q: any) => ({
         id: q.uuid_quiz || q.id,
         title: q.nama_quiz || q.title || 'Untitled Quiz',
         description: q.description || q.deskripsi || '',
         time_limit: q.time_limit || q.waktu_pengerjaan || null,
-        deadline: q.deadline || q.tenggat || null,
-        is_published: q.is_published ?? true,
+        deadline: q.deadline || q.tenggat_pengerjaan || null,
+        is_published: true, // not in list response; assume published since API only returns published
         courseId: q.uuid_pembelajaran || q.course_id || q.courseId || undefined,
-        moduleTitle: q.asal_modul || q.modul?.title || q.pembelajaran?.title || q.asal_pembelajaran || '-',
-        questionCount: q.question_count || q.questions?.length || q._count?.questions || q.count || 0,
+        moduleTitle: q.asal_modul || q.asal_pembelajaran || '-',
+        questionCount: q.question_count || q.questions?.length || q._count?.questions || 0,
       }));
 
       const finalized = await Promise.all(mapped.map(async (quiz: QuizListItem) => {
@@ -216,6 +217,7 @@ export default function PenugasanPage() {
       setQuizzes(finalized);
 
       const rekapList = Array.isArray(rekapRes) ? rekapRes : (rekapRes?.data || []);
+      // Backend returns: uuid_attempt, uuid_quiz, quiz_title, score, is_passed, etc.
       setMyQuizRekap(rekapList);
     } catch (e: any) { setQuizError(e.message || 'Gagal memuat kuis.'); }
     finally { setLoadingQuiz(false); }
@@ -337,7 +339,8 @@ export default function PenugasanPage() {
     finally { setSubmittingQuiz(false); }
   };
 
-  const getAttempt = (quizId: string) => myQuizRekap.find((r: any) => (r.uuid_quiz || r.quiz_id || r.id) === quizId);
+  // Match attempt to quiz by uuid_quiz (backend now includes uuid_quiz in rekap response)
+  const getAttempt = (quizId: string) => myQuizRekap.find((r: any) => r.uuid_quiz === quizId);
 
   // ═══════════════════════════════════════════════════════════════════════════
   return (
