@@ -54,20 +54,7 @@ interface StudyCaseSubmission {
   submitted_at?: string;
 }
 
-interface EssayReviewItem {
-  uuid_attempt: string;
-  uuid_question: string;
-  question_text: string;
-  student_name: string;
-  student_email: string;
-  quiz_title: string;
-  answer_text: string;
-  max_weight: number;
-  submitted_at: string;
-  // earned_score yang sudah diisi (jika ada)
-  earned_score?: number;
-  feedback?: string;
-}
+
 
 // ─── Auth helper ──────────────────────────────────────────────────────────────
 function getAuth() {
@@ -82,7 +69,7 @@ function getAuth() {
 // ─── Main Component ───────────────────────────────────────────────────────────
 export default function PenilaianPage() {
   // ── Tab state ────────────────────────────────────────────────────────────
-  const [tab, setTab] = useState<'quiz' | 'studycase' | 'essay'>('quiz');
+  const [tab, setTab] = useState<'quiz' | 'studycase'>('quiz');
 
   // Toast state
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
@@ -244,86 +231,10 @@ export default function PenilaianPage() {
     }
   };
 
-  // ─────────────────────────────────────────────────────────────────────────
-  // TAB 3 — ESSAY MANUAL REVIEW
-  // API: GET  /api/grade-center/review-queue
-  //      POST /api/grade-center/review/:attemptId/:questionId
-  // ─────────────────────────────────────────────────────────────────────────
-  const [essayQueue, setEssayQueue]     = useState<EssayReviewItem[]>([]);
-  const [essayLoading, setEssayLoading] = useState(false);
-  const [essayError, setEssayError]     = useState<string | null>(null);
-  const [essaySearch, setEssaySearch]   = useState('');
-
-  // Modal penilaian essay
-  const [essayModal, setEssayModal]         = useState<EssayReviewItem | null>(null);
-  const [essayScore, setEssayScore]         = useState('');
-  const [essayFeedback, setEssayFeedback]   = useState('');
-  const [essaySubmitting, setEssaySubmitting] = useState(false);
-
-  const fetchEssayQueue = async () => {
-    setEssayLoading(true);
-    setEssayError(null);
-    try {
-      const auth = getAuth();
-      const res = await apiGet<any>('/api/grade-center/review-queue', {
-        token: auth.token,
-        headers: auth.headers,
-      });
-      const raw: any[] = Array.isArray(res) ? res : (res?.data ?? []);
-      setEssayQueue(raw.map(item => ({
-        uuid_attempt:   item.uuid_attempt,
-        uuid_question:  item.uuid_question,
-        question_text:  item.question_text,
-        student_name:   item.student_name,
-        student_email:  item.student_email,
-        quiz_title:     item.quiz_title,
-        answer_text:    item.answer_text,
-        max_weight:     item.max_weight ?? 1,
-        submitted_at:   item.submitted_at,
-        earned_score:   item.earned_score,
-        feedback:       item.feedback,
-      })));
-    } catch (e: any) {
-      setEssayError(e.message || 'Gagal memuat antrian essay.');
-    } finally {
-      setEssayLoading(false);
-    }
-  };
-
-  // POST /api/grade-center/review/:attemptId/:questionId
-  // Body: { earned_score: number (0-1), feedback?: string }
-  const handleEssaySubmit = async () => {
-    if (!essayModal) return;
-    const score = parseFloat(essayScore);
-    if (isNaN(score) || score < 0 || score > 1) {
-      showToast('Nilai harus antara 0 dan 1 (misal: 0.8 = 80%)', 'error');
-      return;
-    }
-    setEssaySubmitting(true);
-    try {
-      const auth = getAuth();
-      await apiPost<any>(
-        `/api/grade-center/review/${essayModal.uuid_attempt}/${essayModal.uuid_question}`,
-        { earned_score: score, feedback: essayFeedback.trim() || undefined },
-        { token: auth.token, headers: auth.headers },
-      );
-      showToast('Penilaian essay berhasil disimpan!', 'success');
-      setEssayModal(null);
-      setEssayScore('');
-      setEssayFeedback('');
-      await fetchEssayQueue();
-    } catch (e: any) {
-      showToast(`Gagal menyimpan nilai: ${e.message}`, 'error');
-    } finally {
-      setEssaySubmitting(false);
-    }
-  };
-
   // ── Effects ──────────────────────────────────────────────────────────────
   useEffect(() => {
     if (tab === 'quiz') fetchQuiz();
     else if (tab === 'studycase') fetchQueue();
-    else fetchEssayQueue();
   }, [tab]);
 
   // ── Quiz derived data ─────────────────────────────────────────────────────
@@ -372,7 +283,6 @@ export default function PenilaianPage() {
         {([
           { key: 'quiz',      label: 'Nilai Kuis',            icon: <Brain size={15} /> },
           { key: 'studycase', label: 'Verifikasi Studi Kasus', icon: <FileText size={15} /> },
-          { key: 'essay',     label: 'Penilaian Essay',        icon: <PenLine size={15} /> },
         ] as const).map(t => (
           <button key={t.key} onClick={() => setTab(t.key)} style={{ ...s.tabBtn, ...(tab === t.key ? s.tabActive : {}) }}>
             {t.icon}<span>{t.label}</span>
@@ -682,192 +592,7 @@ export default function PenilaianPage() {
         </>
       )}
 
-      {/* ═══════════════════════════════════════════════
-          TAB 3: ESSAY MANUAL REVIEW
-          GET  /api/grade-center/review-queue
-          POST /api/grade-center/review/:attemptId/:questionId
-      ═══════════════════════════════════════════════ */}
-      {tab === 'essay' && (
-        <>
-          <div style={{ marginBottom: 16, display: 'flex', alignItems: 'center', gap: 10, fontSize: '0.82rem', color: 'var(--azure)' }}>
-            <PenLine size={15} />
-            <span>Soal essay yang perlu dinilai manual oleh Anda. Berikan nilai antara <strong>0</strong> (0%) dan <strong>1</strong> (100%).</span>
-          </div>
 
-          {/* Search */}
-          <div className="glass-panel" style={{ ...s.filterRow, marginBottom: 18 }}>
-            <div style={s.searchWrap}>
-              <Search size={15} color="var(--grey)" />
-              <input
-                type="text"
-                placeholder="Cari nama siswa atau judul kuis..."
-                value={essaySearch}
-                onChange={e => setEssaySearch(e.target.value)}
-                style={s.searchInput}
-              />
-            </div>
-          </div>
-
-          {essayError && <div style={s.errBanner}><AlertCircle size={16} /><span>{essayError}</span></div>}
-
-          {essayLoading ? (
-            <div style={s.centered}><Loader2 size={32} style={{ animation: 'spin 1s linear infinite' }} /><p>Memuat antrian essay...</p></div>
-          ) : essayQueue.filter(e => {
-              const q = essaySearch.toLowerCase();
-              return e.student_name.toLowerCase().includes(q) || e.quiz_title.toLowerCase().includes(q);
-            }).length === 0 ? (
-            <div style={s.empty}>
-              <CheckCircle2 size={48} color="#00C853" />
-              <h3>Antrian Kosong</h3>
-              <p>Tidak ada soal essay yang perlu dinilai saat ini.</p>
-            </div>
-          ) : (
-            <div style={s.subGrid}>
-              {essayQueue
-                .filter(e => {
-                  const q = essaySearch.toLowerCase();
-                  return e.student_name.toLowerCase().includes(q) || e.quiz_title.toLowerCase().includes(q);
-                })
-                .map((item, i) => (
-                  <div key={i} className="glass-panel" style={s.subCard}>
-                    {/* Header */}
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span style={{
-                        display: 'inline-flex', padding: '3px 10px', borderRadius: 12, fontSize: '0.74rem', fontWeight: 600,
-                        background: item.earned_score !== undefined ? 'rgba(0,200,83,0.1)' : 'rgba(255,178,64,0.1)',
-                        color: item.earned_score !== undefined ? '#00C853' : '#FFB240',
-                      }}>
-                        {item.earned_score !== undefined ? `✓ Sudah Dinilai (${(item.earned_score * 100).toFixed(0)}%)` : '⏳ Menunggu Penilaian'}
-                      </span>
-                      <span style={{ fontSize: '0.74rem', color: 'var(--grey-blue)' }}>
-                        Bobot: <strong style={{ color: '#fff' }}>{item.max_weight}</strong>
-                      </span>
-                    </div>
-
-                    {/* Student & Quiz */}
-                    <div>
-                      <span style={{ fontSize: '0.76rem', color: 'var(--azure)', fontWeight: 600 }}>
-                        {item.student_name} — {item.student_email}
-                      </span>
-                      <h3 style={{ margin: '4px 0 2px', fontSize: '0.92rem', fontWeight: 700, color: '#fff', lineHeight: 1.35 }}>
-                        {item.question_text}
-                      </h3>
-                      <p style={{ margin: 0, fontSize: '0.74rem', color: 'var(--grey-blue)' }}>
-                        Kuis: {item.quiz_title} •{' '}
-                        {item.submitted_at ? new Date(item.submitted_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : '-'}
-                      </p>
-                    </div>
-
-                    {/* Jawaban siswa */}
-                    <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 8, padding: '10px 14px', fontSize: '0.82rem', color: '#CBD5E1', whiteSpace: 'pre-wrap', lineHeight: 1.5 }}>
-                      {item.answer_text || <em style={{ color: 'var(--grey-blue)' }}>Siswa tidak mengisi jawaban.</em>}
-                    </div>
-
-                    {/* Nilai & Feedback yang sudah ada */}
-                    {item.earned_score !== undefined && item.feedback && (
-                      <div style={{ background: 'rgba(0,200,83,0.05)', border: '1px solid rgba(0,200,83,0.15)', borderRadius: 8, padding: '8px 12px', fontSize: '0.78rem', color: '#CBD5E1' }}>
-                        <strong style={{ color: '#00C853' }}>Feedback:</strong> {item.feedback}
-                      </div>
-                    )}
-
-                    {/* Action */}
-                    <button
-                      onClick={() => { setEssayModal(item); setEssayScore(item.earned_score !== undefined ? String(item.earned_score) : ''); setEssayFeedback(item.feedback || ''); }}
-                      style={{
-                        border: 'none', borderRadius: 8, padding: '9px 16px', fontSize: '0.88rem', fontWeight: 600,
-                        width: '100%', marginTop: 4, cursor: 'pointer',
-                        background: item.earned_score !== undefined
-                          ? 'rgba(255,255,255,0.05)'
-                          : 'linear-gradient(135deg, #1a2744, #0671E0)',
-                        color: '#fff',
-                      }}
-                    >
-                      {item.earned_score !== undefined ? (
-                        <><PenLine size={14} style={{ marginRight: 6 }} />Ubah Penilaian</>
-                      ) : (
-                        <><Star size={14} style={{ marginRight: 6 }} />Beri Nilai</>
-                      )}
-                    </button>
-                  </div>
-                ))}
-            </div>
-          )}
-
-          {/* Essay Review Modal */}
-          {essayModal && (
-            <div style={s.overlay}>
-              <div style={{ ...s.modal, maxWidth: 520 }} className="glass-panel">
-                <div style={s.modalHead}>
-                  <div>
-                    <h3 style={{ margin: 0 }}>Penilaian Soal Essay</h3>
-                    <span style={{ fontSize: '0.8rem', color: 'var(--grey-blue)' }}>
-                      {essayModal.student_name} — {essayModal.quiz_title}
-                    </span>
-                  </div>
-                  <button onClick={() => setEssayModal(null)} style={s.closeBtn}><X size={18} /></button>
-                </div>
-
-                <div style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: 16, overflowY: 'auto', maxHeight: '70vh' }}>
-                  {/* Soal */}
-                  <div style={{ background: 'rgba(6,113,224,0.06)', border: '1px solid rgba(6,113,224,0.14)', borderRadius: 8, padding: '10px 14px', fontSize: '0.85rem', color: 'var(--azure)' }}>
-                    <strong>Soal:</strong><br />
-                    <span style={{ color: '#E2E8F0' }}>{essayModal.question_text}</span>
-                  </div>
-
-                  {/* Jawaban siswa */}
-                  <div>
-                    <p style={{ ...s.formLabel, marginBottom: 6 }}>Jawaban Siswa:</p>
-                    <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 8, padding: '10px 14px', fontSize: '0.83rem', color: '#CBD5E1', whiteSpace: 'pre-wrap', lineHeight: 1.5, maxHeight: 160, overflowY: 'auto' }}>
-                      {essayModal.answer_text || <em>Tidak ada jawaban.</em>}
-                    </div>
-                  </div>
-
-                  {/* Input nilai */}
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                    <label style={s.formLabel}>
-                      Nilai <span style={{ fontWeight: 400, color: 'var(--grey)' }}>(0 = 0% hingga 1 = 100%, bobot soal: {essayModal.max_weight})</span>
-                    </label>
-                    <input
-                      type="number" min="0" max="1" step="0.01"
-                      value={essayScore}
-                      onChange={e => setEssayScore(e.target.value)}
-                      placeholder="Contoh: 0.85"
-                      style={s.input}
-                    />
-                    {essayScore !== '' && !isNaN(parseFloat(essayScore)) && (
-                      <span style={{ fontSize: '0.78rem', color: 'var(--azure)' }}>
-                        = {(parseFloat(essayScore) * 100).toFixed(0)}% dari bobot {essayModal.max_weight}
-                      </span>
-                    )}
-                  </div>
-
-                  {/* Feedback */}
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                    <label style={s.formLabel}>Feedback untuk Siswa <span style={{ fontWeight: 400, color: 'var(--grey)' }}>(opsional)</span></label>
-                    <textarea
-                      rows={3}
-                      value={essayFeedback}
-                      onChange={e => setEssayFeedback(e.target.value)}
-                      placeholder="Tuliskan feedback untuk siswa..."
-                      style={s.textarea}
-                    />
-                  </div>
-
-                  {/* Actions */}
-                  <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, paddingTop: 4 }}>
-                    <button onClick={() => setEssayModal(null)} style={s.btnGhost} disabled={essaySubmitting}>Batal</button>
-                    <button onClick={handleEssaySubmit} disabled={essaySubmitting} style={s.btnPrimary}>
-                      {essaySubmitting
-                        ? <><Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} /><span>Menyimpan...</span></>
-                        : <><CheckCircle2 size={14} /><span>Simpan Penilaian</span></>}
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-        </>
-      )}
       {/* ═══════════════════════════════════════════════
           VERIFY MODAL
           PATCH /api/study-case-submissions/:id/verify
