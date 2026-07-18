@@ -111,7 +111,7 @@ export default function CoursesPage() {
         description: c.deskripsi || c.description || '',
         createdAt: c.tanggal_dibuat || c.createdAt || c.created_at,
         created_at: c.tanggal_dibuat || c.created_at || c.createdAt,
-        status: c.status || 'draft'
+        status: c.is_published ? (c.scheduled_at && new Date(c.scheduled_at) > new Date() ? 'scheduled' : 'published') : 'draft'
       }));
 
       // Fetch moduls count for each course
@@ -385,7 +385,7 @@ export default function CoursesPage() {
         const auth = getAuthHeaders();
         // Update database with status "scheduled" and the datetime
         await apiPut(`/api/pembelajaran/${publishCourseId}`, {
-          status: 'scheduled',
+          is_published: true,
           scheduled_at: new Date(scheduleDatetime).toISOString()
         }, { token: auth.token, headers: auth.headers });
 
@@ -414,7 +414,7 @@ export default function CoursesPage() {
       const auth = getAuthHeaders();
       // Update database with status "published"
       await apiPut(`/api/pembelajaran/${publishCourseId}`, {
-        status: 'published',
+        is_published: true,
         scheduled_at: null
       }, { token: auth.token, headers: auth.headers });
 
@@ -427,7 +427,7 @@ export default function CoursesPage() {
       });
 
       // Update local course status dynamically to published
-      setCourses(prev => prev.map(c => c.id === publishCourseId ? { ...c, status: 'published' } : c));
+      setCourses(prev => prev.map(c => c.id === publishCourseId ? { ...c, is_published: true, scheduled_at: null, status: 'published' } : c));
       // Remove any existing schedule for this course
       const updated = { ...courseSchedules };
       delete updated[publishCourseId];
