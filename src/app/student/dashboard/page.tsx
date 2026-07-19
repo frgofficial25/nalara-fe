@@ -1,10 +1,11 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   GraduationCap, BookOpen, Clock, Flame,
-  RefreshCw, ShieldAlert, ChevronRight, Play, Award
+  RefreshCw, ShieldAlert, ChevronRight, Play
 } from 'lucide-react';
+import AgendaSection from '@/components/dashboard/AgendaSection';
 import { apiGet } from '@/lib/api';
 import { getStoredToken } from '@/services/auth';
 
@@ -27,8 +28,39 @@ interface StudentData {
     overdue: number;
   };
   learning_streak: number;
+  longest_streak?: number;
   upcoming_tasks: UpcomingTask[];
 }
+
+interface StudentTaskRaw {
+  id_tugas?: number;
+  id?: number;
+  nama_tugas?: string;
+  task_name?: string;
+  pembelajaran_asal?: string;
+  course_name?: string;
+  modul_asal?: string;
+  module_name?: string;
+  deadline?: string;
+}
+
+interface StudentDashboardResponse {
+  current_level?: string;
+  enrolled_courses?: number;
+  completed_materials?: number;
+  pending_exams?: number;
+  pending_assignments?: {
+    done: number;
+    ongoing: number;
+    overdue: number;
+  };
+  learning_streak?: number;
+  longest_streak?: number;
+  tugas_mendesak?: StudentTaskRaw[];
+  upcoming_tasks?: StudentTaskRaw[];
+}
+
+type StudentDashboardApiResponse = StudentDashboardResponse | { success: boolean; data: StudentDashboardResponse };
 
 function formatNumber(num: number): string {
   if (num === undefined || num === null) return '0';
@@ -51,7 +83,7 @@ export default function StudentDashboard() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [userName, setUserName] = useState("Student");
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
       setError(null);
       const token = getStoredToken();
@@ -66,58 +98,46 @@ export default function StudentDashboard() {
 
       // Local storage check for username
       const localUser = localStorage.getItem('nalara_user_info') || sessionStorage.getItem('nalara_user_info');
-      let userId = '';
       if (localUser) {
         try {
           const userObj = JSON.parse(localUser);
           if (userObj.nama_lengkap || userObj.name || userObj.username) {
             setUserName(userObj.nama_lengkap || userObj.name || userObj.username);
           }
-          if (userObj.id) {
-            userId = userObj.id;
-          }
         } catch { }
       }
 
-      const response = await apiGet<any>(
+      const response = await apiGet<StudentDashboardApiResponse>(
         '/api/dashboard/student',
         {
           token: token || undefined,
           headers
         }
       );
+      const rawData = 'data' in (response || {}) ? response.data : response;
 
-      if (response && response.data) {
-        const rawData = response.data;
-        const rawTasks = rawData.tugas_mendesak || rawData.upcoming_tasks || [];
-        const upcoming_tasks = rawTasks.map((t: any, idx: number) => ({
-          id: t.id_tugas || t.id || idx + 1,
-          task_name: t.nama_tugas || t.task_name || 'Tugas Baru',
-          course_name: t.pembelajaran_asal || t.course_name || 'Kelas',
-          module_name: t.modul_asal || t.module_name || 'Modul',
-          deadline: t.deadline || 'Segera'
-        }));
-        setData({
-          ...rawData,
-          upcoming_tasks
-        });
-      } else if (response && typeof response === 'object') {
-        const rawData = response;
-        const rawTasks = rawData.tugas_mendesak || rawData.upcoming_tasks || [];
-        const upcoming_tasks = rawTasks.map((t: any, idx: number) => ({
-          id: t.id_tugas || t.id || idx + 1,
-          task_name: t.nama_tugas || t.task_name || 'Tugas Baru',
-          course_name: t.pembelajaran_asal || t.course_name || 'Kelas',
-          module_name: t.modul_asal || t.module_name || 'Modul',
-          deadline: t.deadline || 'Segera'
-        }));
-        setData({
-          ...rawData,
-          upcoming_tasks
-        });
-      } else {
+      if (!rawData || typeof rawData !== 'object') {
         throw new Error('Format response data tidak valid');
       }
+
+      const rawTasks = rawData.tugas_mendesak || rawData.upcoming_tasks || [];
+      const upcoming_tasks = rawTasks.map((t: StudentTaskRaw, idx: number) => ({
+        id: t.id_tugas || t.id || idx + 1,
+        task_name: t.nama_tugas || t.task_name || 'Tugas Baru',
+        course_name: t.pembelajaran_asal || t.course_name || 'Kelas',
+        module_name: t.modul_asal || t.module_name || 'Modul',
+        deadline: t.deadline || 'Segera'
+      }));
+      setData({
+        current_level: rawData.current_level || '',
+        enrolled_courses: rawData.enrolled_courses || 0,
+        completed_materials: rawData.completed_materials || 0,
+        pending_exams: rawData.pending_exams || 0,
+        pending_assignments: rawData.pending_assignments || { done: 0, ongoing: 0, overdue: 0 },
+        learning_streak: rawData.learning_streak || 0,
+        longest_streak: rawData.longest_streak || 0,
+        upcoming_tasks,
+      });
     } catch (err) {
       console.error(err);
       setError(err instanceof Error ? err.message : 'Gagal memuat data dashboard student');
@@ -125,22 +145,24 @@ export default function StudentDashboard() {
       setLoading(false);
       setIsRefreshing(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
-    fetchData();
-  }, []);
+    Promise.resolve().then(() => {
+      void fetchData();
+    });
+  }, [fetchData]);
 
   const handleRefresh = () => {
     setIsRefreshing(true);
-    fetchData();
+    void fetchData();
   };
 
   const completed = data?.completed_materials ?? 0;
   const enrolled = data?.enrolled_courses ?? 0;
   const exams = data?.pending_exams ?? 0;
   const streak = data?.learning_streak ?? 0;
-  const longestStreak = (data as any)?.longest_streak ?? 0;
+  const longestStreak = data?.longest_streak ?? 0;
 
   const urgentTask = data?.upcoming_tasks && data.upcoming_tasks.length > 0
     ? [...data.upcoming_tasks].sort((a, b) => new Date(a.deadline).getTime() - new Date(b.deadline).getTime())[0]
@@ -344,6 +366,14 @@ export default function StudentDashboard() {
             <div style={s.emptyState}>No upcoming tasks recorded yet.</div>
           )}
         </div>
+      </div>
+
+      <div style={s.agendaSectionWrap}>
+        <div style={s.sectionHeader}>
+          <h3 style={s.sectionTitle}>Agenda Student</h3>
+          <span style={s.sectionSubtitle}>Jadwal kelas dan sesi yang akan datang</span>
+        </div>
+        <AgendaSection />
       </div>
 
       <style>{`
@@ -589,6 +619,9 @@ const s: Record<string, React.CSSProperties> = {
     border: '1px solid var(--border-color)',
     borderRadius: '16px',
     padding: '24px',
+  },
+  agendaSectionWrap: {
+    marginTop: '32px',
   },
   sectionHeader: {
     marginBottom: '20px',

@@ -1,10 +1,11 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   Users, BookOpen, RefreshCw, AlertTriangle, ArrowRight, Clock, CheckCircle, Flame, Target, Layers
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import AgendaSection from '@/components/dashboard/AgendaSection';
 import { apiGet } from '@/lib/api';
 import { getStoredToken } from '@/services/auth';
 
@@ -26,6 +27,34 @@ interface LecturerData {
   tasks_to_grade?: TaskToGrade[];
 }
 
+interface LecturerTaskRaw {
+  id_tugas?: number;
+  id?: number;
+  nama_tugas?: string;
+  task_name?: string;
+  kelas_asal?: string;
+  course_name?: string;
+  modul_asal?: string;
+  module_name?: string;
+  jumlah_belum_dinilai?: number;
+  ungraded_count?: number;
+  total_submissions?: number;
+  rasio_pengumpulan?: string;
+  tenggat_verifikasi?: string | null;
+  deadline?: string | null;
+}
+
+interface LecturerDashboardResponse {
+  online_students?: number;
+  active_courses?: number;
+  total_students?: number;
+  pending_submissions?: number;
+  tasks_to_grade?: LecturerTaskRaw[];
+  tugas_mendesak?: LecturerTaskRaw[];
+}
+
+type LecturerDashboardApiResponse = LecturerDashboardResponse | { success: boolean; data: LecturerDashboardResponse };
+
 const formatNumber = (num: number) => {
   if (num >= 1000000000000) return (num / 1000000000000).toFixed(1).replace(/\.0$/, '') + ' Triliun';
   if (num >= 1000000000) return (num / 1000000000).toFixed(1).replace(/\.0$/, '') + ' Miliar';
@@ -41,7 +70,7 @@ export default function LecturerDashboard() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [userName, setUserName] = useState("Tentor");
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
       setError(null);
       const token = getStoredToken();
@@ -54,13 +83,13 @@ export default function LecturerDashboard() {
         headers['x-api-key'] = token;
       }
 
-      const response = await apiGet<{ success: boolean; data: any }>(
+      const response = await apiGet<LecturerDashboardApiResponse>(
         '/api/dashboard/lecturer',
         { token: token || undefined, headers }
       );
-      const rawData = response.data || response;
+      const rawData = response && typeof response === 'object' && 'data' in response ? response.data : response;
       const rawTasks = rawData.tasks_to_grade || rawData.tugas_mendesak || [];
-      const mappedTasks = rawTasks.map((t: any, idx: number) => {
+      const mappedTasks = rawTasks.map((t: LecturerTaskRaw, idx: number) => {
         let totalSub = 0;
         if (t.rasio_pengumpulan && typeof t.rasio_pengumpulan === 'string') {
           const parts = t.rasio_pengumpulan.split('/');
@@ -73,7 +102,7 @@ export default function LecturerDashboard() {
           module_name: t.modul_asal || t.module_name || '',
           ungraded_count: t.jumlah_belum_dinilai !== undefined ? t.jumlah_belum_dinilai : t.ungraded_count || 0,
           total_submissions: totalSub || t.total_submissions || 0,
-          deadline: t.tenggat_verifikasi || t.deadline || null
+          deadline: t.tenggat_verifikasi || t.deadline || undefined
         };
       });
       const lecturerData = {
@@ -110,15 +139,17 @@ export default function LecturerDashboard() {
       setLoading(false);
       setIsRefreshing(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
-    fetchData();
-  }, []);
+    Promise.resolve().then(() => {
+      void fetchData();
+    });
+  }, [fetchData]);
 
   const handleRefresh = () => {
     setIsRefreshing(true);
-    fetchData();
+    void fetchData();
   };
 
   const activeCourses = data?.active_courses ?? 0;
@@ -303,6 +334,9 @@ export default function LecturerDashboard() {
             );
           })}
         </div>
+
+        <h3 style={s.sectionHeader}>Agenda Lecturer</h3>
+        <AgendaSection />
       </div>
 
       <style>{`
@@ -605,7 +639,7 @@ const s: Record<string, React.CSSProperties> = {
     fontSize: '1.1rem',
     fontWeight: 600,
     color: '#F8FAFC',
-    marginBottom: '20px',
+    margin: '32px 0 20px',
     textTransform: 'uppercase',
     letterSpacing: '0.05em',
   },

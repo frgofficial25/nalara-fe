@@ -1,10 +1,11 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   Users, BookOpen, FileText, RefreshCw, ShieldAlert, ChevronRight, FileCheck, Flame, Clock, Layers, ArrowRight, CheckCircle
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import AgendaSection from '@/components/dashboard/AgendaSection';
 import { apiGet } from '@/lib/api';
 import { getStoredToken } from '@/services/auth';
 
@@ -26,6 +27,30 @@ interface TentorData {
   tasks_to_grade: TaskToGrade[];
 }
 
+interface TentorTaskRaw {
+  id?: number;
+  task_name?: string;
+  nama_tugas?: string;
+  course_name?: string;
+  kelas_asal?: string;
+  module_name?: string;
+  modul_asal?: string;
+  ungraded_count?: number;
+  jumlah_belum_dinilai?: number;
+  total_submissions?: number;
+  deadline?: string | null;
+}
+
+interface TentorDashboardResponse {
+  managed_courses?: number;
+  total_students?: number;
+  pending_submissions?: number;
+  verified_by_me?: number;
+  tasks_to_grade?: TentorTaskRaw[];
+}
+
+type TentorDashboardApiResponse = TentorDashboardResponse | { success: boolean; data: TentorDashboardResponse };
+
 export default function TentorDashboard() {
   const router = useRouter();
   const [data, setData] = useState<TentorData | null>(null);
@@ -34,7 +59,7 @@ export default function TentorDashboard() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [userName, setUserName] = useState("Tentor");
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
       setError(null);
       const token = getStoredToken();
@@ -54,19 +79,19 @@ export default function TentorDashboard() {
         } catch { }
       }
 
-      const response = await apiGet<{ success: boolean; data: any } | any>(
+      const response = await apiGet<TentorDashboardApiResponse>(
         '/api/dashboard/tentor',
         { token: token || undefined, headers }
       );
 
-      const raw = response?.data || response;
+      const raw = 'data' in (response || {}) ? response.data : response;
 
       setData({
         managed_courses: raw?.managed_courses ?? 0,
         total_students: raw?.total_students ?? 0,
         pending_submissions: raw?.pending_submissions ?? 0,
         verified_by_me: raw?.verified_by_me ?? 0,
-        tasks_to_grade: (raw?.tasks_to_grade ?? []).map((t: any, i: number) => ({
+        tasks_to_grade: (raw?.tasks_to_grade ?? []).map((t: TentorTaskRaw, i: number) => ({
           id: t.id ?? i + 1,
           task_name: t.task_name ?? t.nama_tugas ?? '-',
           course_name: t.course_name ?? t.kelas_asal ?? '-',
@@ -83,15 +108,17 @@ export default function TentorDashboard() {
       setLoading(false);
       setIsRefreshing(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
-    fetchData();
-  }, []);
+    Promise.resolve().then(() => {
+      void fetchData();
+    });
+  }, [fetchData]);
 
   const handleRefresh = () => {
     setIsRefreshing(true);
-    fetchData();
+    void fetchData();
   };
 
   // Convert numbers > 999.999 as requested by PRD
@@ -344,6 +371,9 @@ export default function TentorDashboard() {
           )}
         </div>
       </div>
+
+      <h3 style={s.sectionHeader}>Agenda Tentor</h3>
+      <AgendaSection />
 
       <style>{`
         @keyframes spin {
@@ -610,7 +640,7 @@ const s: Record<string, React.CSSProperties> = {
     fontSize: '1.2rem',
     fontWeight: 700,
     color: '#ffffff',
-    margin: '32px 0 16px 0',
+    margin: '40px 0 16px 0',
   },
   grid: {
     display: 'grid',

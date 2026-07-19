@@ -1,10 +1,11 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   Users, Activity, Ban, RefreshCw, ShieldAlert, Award,
-  GraduationCap, BookOpen, AlertTriangle, CheckCircle, Mail, Key, UserCheck, HelpCircle
+  GraduationCap, BookOpen
 } from 'lucide-react';
+import AgendaSection from '@/components/dashboard/AgendaSection';
 import { apiGet } from '@/lib/api';
 import { getStoredToken } from '@/services/auth';
 
@@ -17,13 +18,15 @@ interface DashboardData {
   inactive_users: number;
 }
 
+type DashboardApiResponse = DashboardData | { data?: DashboardData };
+
 export default function SuperadminDashboard() {
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  const fetchDashboardData = async () => {
+  const fetchDashboardData = useCallback(async () => {
     try {
       setError(null);
       const token = getStoredToken();
@@ -36,15 +39,14 @@ export default function SuperadminDashboard() {
         headers['x-api-key'] = token;
       }
 
-      let responseData: any = null;
-      const response = await apiGet<any>(
+      const response = await apiGet<DashboardApiResponse>(
         '/api/dashboard/superadmin',
         {
           token: token || undefined,
           headers
         }
       );
-      responseData = response?.data || response;
+      const responseData = 'data' in (response || {}) ? response.data : response;
 
       if (responseData && typeof responseData === 'object') {
         setData({
@@ -65,15 +67,17 @@ export default function SuperadminDashboard() {
       setLoading(false);
       setIsRefreshing(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
-    fetchDashboardData();
-  }, []);
+    Promise.resolve().then(() => {
+      void fetchDashboardData();
+    });
+  }, [fetchDashboardData]);
 
   const handleRefresh = () => {
     setIsRefreshing(true);
-    fetchDashboardData();
+    void fetchDashboardData();
   };
 
   // Convert numbers > 999.999 as requested by PRD
@@ -218,6 +222,9 @@ export default function SuperadminDashboard() {
           );
         })}
       </div>
+
+      <h3 style={s.sectionHeader}>Agenda SuperAdmin</h3>
+      <AgendaSection allowManage />
 
       <style>{`
         @keyframes spin {

@@ -5,28 +5,33 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { 
   LayoutDashboard, 
-  ChevronLeft,
-  ChevronRight,
-  Shield,
   LogOut,
-  BookOpen,
   Brain,
   GraduationCap,
   TrendingUp,
-  Inbox,
   FileText,
   User,
   Layers,
   Users,
   ClipboardList,
-  Award,
   Gem,
   Menu
 } from 'lucide-react';
 import { logoutApi } from '@/services/auth';
 
+interface SidebarMenuItem {
+  label: string;
+  href: string;
+  icon: React.ComponentType<{ size?: number; color?: string; className?: string; style?: React.CSSProperties }>;
+}
+
+interface SidebarMenuGroup {
+  group: string;
+  items: SidebarMenuItem[];
+}
+
 // Define the menu structures per role
-export const getMenuForRole = (role?: string) => {
+export const getMenuForRole = (role?: string): SidebarMenuGroup[] => {
   const cleanRole = role?.toLowerCase() || '';
   if (cleanRole === 'superadmin') {
     return [
@@ -97,7 +102,7 @@ export const getMenuForRole = (role?: string) => {
 };
 
 interface SidebarProps {
-  menu?: any[];
+  menu?: SidebarMenuGroup[];
   roleName?: string;
   isCollapsed?: boolean;
   onToggleCollapse?: () => void;
@@ -301,7 +306,7 @@ export default function Sidebar({
               {group.group}
             </div>
             <ul style={s.menuList}>
-              {group.items.map((item: any, itemIndex: number) => {
+              {group.items.map((item, itemIndex: number) => {
                 const isActive = pathname === item.href || (item.href !== '/' && pathname.startsWith(item.href + '/'));
                 const Icon = item.icon;
                 return (
