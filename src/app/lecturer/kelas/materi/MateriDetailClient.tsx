@@ -6,7 +6,7 @@ import {
   AlertCircle, BookOpen, Video, Trash2, Upload, File,
   ExternalLink, RefreshCw, ZoomIn
 } from 'lucide-react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { apiGet, apiUploadPost, apiDelete, apiPut } from '@/lib/api';
 import { getStoredToken } from '@/services/auth';
 import Portal from '@/components/common/Portal';
@@ -336,6 +336,8 @@ function UploadSection({ tugasId, onSuccess }: { tugasId: string; onSuccess: () 
 export default function MateriDetailClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const pathname = usePathname();
+  const basePath = pathname.startsWith('/tentor') ? '/tentor' : '/lecturer';
   const courseId = searchParams.get('courseId') || '';
   const tugasId = searchParams.get('tugasId') || '';
 
@@ -484,14 +486,14 @@ export default function MateriDetailClient() {
         .materi-card{animation:fadeIn 0.3s ease both}
       `}</style>
 
-      {/* Breadcrumb */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 28, flexWrap: 'wrap' }}>
-        <button onClick={() => router.push(`/lecturer/kelas/detail?id=${courseId}`)} style={backBtn}>
-          <ArrowLeft size={15} />
+      {/* Breadcrumb / Back */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 24 }}>
+        <button onClick={() => router.push(`${basePath}/kelas/detail?id=${courseId}`)} style={backBtn}>
+          <ArrowLeft size={16} />
         </button>
-        <span style={crumb} onClick={() => router.push('/lecturer/kelas')}>Kelas</span>
+        <span style={crumb} onClick={() => router.push(`${basePath}/kelas`)}>Kelas</span>
         <ChevronRight size={13} color="#475569" />
-        <span style={crumb} onClick={() => router.push(`/lecturer/kelas/detail?id=${courseId}`)}>
+        <span style={crumb} onClick={() => router.push(`${basePath}/kelas/detail?id=${courseId}`)}>
           {materi?.nama_pembelajaran ?? 'Detail Kelas'}
         </span>
         <ChevronRight size={13} color="#475569" />

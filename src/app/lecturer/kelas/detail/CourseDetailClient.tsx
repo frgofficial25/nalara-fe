@@ -6,7 +6,7 @@ import {
   ChevronRight, X, AlertCircle, CheckCircle2, Loader2, Upload, Eye,
   Download, Package, Edit
 } from 'lucide-react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { apiGet, apiPost, apiDelete, apiPut } from '@/lib/api';
 import { getStoredToken } from '@/services/auth';
 import Portal from '@/components/common/Portal';
@@ -41,6 +41,21 @@ interface Tugas {
   order?: number;
   file_url?: string;
   createdAt?: string;
+}
+
+interface FinalGradeRecap {
+  uuid_user: string;
+  user: {
+    username: string;
+    full_name: string;
+    email: string;
+  };
+  quiz_count: number;
+  avg_quiz_score: number | null;
+  study_case_count: number;
+  avg_study_case_score: number | null;
+  combined_score: number | null;
+  is_passed: boolean;
 }
 
 // ─── Auth Helper ──────────────────────────────────────────────────────────────
@@ -362,6 +377,8 @@ function EditModulModal({
 export default function CourseDetailClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const pathname = usePathname();
+  const basePath = pathname.startsWith('/tentor') ? '/tentor' : '/lecturer';
   const courseId = searchParams.get('id') || '';
 
   const [course, setCourse] = useState<Pembelajaran | null>(null);
@@ -369,6 +386,11 @@ export default function CourseDetailClient() {
   const [tugasMap, setTugasMap] = useState<Record<string, Tugas[]>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Tab & Recap State
+  const [activeTab, setActiveTab] = useState<'modul' | 'rekap'>('modul');
+  const [recapData, setRecapData] = useState<FinalGradeRecap[]>([]);
+  const [loadingRecap, setLoadingRecap] = useState(false);
 
   // Modal states
   const [showAddModul, setShowAddModul] = useState(false);
@@ -452,7 +474,31 @@ export default function CourseDetailClient() {
     }
   }, [courseId]);
 
+  const fetchRecap = useCallback(async () => {
+    if (!courseId) return;
+    try {
+      setLoadingRecap(true);
+      const auth = getAuth();
+      const res = await apiGet<{ data: FinalGradeRecap[] }>(`/api/grades/recap/${courseId}`, { token: auth.token, headers: auth.headers });
+      if (res && res.data) {
+        setRecapData(res.data);
+      } else if (Array.isArray(res)) {
+        setRecapData(res);
+      }
+    } catch (err) {
+      console.error('Failed to fetch recap:', err);
+    } finally {
+      setLoadingRecap(false);
+    }
+  }, [courseId]);
+
   useEffect(() => { fetchAll(); }, [fetchAll]);
+
+  useEffect(() => {
+    if (activeTab === 'rekap' && recapData.length === 0) {
+      fetchRecap();
+    }
+  }, [activeTab, fetchRecap, recapData.length]);
 
   // ── Delete Handlers ────────────────────────────────────────────────────────
   const confirmDeleteModul = async () => {
@@ -504,7 +550,7 @@ export default function CourseDetailClient() {
 
       {/* Breadcrumb / Back */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 24 }}>
-        <button onClick={() => router.push('/lecturer/kelas')} style={backBtn}>
+        <button onClick={() => router.push(`${basePath}/kelas`)} style={backBtn}>
           <ArrowLeft size={16} />
         </button>
         <span style={{ color: '#64748b', fontSize: '0.85rem' }}>Courses</span>
@@ -539,7 +585,25 @@ export default function CourseDetailClient() {
         </div>
       )}
 
-      {/* Modules */}
+      {/* Tabs */}
+      <div style={tabsContainer}>
+        <button
+          onClick={() => setActiveTab('modul')}
+          style={{ ...tabBtn, ...(activeTab === 'modul' ? activeTabStyle : {}) }}
+        >
+          Modul & Materi
+        </button>
+        <button
+          onClick={() => setActiveTab('rekap')}
+          style={{ ...tabBtn, ...(activeTab === 'rekap' ? activeTabStyle : {}) }}
+        >
+          Rekap Nilai
+        </button>
+      </div>
+
+      {activeTab === 'modul' ? (
+        <>
+          {/* Modules */}
       {moduls.length === 0 ? (
         <div style={emptyState}>
           <Package size={42} color="#4a5568" />
@@ -600,7 +664,7 @@ export default function CourseDetailClient() {
                         </div>
                         <div style={{ display: 'flex', gap: 8 }}>
                           <button
-                            onClick={() => router.push(`/lecturer/kelas/materi?courseId=${courseId}&tugasId=${t.id}`)}
+                            onClick={() => router.push(`${basePath}/kelas/materi?courseId=${courseId}&tugasId=${t.id}`)}
                             style={detailBtn}
                           >
                             <Eye size={13} /> Detail
@@ -619,6 +683,84 @@ export default function CourseDetailClient() {
               </div>
             );
           })}
+        </div>
+      )}
+      </>
+      ) : (
+        <div style={recapContainer}>
+          <div style={recapHeader}>
+            <h2 style={recapTitle}>Rekapitulasi Nilai Kelas</h2>
+            <p style={recapDesc}>Daftar nilai akhir siswa yang telah menyelesaikan kuis di kelas ini.</p>
+          </div>
+          
+          {loadingRecap ? (
+            <div style={{ display: 'flex', justifyContent: 'center', padding: '40px 0' }}>
+              <Loader2 size={24} color="#6366f1" style={{ animation: 'spin 1s linear infinite' }} />
+            </div>
+          ) : recapData.length === 0 ? (
+            <div style={emptyState}>
+              <FileText size={42} color="#4a5568" />
+              <p style={{ color: '#94a3b8', fontWeight: 600, marginTop: 12 }}>Belum ada data nilai</p>
+              <p style={{ color: '#64748b', fontSize: '0.82rem' }}>Siswa belum ada yang mengerjakan kuis atau studi kasus.</p>
+            </div>
+          ) : (
+            <div style={tableWrapper}>
+              <table style={table}>
+                <thead>
+                  <tr>
+                    <th style={th}>No</th>
+                    <th style={th}>Nama Siswa</th>
+                    <th style={th}>Username</th>
+                    <th style={th}>Avg. Kuis</th>
+                    <th style={th}>Avg. Studi Kasus</th>
+                    <th style={th}>Nilai Gabungan</th>
+                    <th style={th}>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {recapData.map((grade, idx) => (
+                    <tr key={grade.uuid_user} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                      <td style={td}>{idx + 1}</td>
+                      <td style={td}>{grade.user?.full_name || '-'}</td>
+                      <td style={td}>{grade.user?.username || '-'}</td>
+                      <td style={td}>
+                        {grade.avg_quiz_score !== null && grade.avg_quiz_score !== undefined ? (
+                          <span style={{ fontWeight: 600, color: grade.avg_quiz_score >= 70 ? '#10b981' : '#f59e0b' }}>
+                            {grade.avg_quiz_score.toFixed(1)}
+                            <span style={{ fontWeight: 400, color: '#64748b', fontSize: '0.8rem' }}> ({grade.quiz_count} kuis)</span>
+                          </span>
+                        ) : <span style={{ color: '#64748b' }}>-</span>}
+                      </td>
+                      <td style={td}>
+                        {grade.avg_study_case_score !== null && grade.avg_study_case_score !== undefined ? (
+                          <span style={{ fontWeight: 600, color: grade.avg_study_case_score >= 70 ? '#10b981' : '#f59e0b' }}>
+                            {grade.avg_study_case_score.toFixed(1)}
+                            <span style={{ fontWeight: 400, color: '#64748b', fontSize: '0.8rem' }}> ({grade.study_case_count} tugas)</span>
+                          </span>
+                        ) : <span style={{ color: '#64748b' }}>-</span>}
+                      </td>
+                      <td style={td}>
+                        {grade.combined_score !== null && grade.combined_score !== undefined ? (
+                          <span style={{ fontWeight: 700, fontSize: '1rem', color: grade.combined_score >= 70 ? '#10b981' : '#f59e0b' }}>
+                            {grade.combined_score.toFixed(1)}
+                          </span>
+                        ) : <span style={{ color: '#64748b' }}>-</span>}
+                      </td>
+                      <td style={td}>
+                        {grade.combined_score !== null ? (
+                          grade.is_passed ? (
+                            <span style={{ ...statusBadge, background: 'rgba(16, 185, 129, 0.1)', color: '#10b981' }}>Lulus</span>
+                          ) : (
+                            <span style={{ ...statusBadge, background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444' }}>Tidak Lulus</span>
+                          )
+                        ) : <span style={{ ...statusBadge, background: 'rgba(100,116,139,0.1)', color: '#64748b' }}>Belum Ada Data</span>}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       )}
 
@@ -824,6 +966,47 @@ const emptyState: React.CSSProperties = {
   justifyContent: 'center', padding: '60px 24px', textAlign: 'center',
   background: 'rgba(255,255,255,0.02)',
   border: '1px dashed rgba(255,255,255,0.1)', borderRadius: 14,
+};
+
+const tabsContainer: React.CSSProperties = {
+  display: 'flex', gap: 8, marginBottom: 20,
+  borderBottom: '1px solid rgba(255,255,255,0.08)', paddingBottom: 12
+};
+
+const tabBtn: React.CSSProperties = {
+  background: 'transparent', border: 'none', color: '#94a3b8',
+  fontSize: '0.9rem', fontWeight: 600, padding: '8px 16px',
+  cursor: 'pointer', borderRadius: 8, transition: 'all 0.2s',
+};
+
+const activeTabStyle: React.CSSProperties = {
+  background: 'rgba(99,102,241,0.1)', color: '#818cf8',
+};
+
+const recapContainer: React.CSSProperties = {
+  background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)',
+  borderRadius: 14, padding: '24px',
+};
+
+const recapHeader: React.CSSProperties = { marginBottom: 20 };
+const recapTitle: React.CSSProperties = { fontSize: '1.1rem', fontWeight: 700, color: '#e2e8f0', margin: '0 0 6px 0' };
+const recapDesc: React.CSSProperties = { color: '#94a3b8', fontSize: '0.85rem', margin: 0 };
+
+const tableWrapper: React.CSSProperties = {
+  overflowX: 'auto', background: 'rgba(0,0,0,0.2)', borderRadius: 10,
+  border: '1px solid rgba(255,255,255,0.05)'
+};
+
+const table: React.CSSProperties = { width: '100%', borderCollapse: 'collapse', fontSize: '0.88rem' };
+const th: React.CSSProperties = { 
+  textAlign: 'left', padding: '12px 16px', color: '#94a3b8', fontWeight: 600,
+  borderBottom: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.02)' 
+};
+const td: React.CSSProperties = { padding: '14px 16px', color: '#e2e8f0' };
+
+const statusBadge: React.CSSProperties = {
+  display: 'inline-block', padding: '4px 10px', borderRadius: 6,
+  fontSize: '0.75rem', fontWeight: 700,
 };
 
 const modulCard: React.CSSProperties = {

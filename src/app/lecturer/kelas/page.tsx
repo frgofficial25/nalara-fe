@@ -6,7 +6,7 @@ import {
   Loader2, Globe, AlertCircle, CheckCircle2, ChevronRight, Eye, EyeOff, Archive, Users, Search,
   Calendar, Layers
 } from 'lucide-react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { apiGet, apiPost, apiPut } from '@/lib/api';
 import { getStoredToken } from '@/services/auth';
 import Portal from '@/components/common/Portal';
@@ -32,8 +32,10 @@ interface Student {
   email: string;
 }
 
-export default function CoursesPage() {
+export default function CourseManagement() {
   const router = useRouter();
+  const pathname = usePathname();
+  const basePath = pathname.startsWith('/tentor') ? '/tentor' : '/lecturer';
   const [courses, setCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -561,7 +563,7 @@ export default function CoursesPage() {
               key={course.id} 
               className="glass-panel" 
               style={{ ...s.card as React.CSSProperties, cursor: 'pointer' }}
-              onClick={() => router.push(`/lecturer/kelas/detail?id=${course.id}`)}
+              onClick={() => router.push(`${basePath}/kelas/detail?id=${course.id}`)}
             >
               <div style={s.cardHeader}>
                 <div style={s.bookIconBox}>
