@@ -44,18 +44,15 @@ interface Tugas {
 }
 
 interface FinalGradeRecap {
+  uuid_grade?: string;
   uuid_user: string;
+  final_score: number;
+  is_passed: boolean;
   user: {
     username: string;
     full_name: string;
     email: string;
   };
-  quiz_count: number;
-  avg_quiz_score: number | null;
-  study_case_count: number;
-  avg_study_case_score: number | null;
-  combined_score: number | null;
-  is_passed: boolean;
 }
 
 // ─── Auth Helper ──────────────────────────────────────────────────────────────
@@ -701,7 +698,7 @@ export default function CourseDetailClient() {
             <div style={emptyState}>
               <FileText size={42} color="#4a5568" />
               <p style={{ color: '#94a3b8', fontWeight: 600, marginTop: 12 }}>Belum ada data nilai</p>
-              <p style={{ color: '#64748b', fontSize: '0.82rem' }}>Siswa belum ada yang mengerjakan kuis atau studi kasus.</p>
+              <p style={{ color: '#64748b', fontSize: '0.82rem' }}>Data nilai rekap belum tersedia untuk kelas ini.</p>
             </div>
           ) : (
             <div style={tableWrapper}>
@@ -711,9 +708,7 @@ export default function CourseDetailClient() {
                     <th style={th}>No</th>
                     <th style={th}>Nama Siswa</th>
                     <th style={th}>Username</th>
-                    <th style={th}>Avg. Kuis</th>
-                    <th style={th}>Avg. Studi Kasus</th>
-                    <th style={th}>Nilai Gabungan</th>
+                    <th style={th}>Nilai Akhir</th>
                     <th style={th}>Status</th>
                   </tr>
                 </thead>
@@ -724,36 +719,16 @@ export default function CourseDetailClient() {
                       <td style={td}>{grade.user?.full_name || '-'}</td>
                       <td style={td}>{grade.user?.username || '-'}</td>
                       <td style={td}>
-                        {grade.avg_quiz_score !== null && grade.avg_quiz_score !== undefined ? (
-                          <span style={{ fontWeight: 600, color: grade.avg_quiz_score >= 70 ? '#10b981' : '#f59e0b' }}>
-                            {grade.avg_quiz_score.toFixed(1)}
-                            <span style={{ fontWeight: 400, color: '#64748b', fontSize: '0.8rem' }}> ({grade.quiz_count} kuis)</span>
-                          </span>
-                        ) : <span style={{ color: '#64748b' }}>-</span>}
+                        <span style={{ fontWeight: 700, fontSize: '1rem', color: grade.final_score >= 70 ? '#10b981' : '#f59e0b' }}>
+                          {grade.final_score.toFixed(1)}
+                        </span>
                       </td>
                       <td style={td}>
-                        {grade.avg_study_case_score !== null && grade.avg_study_case_score !== undefined ? (
-                          <span style={{ fontWeight: 600, color: grade.avg_study_case_score >= 70 ? '#10b981' : '#f59e0b' }}>
-                            {grade.avg_study_case_score.toFixed(1)}
-                            <span style={{ fontWeight: 400, color: '#64748b', fontSize: '0.8rem' }}> ({grade.study_case_count} tugas)</span>
-                          </span>
-                        ) : <span style={{ color: '#64748b' }}>-</span>}
-                      </td>
-                      <td style={td}>
-                        {grade.combined_score !== null && grade.combined_score !== undefined ? (
-                          <span style={{ fontWeight: 700, fontSize: '1rem', color: grade.combined_score >= 70 ? '#10b981' : '#f59e0b' }}>
-                            {grade.combined_score.toFixed(1)}
-                          </span>
-                        ) : <span style={{ color: '#64748b' }}>-</span>}
-                      </td>
-                      <td style={td}>
-                        {grade.combined_score !== null ? (
-                          grade.is_passed ? (
-                            <span style={{ ...statusBadge, background: 'rgba(16, 185, 129, 0.1)', color: '#10b981' }}>Lulus</span>
-                          ) : (
-                            <span style={{ ...statusBadge, background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444' }}>Tidak Lulus</span>
-                          )
-                        ) : <span style={{ ...statusBadge, background: 'rgba(100,116,139,0.1)', color: '#64748b' }}>Belum Ada Data</span>}
+                        {grade.is_passed ? (
+                          <span style={{ ...statusBadge, background: 'rgba(16, 185, 129, 0.1)', color: '#10b981' }}>Lulus</span>
+                        ) : (
+                          <span style={{ ...statusBadge, background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444' }}>Tidak Lulus</span>
+                        )}
                       </td>
                     </tr>
                   ))}
