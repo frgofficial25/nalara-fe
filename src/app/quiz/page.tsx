@@ -10,7 +10,7 @@ import { getStoredToken } from '@/services/auth';
 import {
   Loader2, AlertCircle, Calendar, Clock, Award, ShieldAlert,
   CheckCircle, Play, ArrowLeft, ArrowRight, ChevronLeft, ChevronRight,
-  BookOpen, FileQuestion, Timer, Send, XCircle, Trophy, Brain, Check
+  BookOpen, FileQuestion, Timer, Send, XCircle, Trophy, Brain, Check, Lock
 } from 'lucide-react';
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -255,8 +255,20 @@ function DetailQuizView({
               </div>
             )}
             {status === 'Selesai' && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', background: 'rgba(0,200,83,0.1)', color: '#00C853', padding: '16px 32px', borderRadius: '12px', fontSize: '0.95rem', fontWeight: 600, border: '1px solid rgba(0,200,83,0.2)' }}>
-                <CheckCircle size={20} /> Kuis ini telah Anda selesaikan. Lihat rekap di bawah.
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}>
+                <div style={{
+                  display: 'flex', alignItems: 'center', gap: '12px',
+                  background: 'rgba(0,200,83,0.08)', color: '#00C853',
+                  padding: '20px 36px', borderRadius: '16px', fontSize: '1rem',
+                  fontWeight: 700, border: '1px solid rgba(0,200,83,0.25)',
+                  boxShadow: '0 4px 20px rgba(0,200,83,0.1)'
+                }}>
+                  <Lock size={22} />
+                  <span>Kuis ini sudah dikerjakan &amp; dikunci</span>
+                </div>
+                <p style={{ fontSize: '0.82rem', color: 'var(--grey-blue)', margin: 0 }}>
+                  Lihat rekap hasil pengerjaan Anda di bawah ini.
+                </p>
               </div>
             )}
           </div>

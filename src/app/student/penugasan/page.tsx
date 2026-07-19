@@ -268,15 +268,10 @@ export default function PenugasanPage() {
 
   // ── Open Quiz ──────────────────────────────────────────────────────────────
   const openQuiz = async (quiz: QuizListItem) => {
-    // Check if already attempted
-    const already = myQuizRekap.find((r: any) => (r.uuid_quiz || r.quiz_id) === quiz.id);
-    if (already) { 
-      showToast('Kamu sudah pernah mengerjakan kuis ini. Hanya boleh dikerjakan 1 kali.', 'info'); 
-      return; 
-    }
-
     const isExpired = !!quiz.deadline && new Date(quiz.deadline) < new Date();
-    if (isExpired) {
+    // Allow opening if it's already attempted (to view rekap)
+    const already = myQuizRekap.find((r: any) => (r.uuid_quiz || r.quiz_id) === quiz.id);
+    if (isExpired && !already) {
       showToast('Kuis sudah kedaluwarsa.', 'info');
       return;
     }
@@ -600,9 +595,16 @@ export default function PenugasanPage() {
                           )}
                         </div>
                       </div>
-                      <button onClick={() => openQuiz(quiz)} style={s.btnDetail}>
-                        <Info size={14} /><span>Lihat Rekap</span>
-                      </button>
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8 }}>
+                        <div style={{
+                          display: 'inline-flex', alignItems: 'center', gap: 6,
+                          padding: '6px 14px', borderRadius: 10, fontSize: '0.78rem', fontWeight: 700,
+                          background: 'rgba(0,200,83,0.08)', color: '#00C853',
+                          border: '1px solid rgba(0,200,83,0.2)'
+                        }}>
+                          <Lock size={12} /> Terkunci (1x)
+                        </div>
+                      </div>
                     </div>
                   );
                 })}
