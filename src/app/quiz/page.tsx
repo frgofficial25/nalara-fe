@@ -10,7 +10,7 @@ import { getStoredToken } from '@/services/auth';
 import {
   Loader2, AlertCircle, Calendar, Clock, Award, ShieldAlert,
   CheckCircle, Play, ArrowLeft, ArrowRight, ChevronLeft, ChevronRight,
-  BookOpen, FileQuestion, Timer, Send, XCircle, Trophy, Brain
+  BookOpen, FileQuestion, Timer, Send, XCircle, Trophy, Brain, Check
 } from 'lucide-react';
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -350,277 +350,184 @@ function QuizWorkView({
   return (
     <>
       <style>{`
-        .qwv-root { display:flex; flex-direction:column; gap:1rem; animation:qwv-in 0.35s ease-out; }
-        @keyframes qwv-in { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
-        @keyframes qwv-pulse { 0%,100%{box-shadow:0 0 0 0 rgba(255,82,82,0.5)} 60%{box-shadow:0 0 0 8px rgba(255,82,82,0)} }
-        @keyframes qwv-opt-in { from{opacity:0;transform:translateX(-8px)} to{opacity:1;transform:translateX(0)} }
-        @keyframes qwv-shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
+        .qwv-root { display: flex; flex-direction: column; gap: 1.5rem; animation: qwv-in 0.35s ease-out; }
+        @keyframes qwv-in { from { opacity: 0; transform: translateY(12px) } to { opacity: 1; transform: translateY(0) } }
 
-        /* TOP BAR */
-        .qwv-topbar {
-          display:flex; justify-content:space-between; align-items:center;
-          gap:1rem; flex-wrap:wrap;
-          background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08);
-          border-radius:18px; padding:14px 22px;
-          backdrop-filter:blur(12px); box-shadow:0 4px 24px rgba(0,0,0,0.15);
-        }
-        .qwv-quiz-name { font-size:0.7rem; color:var(--grey); text-transform:uppercase; letter-spacing:0.08em; font-weight:600; margin-bottom:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:260px; }
-        .qwv-soal-counter { color:#fff; font-size:1rem; font-weight:700; }
-        .qwv-soal-counter span { color:var(--grey); font-weight:400; font-size:0.85rem; }
-        .qwv-timer { display:flex; align-items:center; gap:10px; padding:10px 18px; border-radius:12px; transition:all 0.3s; white-space:nowrap; }
-        .qwv-timer.normal { background:rgba(65,150,240,0.1); border:1px solid rgba(65,150,240,0.2); }
-        .qwv-timer.danger { background:rgba(255,82,82,0.12); border:1px solid rgba(255,82,82,0.3); animation:qwv-pulse 1.2s infinite; }
-        .qwv-timer-text { font-family:"SF Mono","Roboto Mono",monospace; font-weight:800; font-size:1.25rem; letter-spacing:2px; }
-
-        /* PROGRESS */
-        .qwv-progress-track { height:4px; border-radius:4px; background:rgba(255,255,255,0.07); overflow:hidden; }
-        .qwv-progress-fill {
-          height:100%; border-radius:4px;
-          background:linear-gradient(90deg,var(--azure),#B388FF,#E040FB,var(--azure));
-          background-size:300% 100%;
-          transition:width 0.5s cubic-bezier(0.4,0,0.2,1);
-          animation:qwv-shimmer 3s linear infinite;
-        }
-
-        /* BODY */
-        .qwv-body { display:flex; gap:1.25rem; align-items:flex-start; }
-
-        /* SIDEBAR */
+        .qwv-body { display: flex; gap: 2rem; align-items: flex-start; }
+        .qwv-content { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 20px; }
+        
         .qwv-sidebar {
-          width:192px; flex-shrink:0;
-          background:rgba(255,255,255,0.025); border:1px solid rgba(255,255,255,0.07);
-          border-radius:18px; padding:18px;
-          position:sticky; top:76px; backdrop-filter:blur(12px);
-          box-shadow:0 4px 20px rgba(0,0,0,0.1);
+          width: 320px; flex-shrink: 0;
+          display: flex; flex-direction: column; gap: 16px;
         }
-        .qwv-sidebar-title { font-size:0.62rem; font-weight:800; text-transform:uppercase; letter-spacing:0.12em; color:var(--grey); padding-bottom:10px; margin-bottom:10px; border-bottom:1px solid rgba(255,255,255,0.07); }
-        .qwv-legend { display:flex; flex-direction:column; gap:5px; margin-bottom:14px; }
-        .qwv-legend-item { display:flex; align-items:center; gap:7px; font-size:0.63rem; color:var(--grey); }
-        .qwv-legend-dot { width:8px; height:8px; border-radius:2px; flex-shrink:0; }
-        .qwv-numgrid { display:grid; grid-template-columns:repeat(4,1fr); gap:5px; }
-        .qwv-numgrid.cols5 { grid-template-columns:repeat(5,1fr); }
+
+        .qwv-timer-card {
+          display: flex; justify-content: space-between; align-items: center;
+          background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.06);
+          border-radius: 14px; padding: 16px 22px;
+          backdrop-filter: blur(12px);
+          box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+        }
+
+        .qwv-navigator-card {
+          background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.06);
+          border-radius: 18px; padding: 22px;
+          display: flex; flex-direction: column; gap: 18px;
+          backdrop-filter: blur(12px);
+          box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+        }
+
+        .qwv-numgrid {
+          display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px;
+        }
+
         .qwv-numbtn {
-          aspect-ratio:1; border-radius:7px; display:flex; align-items:center; justify-content:center;
-          font-size:0.7rem; font-weight:700; cursor:pointer;
-          border:1px solid rgba(255,255,255,0.08); background:rgba(255,255,255,0.04); color:var(--grey);
-          transition:all 0.15s; font-family:inherit;
+          height: 42px; border-radius: 10px; display: flex; align-items: center; justify-content: center;
+          font-size: 0.9rem; font-weight: 700; cursor: pointer;
+          border: 1px solid rgba(255, 255, 255, 0.05); background: rgba(255, 255, 255, 0.03); color: var(--grey-blue);
+          transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
         }
-        .qwv-numbtn:hover { transform:scale(1.1); border-color:rgba(255,255,255,0.22); color:#fff; background:rgba(255,255,255,0.08); }
-        .qwv-numbtn.cur { background:linear-gradient(135deg,var(--azure),#7C3AED); color:#fff; border-color:rgba(100,160,255,0.5); box-shadow:0 3px 12px rgba(65,150,240,0.4); }
-        .qwv-numbtn.ans { background:rgba(0,200,83,0.14); color:#00C853; border-color:rgba(0,200,83,0.35); }
-        .qwv-sidebar-stat { margin-top:12px; padding-top:10px; border-top:1px solid rgba(255,255,255,0.06); text-align:center; }
-        .qwv-sidebar-stat-num { font-size:1.15rem; font-weight:900; color:#00C853; line-height:1.1; }
-        .qwv-sidebar-stat-num span { color:var(--grey); font-weight:400; font-size:0.9rem; }
-        .qwv-sidebar-stat-label { font-size:0.62rem; color:var(--grey); margin-top:2px; }
+        .qwv-numbtn:hover { transform: translateY(-2px); background: rgba(255, 255, 255, 0.08); border-color: rgba(255, 255, 255, 0.15); color: #fff; }
+        .qwv-numbtn.cur { background: linear-gradient(135deg, var(--azure), #045bb5); color: #fff; border-color: transparent; box-shadow: 0 4px 14px rgba(6, 113, 224, 0.4); }
+        .qwv-numbtn.ans { background: rgba(6, 113, 224, 0.12); color: var(--azure); border-color: rgba(6, 113, 224, 0.25); }
 
-        /* CONTENT */
-        .qwv-content { flex:1; min-width:0; }
+        .qwv-btn { display: flex; align-items: center; justify-content: center; padding: 12px 0; border-radius: 10px; font-size: 0.9rem; font-weight: 600; cursor: pointer; transition: all 0.2s; border: none; }
+        .qwv-btn-prev { background: rgba(255,255,255,0.03); color: #fff; border: 1px solid rgba(255,255,255,0.12) !important; }
+        .qwv-btn-prev:hover:not(:disabled) { background: rgba(255,255,255,0.08); transform: translateY(-1px); }
+        .qwv-btn-prev:disabled { opacity: 0.25; cursor: not-allowed; }
+        .qwv-btn-next { background: linear-gradient(135deg, var(--azure), #045bb5); color: #fff; box-shadow: 0 4px 14px rgba(6, 113, 224, 0.3); }
+        .qwv-btn-next:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(6, 113, 224, 0.45); }
+        .qwv-btn-finish { background: linear-gradient(135deg, #00C853, #009624); color: #fff; box-shadow: 0 4px 14px rgba(0, 200, 83, 0.3); }
+        .qwv-btn-finish:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(0, 200, 83, 0.45); }
+
         .qwv-card {
-          background:rgba(255,255,255,0.028); border:1px solid rgba(255,255,255,0.08);
-          border-radius:20px; padding:2rem 2.25rem;
-          position:relative; overflow:hidden;
-          backdrop-filter:blur(16px); box-shadow:0 8px 40px rgba(0,0,0,0.18);
+          background: rgba(255, 255, 255, 0.015); border: 1px solid rgba(255, 255, 255, 0.06);
+          border-radius: 20px; padding: 2.25rem 2.5rem;
+          backdrop-filter: blur(16px);
+          box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
         }
-        .qwv-card::before { content:''; position:absolute; top:0; left:0; right:0; height:2px; background:linear-gradient(90deg,var(--azure),#B388FF,#E040FB); }
-        .qwv-card-hd { display:flex; align-items:center; justify-content:space-between; margin-bottom:1.5rem; flex-wrap:wrap; gap:10px; }
-        .qwv-card-hd-left { display:flex; align-items:center; gap:12px; }
-        .qwv-q-badge {
-          width:44px; height:44px; border-radius:13px; flex-shrink:0;
-          background:linear-gradient(135deg,var(--azure),#7C3AED);
-          display:flex; align-items:center; justify-content:center;
-          font-weight:900; font-size:1.05rem; color:#fff;
-          box-shadow:0 6px 18px rgba(65,150,240,0.35);
-        }
-        .qwv-chip { font-size:0.67rem; font-weight:700; text-transform:uppercase; letter-spacing:0.08em; padding:5px 12px; border-radius:8px; display:flex; align-items:center; gap:5px; }
-        .qwv-chip-mc { background:rgba(65,150,240,0.1); color:var(--azure); border:1px solid rgba(65,150,240,0.2); }
-        .qwv-chip-cb { background:rgba(224,64,251,0.1); color:#E040FB; border:1px solid rgba(224,64,251,0.2); }
-        .qwv-chip-tf { background:rgba(255,168,38,0.1); color:#FFA826; border:1px solid rgba(255,168,38,0.2); }
-        .qwv-q-pos { font-size:0.75rem; color:var(--grey); font-weight:500; }
 
-        /* QUESTION TEXT */
-        .qwv-q-text { font-size:1.15rem; font-weight:600; color:#fff; line-height:1.78; margin:0 0 1.75rem; letter-spacing:0.01em; }
+        .qwv-q-text { font-size: 1.45rem; font-weight: 700; color: #fff; line-height: 1.45; margin: 0 0 1.75rem; letter-spacing: -0.01em; }
 
-        /* OPTIONS */
-        .qwv-options { display:flex; flex-direction:column; gap:0.75rem; }
+        .qwv-options { display: flex; flex-direction: column; gap: 0.85rem; }
         .qwv-opt {
-          display:flex; align-items:center; gap:14px;
-          padding:14px 18px; border-radius:13px;
-          border:1px solid rgba(255,255,255,0.09); background:rgba(255,255,255,0.03);
-          cursor:pointer; text-align:left; color:#fff; font-size:0.95rem;
-          font-family:inherit; width:100%;
-          transition:border-color 0.2s, background 0.2s, box-shadow 0.2s, transform 0.15s;
-          animation:qwv-opt-in 0.25s ease both;
-          position:relative; overflow:hidden;
+          display: flex; align-items: center; gap: 14px;
+          padding: 18px 22px; border-radius: 12px;
+          border: 1px solid rgba(255,255,255,0.06); background: rgba(255,255,255,0.01);
+          cursor: pointer; text-align: left; color: #fff; font-size: 0.94rem;
+          font-family: inherit; width: 100%;
+          transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
         }
-        .qwv-opt:hover { border-color:rgba(255,255,255,0.2); transform:translateX(3px); background:rgba(255,255,255,0.045); }
-        .qwv-opt.sel { border:1.5px solid rgba(65,150,240,0.7); background:rgba(65,150,240,0.1); box-shadow:0 4px 20px rgba(65,150,240,0.14), inset 0 1px 0 rgba(255,255,255,0.06); transform:translateX(0); }
-        .qwv-opt-key {
-          display:flex; align-items:center; justify-content:center;
-          width:36px; height:36px; border-radius:10px; flex-shrink:0;
-          background:rgba(255,255,255,0.07); color:var(--grey-blue);
-          font-weight:800; font-size:0.88rem; transition:all 0.2s; position:relative; z-index:1;
+        .qwv-opt:hover { border-color: rgba(255,255,255,0.15); background: rgba(255,255,255,0.03); transform: translateX(4px); }
+        .qwv-opt.sel { border: 1px solid var(--azure); background: rgba(6, 113, 224, 0.08); box-shadow: 0 4px 20px rgba(6, 113, 224, 0.15); }
+        .qwv-radio-circle {
+          width: 20px; height: 20px; border-radius: 50%;
+          border: 2px solid rgba(255,255,255,0.3);
+          display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+          transition: all 0.2s;
         }
-        .qwv-opt.sel .qwv-opt-key { background:linear-gradient(135deg,var(--azure),#7C3AED); color:#fff; box-shadow:0 3px 10px rgba(65,150,240,0.3); }
-        .qwv-opt-txt { flex:1; line-height:1.55; position:relative; z-index:1; }
-
-        /* NAV */
-        .qwv-nav { display:flex; justify-content:space-between; align-items:center; gap:1rem; margin-top:2rem; padding-top:1.5rem; border-top:1px solid rgba(255,255,255,0.07); }
-        .qwv-btn { display:flex; align-items:center; gap:8px; padding:12px 24px; border-radius:12px; font-size:0.9rem; font-weight:600; cursor:pointer; font-family:inherit; transition:all 0.2s; border:none; }
-        .qwv-btn-prev { background:rgba(255,255,255,0.06); color:var(--grey-blue); border:1px solid rgba(255,255,255,0.1) !important; }
-        .qwv-btn-prev:hover:not(:disabled) { background:rgba(255,255,255,0.11); color:#fff; transform:translateX(-2px); }
-        .qwv-btn-prev:disabled { opacity:0.32; cursor:not-allowed; }
-        .qwv-btn-next { background:linear-gradient(135deg,var(--azure),#5E35B1); color:#fff; box-shadow:0 4px 16px rgba(65,150,240,0.3); }
-        .qwv-btn-next:hover { box-shadow:0 6px 24px rgba(65,150,240,0.45); transform:translateY(-1px); }
-        .qwv-btn-finish { background:linear-gradient(135deg,#00C853,#00BCD4); color:#fff; box-shadow:0 4px 16px rgba(0,200,83,0.35); }
-        .qwv-btn-finish:hover { box-shadow:0 6px 24px rgba(0,200,83,0.5); transform:translateY(-1px); }
-
-        /* MOBILE NUMBER STRIP */
-        .qwv-mob-strip {
-          display:none; overflow-x:auto; gap:5px; align-items:center;
-          background:rgba(255,255,255,0.025); border:1px solid rgba(255,255,255,0.07);
-          border-radius:12px; padding:10px 12px; scrollbar-width:none;
-        }
-        .qwv-mob-strip::-webkit-scrollbar { display:none; }
-        .qwv-mob-btn {
-          flex-shrink:0; width:32px; height:32px; border-radius:8px;
-          display:flex; align-items:center; justify-content:center;
-          font-size:0.72rem; font-weight:700; cursor:pointer;
-          border:1px solid rgba(255,255,255,0.09); color:var(--grey);
-          background:rgba(255,255,255,0.04); font-family:inherit; transition:all 0.15s;
-        }
-        .qwv-mob-btn.cur { background:linear-gradient(135deg,var(--azure),#7C3AED); color:#fff; border-color:transparent; box-shadow:0 2px 8px rgba(65,150,240,0.35); }
-        .qwv-mob-btn.ans { background:rgba(0,200,83,0.14); color:#00C853; border-color:rgba(0,200,83,0.35); }
-
-        /* RESPONSIVE */
-        @media (max-width:700px) {
-          .qwv-sidebar { display:none !important; }
-          .qwv-mob-strip { display:flex; }
-          .qwv-body { display:block; }
-          .qwv-card { padding:1.25rem 1rem; border-radius:16px; }
-          .qwv-q-text { font-size:1rem; margin-bottom:1.25rem; }
-          .qwv-opt { padding:12px 14px; font-size:0.9rem; }
-          .qwv-opt-key { width:32px; height:32px; font-size:0.8rem; }
-          .qwv-btn { padding:10px 16px; font-size:0.85rem; }
-          .qwv-topbar { padding:12px 16px; border-radius:14px; }
-          .qwv-quiz-name { max-width:160px; }
-          .qwv-timer-text { font-size:1.1rem; }
-        }
-        @media (max-width:400px) {
-          .qwv-btn { padding:9px 12px; font-size:0.8rem; gap:5px; }
-          .qwv-card { padding:1rem 0.85rem; }
-        }
+        .qwv-opt.sel .qwv-radio-circle { border-color: var(--azure); background: var(--azure); }
       `}</style>
 
       <div className="qwv-root">
-        {/* TOP BAR */}
-        <div className="qwv-topbar">
-          <div>
-            <div className="qwv-quiz-name">{detail.nama_quiz}</div>
-            <div className="qwv-soal-counter">Soal {currentIdx + 1} <span>dari {total}</span></div>
-          </div>
-          <div className={`qwv-timer ${isLowTime ? 'danger' : 'normal'}`}>
-            <Clock size={17} color={isLowTime ? '#FF5252' : 'var(--azure)'} />
-            <span className="qwv-timer-text" style={{ color: isLowTime ? '#FF5252' : '#fff' }}>{fmtTime(timeLeft)}</span>
-          </div>
-        </div>
-
-        {/* PROGRESS */}
-        <div className="qwv-progress-track">
-          <div className="qwv-progress-fill" style={{ width: `${progress}%` }} />
-        </div>
-
-        {/* MOBILE STRIP */}
-        <div className="qwv-mob-strip">
-          {detail.questions.map((item, idx) => (
-            <button key={idx} onClick={() => onGoTo(idx)}
-              className={`qwv-mob-btn${idx === currentIdx ? ' cur' : answers[item.uuid_question] ? ' ans' : ''}`}>
-              {idx + 1}
-            </button>
-          ))}
-        </div>
-
         {/* BODY */}
         <div className="qwv-body">
 
-          {/* SIDEBAR */}
-          <div className="qwv-sidebar">
-            <div className="qwv-sidebar-title">Navigasi Soal</div>
-            <div className="qwv-legend">
-              <div className="qwv-legend-item">
-                <div className="qwv-legend-dot" style={{ background: 'linear-gradient(135deg,var(--azure),#7C3AED)' }} />
-                Dikerjakan
-              </div>
-              <div className="qwv-legend-item">
-                <div className="qwv-legend-dot" style={{ background: 'rgba(0,200,83,0.3)', border: '1px solid rgba(0,200,83,0.5)' }} />
-                Dijawab
-              </div>
-              <div className="qwv-legend-item">
-                <div className="qwv-legend-dot" style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.13)' }} />
-                Belum dijawab
-              </div>
-            </div>
-            <div className={`qwv-numgrid${total > 20 ? ' cols5' : ''}`}>
-              {detail.questions.map((item, idx) => (
-                <button key={idx} onClick={() => onGoTo(idx)} title={`Soal ${idx + 1}`}
-                  className={`qwv-numbtn${idx === currentIdx ? ' cur' : answers[item.uuid_question] ? ' ans' : ''}`}>
-                  {idx + 1}
-                </button>
-              ))}
-            </div>
-            <div className="qwv-sidebar-stat">
-              <div className="qwv-sidebar-stat-num">{answeredCount}<span>/{total}</span></div>
-              <div className="qwv-sidebar-stat-label">soal dijawab</div>
-            </div>
-          </div>
-
-          {/* CONTENT */}
+          {/* Left Column: Content */}
           <div className="qwv-content">
             <div className="qwv-card">
-              {/* Header */}
-              <div className="qwv-card-hd">
-                <div className="qwv-card-hd-left">
-                  <div className="qwv-q-badge">{currentIdx + 1}</div>
-                  <span className={`qwv-chip ${q.type === 'Checkbox' ? 'qwv-chip-cb' : q.type === 'TrueFalse' ? 'qwv-chip-tf' : 'qwv-chip-mc'}`}>
-                    <FileQuestion size={11} />{typeLabel}
-                  </span>
-                </div>
-                <span className="qwv-q-pos">{currentIdx + 1} / {total}</span>
+              {/* Badges */}
+              <div style={{ display: 'flex', gap: '8px', marginBottom: '20px' }}>
+                <span style={{
+                  fontSize: '0.75rem',
+                  fontWeight: 600,
+                  padding: '4px 12px',
+                  borderRadius: '20px',
+                  background: 'rgba(255, 168, 38, 0.12)',
+                  color: '#FFA826',
+                  border: '1px solid rgba(255, 168, 38, 0.2)'
+                }}>
+                  Question {currentIdx + 1} of {total}
+                </span>
+                <span style={{
+                  fontSize: '0.75rem',
+                  fontWeight: 600,
+                  padding: '4px 12px',
+                  borderRadius: '20px',
+                  background: 'rgba(65, 150, 240, 0.12)',
+                  color: 'var(--azure)',
+                  border: '1px solid rgba(65, 150, 240, 0.2)'
+                }}>
+                  {q.type === 'MultipleChoice' ? 'Multiple Choice' : q.type === 'Checkbox' ? 'Checkbox' : 'True/False'}
+                </span>
               </div>
 
-              {/* Question */}
-              <p className="qwv-q-text">{q.question_text}</p>
+              {/* Question Text */}
+              <h2 className="qwv-q-text">{q.question_text}</h2>
 
               {/* Options */}
               <div className="qwv-options">
-                {q.options.map((opt, oi) => {
+                {q.options.map((opt) => {
                   const isSel = q.type === 'Checkbox'
                     ? Array.isArray(currentAnswer) && currentAnswer.includes(opt.id)
                     : currentAnswer === opt.id;
+                  
                   return (
                     <button key={opt.id} onClick={() => onSelect(q.uuid_question, opt.id)}
-                      className={`qwv-opt${isSel ? ' sel' : ''}`}
-                      style={{ animationDelay: `${oi * 0.04}s` }}>
-                      <span className="qwv-opt-key">
-                        {q.type === 'Checkbox' ? (isSel ? '✓' : <span style={{ opacity: 0.25, fontWeight: 400 }}>□</span>) : opt.id}
+                      className={`qwv-opt${isSel ? ' sel' : ''}`}>
+                      <span className="qwv-radio-circle" style={{ borderRadius: q.type === 'Checkbox' ? '4px' : '50%' }}>
+                        {isSel && <Check size={11} color="#fff" strokeWidth={3} />}
                       </span>
                       <span className="qwv-opt-txt">{opt.text}</span>
                     </button>
                   );
                 })}
               </div>
-
-              {/* Navigation */}
-              <div className="qwv-nav">
-                <button id="btn-prev" onClick={onPrev} disabled={currentIdx === 0} className="qwv-btn qwv-btn-prev">
-                  <ChevronLeft size={17} /> Sebelumnya
-                </button>
-                {currentIdx === total - 1
-                  ? <button id="btn-finish" onClick={onFinish} className="qwv-btn qwv-btn-finish"><Send size={15} /> Selesai Kuis</button>
-                  : <button id="btn-next" onClick={onNext} className="qwv-btn qwv-btn-next">Selanjutnya <ChevronRight size={17} /></button>
-                }
-              </div>
             </div>
           </div>
+
+          {/* Right Column: Sidebar */}
+          <div className="qwv-sidebar">
+            {/* Time Remaining */}
+            {timeLeft !== null && (
+              <div className="qwv-timer-card">
+                <span style={{ fontSize: '0.88rem', fontWeight: 600, color: 'var(--grey-blue)' }}>Time Remaining</span>
+                <span style={{ fontSize: '1.15rem', fontWeight: 700, color: isLowTime ? '#FF5252' : '#FFA826' }}>
+                  {fmtTime(timeLeft)}
+                </span>
+              </div>
+            )}
+
+            {/* Question Navigator */}
+            <div className="qwv-navigator-card">
+              <h4 style={{ margin: 0, fontSize: '0.9rem', fontWeight: 700, color: '#fff' }}>Question Navigator</h4>
+              <div className="qwv-numgrid">
+                {detail.questions.map((item, idx) => (
+                  <button key={idx} onClick={() => onGoTo(idx)}
+                    className={`qwv-numbtn${idx === currentIdx ? ' cur' : answers[item.uuid_question] ? ' ans' : ''}`}>
+                    {idx + 1}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Navigation Buttons */}
+            <div style={{ display: 'flex', gap: '12px' }}>
+              <button onClick={onPrev} disabled={currentIdx === 0} className="qwv-btn qwv-btn-prev" style={{ flex: 1 }}>
+                Previous
+              </button>
+              {currentIdx === total - 1 ? (
+                <button onClick={onFinish} className="qwv-btn qwv-btn-finish" style={{ flex: 1 }}>
+                  Submit
+                </button>
+              ) : (
+                <button onClick={onNext} className="qwv-btn qwv-btn-next" style={{ flex: 1 }}>
+                  Next
+                </button>
+              )}
+            </div>
+          </div>
+
         </div>
       </div>
     </>
@@ -961,32 +868,46 @@ function QuizPageInner() {
   const status = getStatus();
 
   return (
-    <main style={{ padding: '2rem 1.5rem', maxWidth: view === 'quiz' ? '1140px' : '900px', margin: '0 auto', fontFamily: 'Inter, system-ui, sans-serif' }}>
-      {view !== 'quiz' && (
-        <button onClick={goBack} style={{ background: 'none', border: 'none', display: 'inline-flex', alignItems: 'center', gap: '6px', marginBottom: '1.5rem', color: 'var(--azure)', fontSize: '0.88rem', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 600 }}>
-          <ArrowLeft size={16} /> Kembali ke Kelas
-        </button>
-      )}
+    <div style={{
+      minHeight: '100vh',
+      backgroundColor: '#070a13',
+      backgroundImage: `
+        radial-gradient(at 0% 0%, rgba(6, 113, 224, 0.12) 0px, transparent 50%),
+        radial-gradient(at 50% 0%, rgba(124, 58, 237, 0.08) 0px, transparent 50%),
+        radial-gradient(at 100% 0%, rgba(236, 72, 153, 0.06) 0px, transparent 50%)
+      `,
+      backgroundAttachment: 'fixed',
+      color: '#fff',
+      fontFamily: 'Inter, system-ui, sans-serif',
+      padding: '2.5rem 1.5rem'
+    }}>
+      <main style={{ maxWidth: view === 'quiz' ? '1200px' : '900px', margin: '0 auto' }}>
+        {view !== 'quiz' && (
+          <button onClick={goBack} style={{ background: 'none', border: 'none', display: 'inline-flex', alignItems: 'center', gap: '6px', marginBottom: '1.5rem', color: 'var(--azure)', fontSize: '0.88rem', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 600 }}>
+            <ArrowLeft size={16} /> Kembali ke Kelas
+          </button>
+        )}
 
-      {view === 'home' && (
-        <DetailQuizView detail={detail} status={status} rekap={rekap} onStart={handleStart} onBack={goBack} />
-      )}
+        {view === 'home' && (
+          <DetailQuizView detail={detail} status={status} rekap={rekap} onStart={handleStart} onBack={goBack} />
+        )}
 
-      {view === 'quiz' && (
-        <QuizWorkView
-          detail={detail} timeLeft={timeLeft} currentIdx={currentIdx}
-          answers={answers} onSelect={handleSelect}
-          onPrev={() => setCurrentIdx(i => Math.max(0, i - 1))}
-          onNext={() => setCurrentIdx(i => Math.min(detail.questions.length - 1, i + 1))}
-          onGoTo={(idx) => setCurrentIdx(idx)}
-          onFinish={handleSubmit}
-        />
-      )}
+        {view === 'quiz' && (
+          <QuizWorkView
+            detail={detail} timeLeft={timeLeft} currentIdx={currentIdx}
+            answers={answers} onSelect={handleSelect}
+            onPrev={() => setCurrentIdx(i => Math.max(0, i - 1))}
+            onNext={() => setCurrentIdx(i => Math.min(detail.questions.length - 1, i + 1))}
+            onGoTo={(idx) => setCurrentIdx(idx)}
+            onFinish={handleSubmit}
+          />
+        )}
 
-      {view === 'result' && result && (
-        <ResultView result={result} quizTitle={detail.nama_quiz} onBack={goBack} />
-      )}
-    </main>
+        {view === 'result' && result && (
+          <ResultView result={result} quizTitle={detail.nama_quiz} onBack={goBack} />
+        )}
+      </main>
+    </div>
   );
 }
 

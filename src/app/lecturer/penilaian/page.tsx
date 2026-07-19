@@ -69,7 +69,7 @@ function getAuth() {
 // ─── Main Component ───────────────────────────────────────────────────────────
 export default function PenilaianPage() {
   // ── Tab state ────────────────────────────────────────────────────────────
-  const [tab, setTab] = useState<'quiz' | 'studycase'>('quiz');
+  const [tab, setTab] = useState<'quiz' | 'studycase' | 'class'>('quiz');
 
   // Toast state
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
@@ -102,6 +102,125 @@ export default function PenilaianPage() {
   const [selectedCourse, setSelectedCourse] = useState('all');
   const [selectedStudent, setSelectedStudent] = useState<GradeRow | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // TAB 3 — CLASS LEVEL GRADING CENTER
+  // API: GET /api/students, GET /api/grades/recap/:id, POST /api/grades/set-grades/:id
+  // ─────────────────────────────────────────────────────────────────────────
+  const [classTabCourseId, setClassTabCourseId] = useState<string>('all');
+  const [classStudents, setClassStudents] = useState<any[]>([]);
+  const [classRecap, setClassRecap] = useState<any[]>([]);
+  const [classLoading, setClassLoading] = useState(false);
+  const [classError, setClassError] = useState<string | null>(null);
+  const [editingGrade, setEditingGrade] = useState<any | null>(null);
+  const [savingGrades, setSavingGrades] = useState(false);
+  const [classSearch, setClassSearch] = useState('');
+
+  const fetchClassPenilaian = async () => {
+    if (classTabCourseId === 'all') {
+      setClassStudents([]);
+      setClassRecap([]);
+      return;
+    }
+    setClassLoading(true);
+    setClassError(null);
+    try {
+      const auth = getAuth();
+      const [studRes, recapRes] = await Promise.all([
+        apiGet<any>('/api/students', { token: auth.token, headers: auth.headers }),
+        apiGet<any>(`/api/grades/recap/${classTabCourseId}`, { token: auth.token, headers: auth.headers })
+      ]);
+      
+      const sList = Array.isArray(studRes) ? studRes : (studRes?.data || []);
+      const rList = Array.isArray(recapRes) ? recapRes : (recapRes?.data || []);
+      
+      setClassStudents(sList);
+      setClassRecap(rList);
+    } catch (err: any) {
+      setClassError(err.message || 'Gagal memuat data penilaian kelas.');
+    } finally {
+      setClassLoading(false);
+      setRefreshing(false);
+    }
+  };
+
+  const handleCalculateSingle = async (userId: string) => {
+    try {
+      const auth = getAuth();
+      await apiPost<any>('/api/grades/calculate', {
+        uuid_user: userId,
+        uuid_pembelajaran: classTabCourseId
+      }, { token: auth.token, headers: auth.headers });
+      
+      showToast('Berhasil kalkulasi nilai!', 'success');
+      fetchClassPenilaian();
+    } catch (err: any) {
+      showToast(`Gagal kalkulasi: ${err.message}`, 'error');
+    }
+  };
+
+  const handleCalculateBatch = async () => {
+    if (classStudents.length === 0) return;
+    const auth = getAuth();
+    let successCount = 0;
+    let failCount = 0;
+    setClassLoading(true);
+    for (const student of classStudents) {
+      try {
+        await apiPost<any>('/api/grades/calculate', {
+          uuid_user: student.id || student.uuid_user,
+          uuid_pembelajaran: classTabCourseId
+        }, { token: auth.token, headers: auth.headers });
+        successCount++;
+      } catch {
+        failCount++;
+      }
+    }
+    setClassLoading(false);
+    showToast(`Selesai kalkulasi masal! Sukses: ${successCount}, Gagal: ${failCount}`, 'success');
+    fetchClassPenilaian();
+  };
+
+  const handleUpdateLocalGrade = (userId: string, finalScore: number, isPassed: boolean) => {
+    setClassRecap(prev => {
+      const existingIdx = prev.findIndex(r => r.uuid_user === userId);
+      if (existingIdx > -1) {
+        const next = [...prev];
+        next[existingIdx] = { ...next[existingIdx], final_score: finalScore, is_passed: isPassed };
+        return next;
+      } else {
+        return [...prev, { uuid_user: userId, final_score: finalScore, is_passed: isPassed }];
+      }
+    });
+    setEditingGrade(null);
+  };
+
+  const handlePublishGrades = async () => {
+    if (classTabCourseId === 'all') return;
+    setSavingGrades(true);
+    try {
+      const auth = getAuth();
+      const payload = classStudents.map(student => {
+        const grade = classRecap.find(r => r.uuid_user === student.id || r.uuid_user === student.uuid_user);
+        return {
+          uuid_user: student.id || student.uuid_user,
+          final_score: grade ? grade.final_score : 0,
+          is_passed: grade ? grade.is_passed : false
+        };
+      });
+      
+      await apiPost<any>(`/api/grades/set-grades/${classTabCourseId}`, {
+        grades: payload
+      }, { token: auth.token, headers: auth.headers });
+      
+      showToast('Semua nilai berhasil disimpan & dipublish!', 'success');
+      fetchClassPenilaian();
+    } catch (err: any) {
+      showToast(`Gagal publish: ${err.message}`, 'error');
+    } finally {
+      setSavingGrades(false);
+    }
+  };
 
   const fetchQuiz = async () => {
     setQuizLoading(true);
@@ -269,7 +388,8 @@ export default function PenilaianPage() {
   useEffect(() => {
     if (tab === 'quiz') fetchQuiz();
     else if (tab === 'studycase') fetchQueue();
-  }, [tab]);
+    else if (tab === 'class') fetchClassPenilaian();
+  }, [tab, classTabCourseId]);
 
   // ── Quiz derived data ─────────────────────────────────────────────────────
   const graded = grades.filter(g => g.completedCount > 0);
@@ -305,8 +425,13 @@ export default function PenilaianPage() {
           <p style={s.subtitle}>Pantau nilai kuis & verifikasi studi kasus siswa</p>
         </div>
         <button
-          onClick={() => { setRefreshing(true); if (tab === 'quiz') fetchQuiz(); else fetchQueue(); }}
-          disabled={quizLoading || subLoading}
+          onClick={() => { 
+            setRefreshing(true); 
+            if (tab === 'quiz') fetchQuiz(); 
+            else if (tab === 'studycase') fetchQueue();
+            else if (tab === 'class') fetchClassPenilaian();
+          }}
+          disabled={quizLoading || subLoading || classLoading}
           style={s.btnGhost}
         >
           <RefreshCw size={14} style={{ animation: refreshing ? 'spin 1s linear infinite' : 'none' }} />
@@ -319,6 +444,7 @@ export default function PenilaianPage() {
         {([
           { key: 'quiz',      label: 'Nilai Kuis',            icon: <Brain size={15} /> },
           { key: 'studycase', label: 'Verifikasi Studi Kasus', icon: <FileText size={15} /> },
+          { key: 'class',     label: 'Penilaian Kelas',       icon: <Award size={15} /> },
         ] as const).map(t => (
           <button key={t.key} onClick={() => setTab(t.key)} style={{ ...s.tabBtn, ...(tab === t.key ? s.tabActive : {}) }}>
             {t.icon}<span>{t.label}</span>
@@ -623,6 +749,174 @@ export default function PenilaianPage() {
                   </div>
                 );
               })}
+            </div>
+          )}
+        </>
+      )}
+
+      {/* ── Tab 3: Class Assessment ── */}
+      {tab === 'class' && (
+        <>
+          <div className="glass-panel" style={s.filterRow}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1 }}>
+              <BookOpen size={15} color="var(--grey-blue)" />
+              <select 
+                value={classTabCourseId} 
+                onChange={e => setClassTabCourseId(e.target.value)} 
+                style={s.select}
+              >
+                <option value="all">Pilih Kelas...</option>
+                {courses.map((c: any) => (
+                  <option key={c.uuid_pembelajaran || c.id} value={c.uuid_pembelajaran || c.id}>
+                    {c.title || c.nama_pembelajaran}
+                  </option>
+                ))}
+              </select>
+            </div>
+            
+            {classTabCourseId !== 'all' && (
+              <div style={{ display: 'flex', gap: 10 }}>
+                <button
+                  type="button"
+                  onClick={handleCalculateBatch}
+                  disabled={classLoading || classStudents.length === 0}
+                  style={s.btnGhost}
+                >
+                  <RefreshCw size={14} />
+                  <span>Kalkulasi Masal</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={handlePublishGrades}
+                  disabled={savingGrades || classStudents.length === 0}
+                  style={{ ...s.btnPrimary, background: '#00C853' }}
+                >
+                  {savingGrades ? 'Menyimpan...' : 'Simpan & Publish'}
+                </button>
+              </div>
+            )}
+          </div>
+
+          {classError && <div style={s.errBanner}><AlertCircle size={16} /><span>{classError}</span></div>}
+
+          {classTabCourseId === 'all' ? (
+            <div style={s.empty}>
+              <BookOpen size={48} color="var(--border-color)" />
+              <h3>Pilih Kelas</h3>
+              <p>Pilih kelas di atas untuk memuat data penilaian.</p>
+            </div>
+          ) : classLoading ? (
+            <div style={s.centered}><Loader2 size={32} style={{ animation: 'spin 1s linear infinite' }} /><p>Memuat data penilaian kelas...</p></div>
+          ) : classStudents.length === 0 ? (
+            <div style={s.empty}>
+              <Award size={48} color="var(--border-color)" />
+              <h3>Tidak Ada Siswa</h3>
+              <p>Belum ada siswa terdaftar di kelas ini.</p>
+            </div>
+          ) : (
+            <div className="glass-panel" style={{ borderRadius: 12, overflow: 'hidden' }}>
+              <table style={s.table}>
+                <thead>
+                  <tr>
+                    {['Siswa', 'Nilai Akhir', 'Status Kelulusan', 'Aksi'].map(h => (
+                      <th key={h} style={{ ...s.th, ...(h === 'Aksi' ? { textAlign: 'right' } : {}) }}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {classStudents.map((student) => {
+                    const grade = classRecap.find(r => r.uuid_user === student.id || r.uuid_user === student.uuid_user);
+                    const finalScore = grade ? grade.final_score : 0;
+                    const isPassed = grade ? grade.is_passed : false;
+                    
+                    return (
+                      <tr key={student.id || student.uuid_user} style={s.tr}>
+                        <td style={s.td}>
+                          <strong style={{ color: '#fff', fontSize: '0.9rem' }}>{student.full_name || student.name}</strong>
+                          <span style={{ display: 'block', fontSize: '0.76rem', color: 'var(--grey-blue)' }}>{student.email || student.username}</span>
+                        </td>
+                        <td style={s.td}>
+                          <strong style={{ color: finalScore >= 75 ? 'var(--azure)' : '#FF5252', fontSize: '1rem' }}>
+                            {finalScore.toFixed(1)}
+                          </strong>
+                        </td>
+                        <td style={s.td}>
+                          {isPassed ? (
+                            <span style={s.pillGreen}>Lulus</span>
+                          ) : (
+                            <span style={s.pillRed}>Tidak Lulus</span>
+                          )}
+                        </td>
+                        <td style={{ ...s.td, textAlign: 'right' }}>
+                          <div style={{ display: 'inline-flex', gap: 8 }}>
+                            <button
+                              onClick={() => handleCalculateSingle(student.id || student.uuid_user)}
+                              style={{ ...s.btnView, background: 'rgba(255,255,255,0.05)', color: '#fff', borderColor: 'rgba(255,255,255,0.1)' }}
+                            >
+                              <span>Kalkulasi</span>
+                            </button>
+                            <button
+                              onClick={() => setEditingGrade({
+                                uuid_user: student.id || student.uuid_user,
+                                name: student.full_name || student.name,
+                                final_score: finalScore,
+                                is_passed: isPassed
+                              })}
+                              style={s.btnView}
+                            >
+                              <span>Edit</span>
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {editingGrade && (
+            <div style={s.overlay}>
+              <div style={{ ...s.modal, maxWidth: 440 }} className="glass-panel">
+                <div style={s.modalHead}>
+                  <div>
+                    <h3 style={{ margin: 0 }}>Ubah Nilai</h3>
+                    <span style={{ fontSize: '0.8rem', color: 'var(--grey-blue)' }}>{editingGrade.name}</span>
+                  </div>
+                  <button onClick={() => setEditingGrade(null)} style={s.closeBtn}><X size={18} /></button>
+                </div>
+                <div style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: 16 }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    <label style={s.formLabel}>Nilai Akhir</label>
+                    <input 
+                      type="number" 
+                      value={editingGrade.final_score} 
+                      onChange={e => setEditingGrade({ ...editingGrade, final_score: parseFloat(e.target.value) || 0 })}
+                      style={s.input} 
+                    />
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <input 
+                      type="checkbox" 
+                      id="editIsPassed"
+                      checked={editingGrade.is_passed} 
+                      onChange={e => setEditingGrade({ ...editingGrade, is_passed: e.target.checked })}
+                      style={{ width: 18, height: 18, cursor: 'pointer' }}
+                    />
+                    <label htmlFor="editIsPassed" style={{ fontSize: '0.88rem', color: '#fff', cursor: 'pointer', fontWeight: 600 }}>Lulus Kelas</label>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 8 }}>
+                    <button onClick={() => setEditingGrade(null)} style={s.btnGhost}>Batal</button>
+                    <button 
+                      onClick={() => handleUpdateLocalGrade(editingGrade.uuid_user, editingGrade.final_score, editingGrade.is_passed)}
+                      style={s.btnPrimary}
+                    >
+                      Simpan
+                    </button>
+                  </div>
+                </div>
+              </div>
             </div>
           )}
         </>

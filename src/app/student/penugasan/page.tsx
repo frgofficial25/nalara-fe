@@ -9,6 +9,7 @@ import {
 import { apiGet, apiPost } from '@/lib/api';
 import { getStoredToken } from '@/services/auth';
 import { useRouter } from 'next/navigation';
+import Portal from '@/components/common/Portal';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface UrgentTask {
@@ -463,10 +464,18 @@ export default function PenugasanPage() {
                       </div>
                       <h3 style={s.taskTitle}>{quiz.title}</h3>
                       {quiz.description && <p style={s.taskMeta}>{quiz.description}</p>}
-                      <div style={{ display: 'flex', gap: 16, marginTop: 8, fontSize: '0.78rem', color: 'var(--grey-blue)' }}>
+                      <div style={{ display: 'flex', gap: 16, marginTop: 8, fontSize: '0.78rem', color: 'var(--grey-blue)', flexWrap: 'wrap', alignItems: 'center' }}>
                         <span>{quiz.questionCount} soal</span>
-                        {quiz.time_limit && <span><Clock size={11} /> {quiz.time_limit} menit</span>}
-                        {quiz.deadline && <span><Calendar size={11} /> {new Date(quiz.deadline).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}</span>}
+                        {quiz.time_limit && (
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                            <Clock size={12} /> {quiz.time_limit} menit
+                          </span>
+                        )}
+                        {quiz.deadline && (
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                            <Calendar size={12} /> {new Date(quiz.deadline).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
+                          </span>
+                        )}
                         {attempt && <span style={{ fontSize: '0.78rem', color: 'var(--grey-blue)', display: 'flex', alignItems: 'center', gap: 4 }}>Skor: <strong style={{ color: (attempt.is_passed || attempt.isPassed || (attempt.score ?? attempt.skor) >= 75) ? '#00C853' : '#FF5252' }}>{attempt.score ?? attempt.skor ?? '-'}</strong></span>}
                       </div>
                     </div>
@@ -492,18 +501,18 @@ export default function PenugasanPage() {
       {/* ═══════════════════════════════════════════════════════ */}
       {/* MODALS */}
 
-      {/* Upload Study Case Modal */}
       {uploadTask && (
-        <div style={s.overlay}>
-          <div style={s.modal} className="glass-panel">
+        <Portal>
+          <div style={s.overlay}>
+            <div style={{ ...s.modal, padding: '24px' }} className="glass-panel">
             <div style={s.modalHead}>
               <div>
-                <h3 style={{ margin: 0, fontSize: '1.05rem' }}>Kumpulkan Tugas</h3>
+                <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 700, color: '#fff' }}>Kumpulkan Tugas</h3>
                 <p style={{ margin: '4px 0 0', fontSize: '0.82rem', color: 'var(--grey-blue)' }}>{uploadTask.nama_tugas}</p>
               </div>
               <button onClick={() => setUploadTask(null)} style={s.closeBtn}><X size={18} /></button>
             </div>
-            <div style={{ padding: '20px 24px' }}>
+            <div>
               {submitError && <div style={{ ...s.errorBanner, marginBottom: 16 }}><AlertCircle size={15} /><span>{submitError}</span></div>}
               {submitSuccess ? (
                 <div style={s.successBox}>
@@ -515,19 +524,78 @@ export default function PenugasanPage() {
                 <form onSubmit={handleSubmitSc} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                   <div style={s.fg}>
                     <label style={s.label}>1. Jupyter Notebook (.ipynb) <span style={{ color: '#FF5252' }}>*</span></label>
-                    <input type="file" required accept=".ipynb" onChange={e => setIpynbFile(e.target.files?.[0] || null)} style={s.fileInput} />
-                    {ipynbFile && <span style={s.fileHint}>{ipynbFile.name} ({Math.round(ipynbFile.size / 1024)} KB)</span>}
+                    <div style={{
+                      position: 'relative',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '10px',
+                      background: 'rgba(255, 255, 255, 0.02)',
+                      border: ipynbFile ? '1px solid var(--azure)' : '1px solid var(--border-color)',
+                      borderRadius: '8px',
+                      padding: '12px 16px',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s',
+                    }}>
+                      <FileText size={16} color={ipynbFile ? 'var(--azure)' : 'var(--grey-blue)'} />
+                      <input 
+                        type="file" 
+                        required 
+                        accept=".ipynb" 
+                        onChange={e => setIpynbFile(e.target.files?.[0] || null)} 
+                        style={{
+                          position: 'absolute',
+                          inset: 0,
+                          width: '100%',
+                          height: '100%',
+                          opacity: 0,
+                          cursor: 'pointer'
+                        }} 
+                      />
+                      <span style={{ fontSize: '0.88rem', color: ipynbFile ? '#fff' : 'var(--grey-blue)' }}>
+                        {ipynbFile ? ipynbFile.name : 'Pilih file Jupyter Notebook...'}
+                      </span>
+                    </div>
                   </div>
                   <div style={s.fg}>
                     <label style={s.label}>2. Laporan PDF <span style={{ color: '#FF5252' }}>*</span></label>
-                    <input type="file" required accept=".pdf" onChange={e => setPdfFile(e.target.files?.[0] || null)} style={s.fileInput} />
-                    {pdfFile && <span style={s.fileHint}>{pdfFile.name} ({Math.round(pdfFile.size / 1024)} KB)</span>}
+                    <div style={{
+                      position: 'relative',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '10px',
+                      background: 'rgba(255, 255, 255, 0.02)',
+                      border: pdfFile ? '1px solid var(--azure)' : '1px solid var(--border-color)',
+                      borderRadius: '8px',
+                      padding: '12px 16px',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s',
+                    }}>
+                      <FileText size={16} color={pdfFile ? 'var(--azure)' : 'var(--grey-blue)'} />
+                      <input 
+                        type="file" 
+                        required 
+                        accept=".pdf" 
+                        onChange={e => setPdfFile(e.target.files?.[0] || null)} 
+                        style={{
+                          position: 'absolute',
+                          inset: 0,
+                          width: '100%',
+                          height: '100%',
+                          opacity: 0,
+                          cursor: 'pointer'
+                        }} 
+                      />
+                      <span style={{ fontSize: '0.88rem', color: pdfFile ? '#fff' : 'var(--grey)' }}>
+                        {pdfFile ? pdfFile.name : 'Pilih file Laporan PDF...'}
+                      </span>
+                    </div>
+                    {pdfFile && <span style={s.fileHint}>File terpilih: {pdfFile.name} ({Math.round(pdfFile.size / 1024)} KB)</span>}
                   </div>
                   <div style={s.fg}>
                     <label style={s.label}>Catatan (Opsional)</label>
                     <textarea rows={3} value={notes} onChange={e => setNotes(e.target.value)} placeholder="Catatan pengerjaan..." style={s.textarea} />
                   </div>
-                  <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
+                  <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, borderTop: '1px solid rgba(255, 255, 255, 0.08)', paddingTop: 16 }}>
                     <button type="button" onClick={() => setUploadTask(null)} style={s.btnGhost}>Batal</button>
                     <button type="submit" disabled={submitting} style={s.btnPrimary}>
                       {submitting ? <><Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} /><span>Mengirim...</span></> : <><Upload size={14} /><span>Kirim Sekarang</span></>}
@@ -538,12 +606,13 @@ export default function PenugasanPage() {
             </div>
           </div>
         </div>
+        </Portal>
       )}
 
-      {/* Submission Detail Modal */}
       {selectedSub && (
-        <div style={s.overlay}>
-          <div style={{ ...s.modal, maxWidth: 520 }} className="glass-panel">
+        <Portal>
+          <div style={s.overlay}>
+            <div style={{ ...s.modal, maxWidth: 520 }} className="glass-panel">
             <div style={s.modalHead}>
               <h3 style={{ margin: 0 }}>{selectedSub.tugas?.title || 'Detail Pengumpulan'}</h3>
               <button onClick={() => setSelectedSub(null)} style={s.closeBtn}><X size={18} /></button>
@@ -572,12 +641,13 @@ export default function PenugasanPage() {
             </div>
           </div>
         </div>
+        </Portal>
       )}
 
-      {/* Quiz Taking Modal */}
       {activeQuiz && (
-        <div style={s.overlay}>
-          <div style={{ ...s.modal, maxWidth: 780, maxHeight: '95vh' }} className="glass-panel">
+        <Portal>
+          <div style={s.overlay}>
+            <div style={{ ...s.modal, maxWidth: 780, maxHeight: '95vh' }} className="glass-panel">
             <div style={s.modalHead}>
               <div style={{ flex: 1 }}>
                 <h3 style={{ margin: 0, fontSize: '1.05rem' }}>{activeQuiz.title}</h3>
@@ -644,6 +714,7 @@ export default function PenugasanPage() {
             </div>
           </div>
         </div>
+        </Portal>
       )}
 
       {/* Toast Alert */}
@@ -713,9 +784,20 @@ const s: Record<string, React.CSSProperties> = {
   btnStart: { display: 'inline-flex', alignItems: 'center', gap: 7, background: 'rgba(6,113,224,0.15)', border: '1px solid rgba(6,113,224,0.3)', color: 'var(--azure)', padding: '9px 18px', borderRadius: 8, fontWeight: 600, fontSize: '0.88rem', cursor: 'pointer', whiteSpace: 'nowrap' },
   successBox: { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, padding: '30px 0' },
   attachLink: { display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: '0.82rem', color: 'var(--azure)', textDecoration: 'none', padding: '6px 12px', background: 'rgba(6,113,224,0.08)', border: '1px solid rgba(6,113,224,0.15)', borderRadius: 7 },
-  overlay: { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100, padding: 20 },
-  modal: { width: '100%', maxWidth: 580, maxHeight: '90vh', display: 'flex', flexDirection: 'column', borderRadius: 16 },
-  modalHead: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 22px', borderBottom: '1px solid rgba(255,255,255,0.07)' },
+  overlay: { position: 'fixed', inset: 0, background: 'rgba(0, 0, 0, 0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100, padding: 20 },
+  modal: { 
+    width: '100%', 
+    maxWidth: 540, 
+    maxHeight: '90vh', 
+    display: 'flex', 
+    flexDirection: 'column', 
+    borderRadius: 16,
+    background: 'rgba(20, 20, 20, 0.85)',
+    border: '1px solid rgba(255, 255, 255, 0.08)',
+    boxShadow: '0 20px 40px rgba(0, 0, 0, 0.5)',
+    backdropFilter: 'blur(16px)',
+  },
+  modalHead: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255, 255, 255, 0.08)', paddingBottom: '16px', marginBottom: '20px' },
   closeBtn: { background: 'none', border: 'none', color: 'var(--grey-blue)', cursor: 'pointer' },
   fg: { display: 'flex', flexDirection: 'column', gap: 6 },
   label: { fontSize: '0.82rem', fontWeight: 600, color: 'var(--grey-blue)' },

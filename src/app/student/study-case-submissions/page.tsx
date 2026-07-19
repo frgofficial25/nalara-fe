@@ -3,10 +3,11 @@
 import React, { useState, useEffect } from 'react';
 import { 
   FileText, Upload, CheckCircle2, AlertCircle, Loader2, Calendar, 
-  ExternalLink, MessageSquare, ClipboardList, Info, HelpCircle
+  ExternalLink, MessageSquare, ClipboardList, Info, HelpCircle, X
 } from 'lucide-react';
 import { apiGet } from '@/lib/api';
 import { getStoredToken } from '@/services/auth';
+import Portal from '@/components/common/Portal';
 
 interface UrgentTask {
   id_tugas: string;
@@ -309,12 +310,16 @@ export default function StudyCaseSubmissionsPage() {
 
       {/* Submit Assignment Modal */}
       {submittingTask && (
-        <div style={s.overlay}>
-          <div style={s.modal} className="glass-panel">
-            <h3 style={s.modalTitle}>Kumpulkan: {submittingTask.nama_tugas}</h3>
-            <p style={{ color: 'var(--grey-blue)', fontSize: '0.82rem', marginBottom: 18 }}>
-              Pastikan format file Anda benar (.ipynb untuk notebook dan .pdf untuk laporan).
-            </p>
+        <Portal>
+          <div style={s.overlay}>
+            <div style={{ ...s.modal, padding: '24px' }} className="glass-panel">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255, 255, 255, 0.08)', paddingBottom: '16px', marginBottom: '20px' }}>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 700, color: '#fff' }}>Kumpulkan Tugas</h3>
+                <p style={{ margin: '4px 0 0', fontSize: '0.82rem', color: 'var(--grey-blue)' }}>{submittingTask.nama_tugas}</p>
+              </div>
+              <button onClick={() => setSubmittingTask(null)} style={{ background: 'none', border: 'none', color: 'var(--grey-blue)', cursor: 'pointer' }}><X size={18} /></button>
+            </div>
 
             {submitError && (
               <div style={s.submitErrorAlert}>
@@ -333,25 +338,67 @@ export default function StudyCaseSubmissionsPage() {
               <form onSubmit={handleSubmit} style={s.form}>
                 <div style={s.formGroup}>
                   <label style={s.label}>1. File Jupyter Notebook (.ipynb) <span style={{ color: '#FF5252' }}>*</span></label>
-                  <input 
-                    type="file" 
-                    required 
-                    accept=".ipynb"
-                    onChange={(e) => setIpynbFile(e.target.files?.[0] || null)}
-                    style={s.fileInput} 
-                  />
+                  <div style={{
+                    position: 'relative',
+                    display: 'flex',
+                    alignItems: 'center',
+                    background: 'rgba(255, 255, 255, 0.02)',
+                    border: '1px solid var(--border-color)',
+                    borderRadius: '8px',
+                    padding: '10px 14px',
+                    cursor: 'pointer',
+                  }}>
+                    <input 
+                      type="file" 
+                      required 
+                      accept=".ipynb"
+                      onChange={(e) => setIpynbFile(e.target.files?.[0] || null)}
+                      style={{
+                        position: 'absolute',
+                        inset: 0,
+                        width: '100%',
+                        height: '100%',
+                        opacity: 0,
+                        cursor: 'pointer'
+                      }} 
+                    />
+                    <span style={{ fontSize: '0.88rem', color: ipynbFile ? '#fff' : 'var(--grey)' }}>
+                      {ipynbFile ? ipynbFile.name : 'Pilih file Jupyter Notebook...'}
+                    </span>
+                  </div>
                   {ipynbFile && <span style={s.fileHint}>File terpilih: {ipynbFile.name} ({Math.round(ipynbFile.size / 1024)} KB)</span>}
                 </div>
 
                 <div style={s.formGroup}>
                   <label style={s.label}>2. Laporan Latihan (PDF) <span style={{ color: '#FF5252' }}>*</span></label>
-                  <input 
-                    type="file" 
-                    required 
-                    accept=".pdf"
-                    onChange={(e) => setPdfFile(e.target.files?.[0] || null)}
-                    style={s.fileInput} 
-                  />
+                  <div style={{
+                    position: 'relative',
+                    display: 'flex',
+                    alignItems: 'center',
+                    background: 'rgba(255, 255, 255, 0.02)',
+                    border: '1px solid var(--border-color)',
+                    borderRadius: '8px',
+                    padding: '10px 14px',
+                    cursor: 'pointer',
+                  }}>
+                    <input 
+                      type="file" 
+                      required 
+                      accept=".pdf"
+                      onChange={(e) => setPdfFile(e.target.files?.[0] || null)}
+                      style={{
+                        position: 'absolute',
+                        inset: 0,
+                        width: '100%',
+                        height: '100%',
+                        opacity: 0,
+                        cursor: 'pointer'
+                      }} 
+                    />
+                    <span style={{ fontSize: '0.88rem', color: pdfFile ? '#fff' : 'var(--grey)' }}>
+                      {pdfFile ? pdfFile.name : 'Pilih file Laporan PDF...'}
+                    </span>
+                  </div>
                   {pdfFile && <span style={s.fileHint}>File terpilih: {pdfFile.name} ({Math.round(pdfFile.size / 1024)} KB)</span>}
                 </div>
 
@@ -365,7 +412,7 @@ export default function StudyCaseSubmissionsPage() {
                   />
                 </div>
 
-                <div style={s.modalFooter}>
+                <div style={{ ...s.modalFooter, borderTop: '1px solid rgba(255, 255, 255, 0.08)', paddingTop: '16px', marginTop: '12px' }}>
                   <button type="button" onClick={() => setSubmittingTask(null)} style={s.cancelBtn}>Batal</button>
                   <button type="submit" disabled={submitting} style={s.submitActionBtn}>
                     {submitting ? (
@@ -385,12 +432,14 @@ export default function StudyCaseSubmissionsPage() {
             )}
           </div>
         </div>
+        </Portal>
       )}
 
       {/* Detail Modal */}
       {selectedSub && (
-        <div style={s.overlay}>
-          <div style={{ ...s.modal, maxWidth: 520 }} className="glass-panel">
+        <Portal>
+          <div style={s.overlay}>
+            <div style={{ ...s.modal, maxWidth: 520 }} className="glass-panel">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18, borderBottom: '1px solid rgba(255,255,255,0.08)', paddingBottom: 12 }}>
               <h3 style={{ margin: 0, color: '#fff', fontSize: '1.1rem' }}>Detail Pengumpulan</h3>
               <button onClick={() => setSelectedSub(null)} style={{ background: 'none', border: 'none', color: 'var(--grey-blue)', cursor: 'pointer' }}>Close</button>
@@ -453,6 +502,7 @@ export default function StudyCaseSubmissionsPage() {
             </div>
           </div>
         </div>
+        </Portal>
       )}
 
       <style>{`
@@ -659,8 +709,7 @@ const s: Record<string, React.CSSProperties> = {
     left: 0,
     width: '100%',
     height: '100%',
-    background: 'rgba(0,0,0,0.6)',
-    backdropFilter: 'blur(4px)',
+    background: 'rgba(0, 0, 0, 0.85)',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
@@ -668,10 +717,14 @@ const s: Record<string, React.CSSProperties> = {
     padding: 16,
   },
   modal: {
-    maxWidth: 480,
+    maxWidth: 540,
     width: '100%',
     borderRadius: 16,
     padding: 24,
+    background: 'rgba(20, 20, 20, 0.85)',
+    border: '1px solid rgba(255, 255, 255, 0.08)',
+    boxShadow: '0 20px 40px rgba(0, 0, 0, 0.5)',
+    backdropFilter: 'blur(16px)',
   },
   modalTitle: {
     fontSize: '1.15rem',
