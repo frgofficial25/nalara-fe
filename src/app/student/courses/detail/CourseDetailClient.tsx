@@ -4,7 +4,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import {
   BookOpen, Loader2, AlertCircle, ChevronRight, Video,
   BookOpenCheck, FlaskConical, PencilLine, ArrowLeft, Layers,
-  Brain
+  Brain, GraduationCap
 } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { apiGet } from '@/lib/api';
@@ -43,6 +43,7 @@ export default function CourseDetailClient() {
   const [moduls, setModuls] = useState<Modul[]>([]);
   const [tugasMap, setTugasMap] = useState<Record<string, Tugas[]>>({});
   const [quizMap, setQuizMap] = useState<Record<string, any[]>>({});
+  const [finalGrade, setFinalGrade] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -133,6 +134,29 @@ export default function CourseDetailClient() {
       );
       setTugasMap(newTugasMap);
       setQuizMap(newQuizMap);
+
+      // Fetch final grade / graduation status
+      const getUserId = () => {
+        const raw = typeof window !== 'undefined' ? (localStorage.getItem('nalara_user_info') || sessionStorage.getItem('nalara_user_info') || '') : '';
+        try {
+          const p = JSON.parse(raw);
+          return p.id || p.uuid_user || '';
+        } catch {
+          return '';
+        }
+      };
+
+      const userId = getUserId();
+      if (userId) {
+        try {
+          const assessRes = await apiGet<any>(`/api/grades/assessment/${courseId}/${userId}`, opts);
+          if (assessRes?.success && assessRes.data?.finalGrade) {
+            setFinalGrade(assessRes.data.finalGrade);
+          }
+        } catch (e) {
+          console.warn('Failed to fetch student final grade assessment:', e);
+        }
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Gagal memuat detail kelas.');
     } finally {
@@ -196,6 +220,47 @@ export default function CourseDetailClient() {
                 <h1 style={s.courseTitle}>{course.title}</h1>
                 <p style={s.courseDesc}>{course.description || 'Tidak ada deskripsi.'}</p>
               </div>
+            </div>
+          )}
+
+          {finalGrade && (
+            <div style={{
+              ...s.gradCard,
+              background: finalGrade.is_passed ? 'rgba(0, 200, 83, 0.08)' : 'rgba(255, 61, 0, 0.08)',
+              borderColor: finalGrade.is_passed ? 'rgba(0, 200, 83, 0.2)' : 'rgba(255, 61, 0, 0.2)',
+              color: finalGrade.is_passed ? '#00C853' : '#FF3D00',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              padding: '16px 20px',
+              borderRadius: '12px',
+              border: '1px solid',
+              marginBottom: '24px',
+              gap: '16px',
+              flexWrap: 'wrap'
+            }} className="glass-panel">
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <GraduationCap size={24} color={finalGrade.is_passed ? '#00C853' : '#FF3D00'} />
+                <div>
+                  <h3 style={{ fontSize: '0.95rem', fontWeight: 700, margin: 0, color: '#fff' }}>
+                    {finalGrade.is_passed ? 'Selamat! Anda Dinyatakan Lulus Kelas Ini' : 'Status Kelulusan Kelas'}
+                  </h3>
+                  <p style={{ fontSize: '0.8rem', color: 'var(--grey-blue)', margin: '4px 0 0 0' }}>
+                    Nilai Akhir: <strong>{parseFloat(finalGrade.final_score.toFixed(1))}/100</strong>
+                  </p>
+                </div>
+              </div>
+              <span style={{
+                fontSize: '0.72rem',
+                fontWeight: 700,
+                padding: '4px 10px',
+                borderRadius: '20px',
+                background: finalGrade.is_passed ? 'rgba(0, 200, 83, 0.15)' : 'rgba(255, 61, 0, 0.15)',
+                color: finalGrade.is_passed ? '#00C853' : '#FF3D00',
+                border: `1px solid ${finalGrade.is_passed ? 'rgba(0, 200, 83, 0.25)' : 'rgba(255, 61, 0, 0.25)'}`
+              }}>
+                {finalGrade.is_passed ? 'Lulus' : 'Tidak Lulus'}
+              </span>
             </div>
           )}
 
@@ -443,5 +508,8 @@ const s: Record<string, React.CSSProperties> = {
     fontSize: '0.72rem',
     color: 'var(--grey-blue)',
     fontWeight: 500,
+  },
+  gradCard: {
+    boxShadow: '0 8px 32px 0 rgba(0, 0, 0, 0.2)',
   },
 };
