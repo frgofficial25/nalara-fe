@@ -20,6 +20,9 @@ interface Course {
   createdAt?: string;
   created_at?: string;
   modulesCount?: number;
+  scheduled_at?: string | null;
+  prerequisite_uuid?: string | null;
+  prerequisite_name?: string | null;
 }
 
 interface Student {
@@ -40,7 +43,7 @@ export default function CoursesPage() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [showAiModal, setShowAiModal] = useState(false);
   const [currentCourse, setCurrentCourse] = useState<Course | null>(null);
-  const [form, setForm] = useState({ title: '', description: '' });
+  const [form, setForm] = useState({ title: '', description: '', scheduled_at: '', prerequisite_uuid: '' });
 
   // Publish & Assign Modal State
   const [publishCourseId, setPublishCourseId] = useState<string | null>(null);
@@ -111,6 +114,9 @@ export default function CoursesPage() {
         description: c.deskripsi || c.description || '',
         createdAt: c.tanggal_dibuat || c.createdAt || c.created_at,
         created_at: c.tanggal_dibuat || c.created_at || c.createdAt,
+        scheduled_at: c.scheduled_at,
+        prerequisite_uuid: c.prerequisite_uuid,
+        prerequisite_name: c.prerequisite_name,
         status: c.is_published ? (c.scheduled_at && new Date(c.scheduled_at) > new Date() ? 'scheduled' : 'published') : 'draft'
       }));
 
@@ -260,6 +266,8 @@ export default function CoursesPage() {
       await apiPost('/api/pembelajaran', {
         title: form.title,
         description: form.description,
+        scheduled_at: form.scheduled_at || null,
+        prerequisite_uuid: form.prerequisite_uuid || null,
         uuid_user: userUuid
       }, {
         token: auth.token,
@@ -267,7 +275,7 @@ export default function CoursesPage() {
       });
 
       setShowCreateModal(false);
-      setForm({ title: '', description: '' });
+      setForm({ title: '', description: '', scheduled_at: '', prerequisite_uuid: '' });
       fetchCourses();
       showToast('Kelas berhasil dibuat!');
     } catch (err) {
@@ -297,7 +305,9 @@ export default function CoursesPage() {
         headers,
         body: JSON.stringify({
           title: form.title,
-          description: form.description
+          description: form.description,
+          scheduled_at: form.scheduled_at || null,
+          prerequisite_uuid: form.prerequisite_uuid || null
         })
       });
 
@@ -305,7 +315,7 @@ export default function CoursesPage() {
 
       setShowEditModal(false);
       setCurrentCourse(null);
-      setForm({ title: '', description: '' });
+      setForm({ title: '', description: '', scheduled_at: '', prerequisite_uuid: '' });
       fetchCourses();
       showToast('Kelas berhasil diperbarui!');
     } catch (err) {
@@ -487,13 +497,18 @@ export default function CoursesPage() {
   };
 
   const openCreateModal = () => {
-    setForm({ title: '', description: '' });
+    setForm({ title: '', description: '', scheduled_at: '', prerequisite_uuid: '' });
     setShowCreateModal(true);
   };
 
   const openEditModal = (course: Course) => {
     setCurrentCourse(course);
-    setForm({ title: course.title, description: course.description || '' });
+    setForm({ 
+      title: course.title, 
+      description: course.description || '',
+      scheduled_at: course.scheduled_at ? new Date(course.scheduled_at).toISOString().slice(0, 16) : '',
+      prerequisite_uuid: course.prerequisite_uuid || ''
+    });
     setShowEditModal(true);
   };
 
@@ -723,6 +738,29 @@ export default function CoursesPage() {
                     style={{ ...s.input, minHeight: 100, resize: 'vertical' }}
                   />
                 </div>
+                <div style={s.formGroup}>
+                  <label style={s.label}>Jadwal Publish</label>
+                  <input
+                    type="datetime-local"
+                    value={form.scheduled_at}
+                    onChange={(e) => setForm({ ...form, scheduled_at: e.target.value })}
+                    style={s.input}
+                  />
+                  <small style={{ color: '#666', marginTop: 4, display: 'block' }}>Biarkan kosong jika ingin publish manual.</small>
+                </div>
+                <div style={s.formGroup}>
+                  <label style={s.label}>Kelas Prasyarat</label>
+                  <select
+                    value={form.prerequisite_uuid}
+                    onChange={(e) => setForm({ ...form, prerequisite_uuid: e.target.value })}
+                    style={s.input}
+                  >
+                    <option value="">-- Tidak ada prasyarat --</option>
+                    {courses.map(c => (
+                      <option key={c.id} value={c.id}>{c.title}</option>
+                    ))}
+                  </select>
+                </div>
                 <div style={s.modalFooter}>
                   <button type="button" onClick={() => setShowCreateModal(false)} style={s.cancelBtn}>Cancel</button>
                   <button type="submit" style={s.submitBtn}>Create Course</button>
@@ -762,6 +800,29 @@ export default function CoursesPage() {
                     onChange={(e) => setForm({ ...form, description: e.target.value })}
                     style={{ ...s.input, minHeight: 100, resize: 'vertical' }}
                   />
+                </div>
+                <div style={s.formGroup}>
+                  <label style={s.label}>Jadwal Publish</label>
+                  <input
+                    type="datetime-local"
+                    value={form.scheduled_at}
+                    onChange={(e) => setForm({ ...form, scheduled_at: e.target.value })}
+                    style={s.input}
+                  />
+                  <small style={{ color: '#666', marginTop: 4, display: 'block' }}>Biarkan kosong jika ingin publish manual.</small>
+                </div>
+                <div style={s.formGroup}>
+                  <label style={s.label}>Kelas Prasyarat</label>
+                  <select
+                    value={form.prerequisite_uuid}
+                    onChange={(e) => setForm({ ...form, prerequisite_uuid: e.target.value })}
+                    style={s.input}
+                  >
+                    <option value="">-- Tidak ada prasyarat --</option>
+                    {courses.filter(c => c.id !== currentCourse?.id).map(c => (
+                      <option key={c.id} value={c.id}>{c.title}</option>
+                    ))}
+                  </select>
                 </div>
                 <div style={s.modalFooter}>
                   <button type="button" onClick={() => {

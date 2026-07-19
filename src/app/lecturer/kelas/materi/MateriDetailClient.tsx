@@ -106,13 +106,14 @@ function FilePreviewSection({ file, tipe }: { file: MateriFile; tipe?: string })
     return () => clearTimeout(fallbackTimer);
   }, [isPDF, viewMode, previewNonce]);
 
-  // PDF — Google Docs Viewer proxy (handles Cloudinary CORS/X-Frame-Options)
+  // PDF — Google Docs Viewer proxy
   if (isPDF) {
-    // Ensure the URL ends with .pdf so Google Docs Viewer recognizes it
     const pdfUrl = url.split('?')[0].toLowerCase().endsWith('.pdf')
       ? url
       : url.split('?')[0] + '.pdf' + (url.includes('?') ? '?' + url.split('?')[1] : '');
+      
     const googleViewerUrl = `https://docs.google.com/viewer?url=${encodeURIComponent(pdfUrl)}&embedded=true`;
+    
     return (
       <div style={{ width: '100%', borderRadius: 12, overflow: 'hidden', background: '#1e1e2e', display: 'flex', flexDirection: 'column' }}>
         {/* Toolbar */}
@@ -129,14 +130,31 @@ function FilePreviewSection({ file, tipe }: { file: MateriFile; tipe?: string })
           </div>
         </div>
         {/* Google Docs Viewer iframe */}
-        <div style={{ width: '100%', height: '680px', background: '#fff' }}>
-          <iframe
-            key={previewNonce}
-            src={googleViewerUrl}
-            title={file.nama_file || 'PDF Preview'}
-            style={{ width: '100%', height: '100%', border: 'none', display: 'block' }}
-            allow="fullscreen"
-          />
+        <div style={{ width: '100%', height: '680px', background: '#fff', position: 'relative' }}>
+          {viewMode === 'google' ? (
+            <iframe
+              key={previewNonce}
+              src={googleViewerUrl}
+              title={file.nama_file || 'PDF Preview'}
+              style={{ width: '100%', height: '100%', border: 'none', display: 'block' }}
+              allow="fullscreen"
+              onLoad={() => setIframeLoaded(true)}
+            />
+          ) : (
+            <iframe
+              key={previewNonce}
+              src={pdfUrl}
+              title={file.nama_file || 'PDF Preview'}
+              style={{ width: '100%', height: '100%', border: 'none', display: 'block' }}
+              allow="fullscreen"
+            />
+          )}
+          
+          {autoFallback && (
+            <div style={{ position: 'absolute', top: 10, right: 10, background: 'rgba(239,68,68,0.1)', color: '#ef4444', padding: '6px 12px', borderRadius: 6, fontSize: '0.75rem', fontWeight: 500, display: 'flex', alignItems: 'center', gap: 6 }}>
+              <AlertCircle size={14} /> Memuat viewer alternatif...
+            </div>
+          )}
         </div>
       </div>
     );
