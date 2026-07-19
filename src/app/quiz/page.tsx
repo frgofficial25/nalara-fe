@@ -427,6 +427,15 @@ function QuizWorkView({
           transition: all 0.2s;
         }
         .qwv-opt.sel .qwv-radio-circle { border-color: var(--azure); background: var(--azure); }
+
+        @media (max-width: 768px) {
+          .qwv-body { flex-direction: column-reverse; gap: 1rem; align-items: stretch; }
+          .qwv-sidebar { width: 100%; padding: 12px 12px 0 12px; }
+          .qwv-card { padding: 1.5rem 1.25rem; border-radius: 0; border-left: none; border-right: none; }
+          .qwv-q-text { font-size: 1.15rem; margin-bottom: 1.25rem; }
+          .qwv-opt { padding: 14px 16px; font-size: 0.88rem; border-radius: 10px; }
+          .qwv-numgrid { grid-template-columns: repeat(6, 1fr); }
+        }
       `}</style>
 
       <div className="qwv-root">
@@ -741,6 +750,10 @@ function QuizPageInner() {
   /* ─── Start quiz ─────────────────────────────────────────────────────── */
   const handleStart = () => {
     if (!detail || !quizId) return;
+    if (rekap) {
+      setError('Kuis ini telah Anda selesaikan.');
+      return;
+    }
     if (!detail.questions.length) {
       setError('Kuis belum memiliki soal yang valid. Silakan hubungi pengajar Anda.');
       return;
@@ -868,19 +881,27 @@ function QuizPageInner() {
   const status = getStatus();
 
   return (
-    <div style={{
-      minHeight: '100vh',
-      backgroundColor: '#070a13',
-      backgroundImage: `
-        radial-gradient(at 0% 0%, rgba(6, 113, 224, 0.12) 0px, transparent 50%),
-        radial-gradient(at 50% 0%, rgba(124, 58, 237, 0.08) 0px, transparent 50%),
-        radial-gradient(at 100% 0%, rgba(236, 72, 153, 0.06) 0px, transparent 50%)
-      `,
-      backgroundAttachment: 'fixed',
-      color: '#fff',
-      fontFamily: 'Inter, system-ui, sans-serif',
-      padding: '2.5rem 1.5rem'
-    }}>
+    <div 
+      className="quiz-page-container"
+      style={{
+        minHeight: '100vh',
+        backgroundColor: '#070a13',
+        backgroundImage: `
+          radial-gradient(at 0% 0%, rgba(6, 113, 224, 0.12) 0px, transparent 50%),
+          radial-gradient(at 50% 0%, rgba(124, 58, 237, 0.08) 0px, transparent 50%),
+          radial-gradient(at 100% 0%, rgba(236, 72, 153, 0.06) 0px, transparent 50%)
+        `,
+        backgroundAttachment: 'fixed',
+        color: '#fff',
+        fontFamily: 'Inter, system-ui, sans-serif',
+      }}
+    >
+      <style>{`
+        .quiz-page-container { padding: 2.5rem 1.5rem; }
+        @media (max-width: 768px) {
+          .quiz-page-container { padding: 0 !important; }
+        }
+      `}</style>
       <main style={{ maxWidth: view === 'quiz' ? '1200px' : '900px', margin: '0 auto' }}>
         {view !== 'quiz' && (
           <button onClick={goBack} style={{ background: 'none', border: 'none', display: 'inline-flex', alignItems: 'center', gap: '6px', marginBottom: '1.5rem', color: 'var(--azure)', fontSize: '0.88rem', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 600 }}>

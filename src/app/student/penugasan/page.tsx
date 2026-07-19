@@ -119,6 +119,7 @@ export default function PenugasanPage() {
   const [quizzes, setQuizzes]           = useState<QuizListItem[]>([]);
   const [loadingQuiz, setLoadingQuiz]   = useState(false);
   const [quizError, setQuizError]       = useState<string | null>(null);
+  const [quizTab, setQuizTab]           = useState<'pending' | 'submitted'>('pending');
 
   // Quiz session
   const [activeQuiz, setActiveQuiz]         = useState<QuizDetail | null>(null);
@@ -442,58 +443,104 @@ export default function PenugasanPage() {
       {/* ═══════════════ QUIZ TAB ═══════════════ */}
       {mainTab === 'quiz' && (
         <>
+          {/* Sub-tabs */}
+          <div style={s.subTabBar}>
+            <button onClick={() => setQuizTab('pending')} style={{ ...s.subTab, ...(quizTab === 'pending' ? s.subTabActive : {}) }}>
+              Belum Dikerjakan ({quizzes.filter(quiz => !getAttempt(quiz.id)).length})
+            </button>
+            <button onClick={() => setQuizTab('submitted')} style={{ ...s.subTab, ...(quizTab === 'submitted' ? s.subTabActive : {}) }}>
+              Sudah Dikerjakan ({quizzes.filter(quiz => getAttempt(quiz.id)).length})
+            </button>
+          </div>
+
           {quizError && <div style={s.errorBanner}><AlertCircle size={16} /><span>{quizError}</span></div>}
 
           {loadingQuiz ? (
             <div style={s.centered}><Loader2 size={32} style={{ animation: 'spin 1s linear infinite' }} /><p>Memuat kuis...</p></div>
-          ) : quizzes.filter(quiz => !getAttempt(quiz.id)).length === 0 ? (
-            <div style={s.emptyState}><Brain size={48} color="var(--border-color)" /><h3>Belum ada kuis tersedia</h3><p>Semua kuis yang ditugaskan telah Anda selesaikan.</p></div>
-          ) : (
-            <div style={s.cardList}>
-              {quizzes.filter(quiz => !getAttempt(quiz.id)).map(quiz => {
-                const attempt = getAttempt(quiz.id);
-                const isExpired = quiz.deadline && new Date(quiz.deadline) < new Date();
-                return (
-                  <div key={quiz.id} className="glass-panel" style={s.quizCard}>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
-                        <Brain size={16} color="var(--azure)" />
-                        <span style={s.courseLabel}>{quiz.moduleTitle}</span>
-                        {attempt && <span style={{ ...s.statusBadge, background: (attempt.is_passed || attempt.isPassed || attempt.score >= 75) ? 'rgba(0,200,83,0.12)' : 'rgba(255,82,82,0.12)', color: (attempt.is_passed || attempt.isPassed || attempt.score >= 75) ? '#00C853' : '#FF5252' }}>{(attempt.is_passed || attempt.isPassed || attempt.score >= 75) ? 'Lulus' : 'Tidak Lulus'}</span>}
-                        {isExpired && !attempt && <span style={{ ...s.statusBadge, background: 'rgba(255,82,82,0.08)', color: '#FF5252' }}>Kedaluwarsa</span>}
+          ) : quizTab === 'pending' ? (
+            quizzes.filter(quiz => !getAttempt(quiz.id)).length === 0 ? (
+              <div style={s.emptyState}><CheckCircle2 size={48} color="#00C853" /><h3>Semua Kuis Selesai! 🎉</h3><p>Tidak ada kuis yang belum dikerjakan.</p></div>
+            ) : (
+              <div style={s.cardList}>
+                {quizzes.filter(quiz => !getAttempt(quiz.id)).map(quiz => {
+                  const isExpired = !!(quiz.deadline && new Date(quiz.deadline) < new Date());
+                  return (
+                    <div key={quiz.id} className="glass-panel" style={s.quizCard}>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+                          <Brain size={16} color="var(--azure)" />
+                          <span style={s.courseLabel}>{quiz.moduleTitle}</span>
+                          {isExpired && <span style={{ ...s.statusBadge, background: 'rgba(255,82,82,0.08)', color: '#FF5252' }}>Kedaluwarsa</span>}
+                        </div>
+                        <h3 style={s.taskTitle}>{quiz.title}</h3>
+                        {quiz.description && <p style={s.taskMeta}>{quiz.description}</p>}
+                        <div style={{ display: 'flex', gap: 16, marginTop: 8, fontSize: '0.78rem', color: 'var(--grey-blue)', flexWrap: 'wrap', alignItems: 'center' }}>
+                          <span>{quiz.questionCount} soal</span>
+                          {quiz.time_limit && (
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                              <Clock size={12} /> {quiz.time_limit} menit
+                            </span>
+                          )}
+                          {quiz.deadline && (
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                              <Calendar size={12} /> {new Date(quiz.deadline).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
+                            </span>
+                          )}
+                        </div>
                       </div>
-                      <h3 style={s.taskTitle}>{quiz.title}</h3>
-                      {quiz.description && <p style={s.taskMeta}>{quiz.description}</p>}
-                      <div style={{ display: 'flex', gap: 16, marginTop: 8, fontSize: '0.78rem', color: 'var(--grey-blue)', flexWrap: 'wrap', alignItems: 'center' }}>
-                        <span>{quiz.questionCount} soal</span>
-                        {quiz.time_limit && (
-                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                            <Clock size={12} /> {quiz.time_limit} menit
-                          </span>
-                        )}
-                        {quiz.deadline && (
-                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                            <Calendar size={12} /> {new Date(quiz.deadline).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
-                          </span>
-                        )}
-                        {attempt && <span style={{ fontSize: '0.78rem', color: 'var(--grey-blue)', display: 'flex', alignItems: 'center', gap: 4 }}>Skor: <strong style={{ color: (attempt.is_passed || attempt.isPassed || (attempt.score ?? attempt.skor) >= 75) ? '#00C853' : '#FF5252' }}>{attempt.score ?? attempt.skor ?? '-'}</strong></span>}
-                      </div>
-                    </div>
-                    {!attempt && !isExpired && (
-                      <button onClick={() => openQuiz(quiz)} disabled={loadingQuizDetail || quiz.questionCount === 0} style={{ ...s.btnStart, opacity: (loadingQuizDetail || quiz.questionCount === 0) ? 0.6 : 1, cursor: (loadingQuizDetail || quiz.questionCount === 0) ? 'not-allowed' : 'pointer' }}>
-                        <Play size={14} /><span>Mulai Kuis</span>
+                      <button 
+                        onClick={() => openQuiz(quiz)} 
+                        disabled={loadingQuizDetail || quiz.questionCount === 0 || isExpired} 
+                        style={{ ...s.btnStart, opacity: (loadingQuizDetail || quiz.questionCount === 0 || isExpired) ? 0.6 : 1, cursor: (loadingQuizDetail || quiz.questionCount === 0 || isExpired) ? 'not-allowed' : 'pointer' }}
+                      >
+                        <Play size={14} fill="var(--azure)" /><span>Mulai Kuis</span>
                       </button>
-                    )}
-                    {!attempt && !isExpired && quiz.questionCount === 0 && (
-                      <div style={{ textAlign: 'center', fontSize: '0.78rem', color: '#FFB240' }}>Soal belum tersedia</div>
-                    )}
-                    {attempt && (
-                      <div style={{ textAlign: 'center', fontSize: '0.8rem', color: 'var(--grey-blue)' }}>Selesai dikerjakan</div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )
+          ) : (
+            quizzes.filter(quiz => getAttempt(quiz.id)).length === 0 ? (
+              <div style={s.emptyState}><Brain size={48} color="var(--border-color)" /><h3>Belum ada kuis yang selesai</h3><p>Kuis yang sudah Anda kerjakan akan tampil di sini.</p></div>
+            ) : (
+              <div style={s.cardList}>
+                {quizzes.filter(quiz => getAttempt(quiz.id)).map(quiz => {
+                  const attempt = getAttempt(quiz.id)!;
+                  const finalScore = attempt.score ?? attempt.skor ?? 0;
+                  const isPassed = attempt.is_passed ?? attempt.isPassed ?? (finalScore >= 75);
+                  return (
+                    <div key={quiz.id} className="glass-panel" style={s.quizCard}>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+                          <Brain size={16} color="var(--azure)" />
+                          <span style={s.courseLabel}>{quiz.moduleTitle}</span>
+                          <span style={{ 
+                            ...s.statusBadge, 
+                            background: isPassed ? 'rgba(0,200,83,0.12)' : 'rgba(255,82,82,0.12)', 
+                            color: isPassed ? '#00C853' : '#FF5252' 
+                          }}>
+                            {isPassed ? 'Lulus' : 'Tidak Lulus'}
+                          </span>
+                        </div>
+                        <h3 style={s.taskTitle}>{quiz.title}</h3>
+                        <div style={{ display: 'flex', gap: 16, marginTop: 8, fontSize: '0.78rem', color: 'var(--grey-blue)', flexWrap: 'wrap', alignItems: 'center' }}>
+                          <span>Skor Akhir: <strong style={{ color: isPassed ? '#00C853' : '#FF5252' }}>{finalScore}%</strong></span>
+                          {attempt.completed_at && (
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                              <Calendar size={12} /> {new Date(attempt.completed_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <button onClick={() => openQuiz(quiz)} style={s.btnDetail}>
+                        <Info size={14} /><span>Lihat Rekap</span>
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            )
           )}
         </>
       )}

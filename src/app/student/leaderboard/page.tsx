@@ -43,6 +43,8 @@ export default function LeaderboardPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [courses, setCourses] = useState<any[]>([]);
+  const [selectedCourseId, setSelectedCourseId] = useState<string>('global');
 
   const getAuthHeaders = () => {
     const token = getStoredToken();
@@ -71,12 +73,27 @@ export default function LeaderboardPage() {
         } catch {}
       }
 
-      const path = userId
-        ? `/api/students/leaderboard?userId=${userId}`
-        : '/api/students/leaderboard';
+      // Fetch courses list if not fetched yet
+      if (courses.length === 0) {
+        try {
+          const coursesRes = await apiGet<any>('/api/pembelajaran', {
+            token: auth.token,
+            headers: auth.headers
+          });
+          const mapped = Array.isArray(coursesRes) ? coursesRes : (coursesRes?.data || []);
+          setCourses(mapped);
+        } catch (cErr) {
+          console.warn('Failed to load courses:', cErr);
+        }
+      }
+
+      const isGlobal = selectedCourseId === 'global';
+      const path = isGlobal
+        ? (userId ? `/api/students/leaderboard?userId=${userId}` : '/api/students/leaderboard')
+        : `/api/grades/leaderboard/${selectedCourseId}?userId=${userId}`;
 
       const [leaderboardRes, gradesRes] = await Promise.all([
-        apiGet<{ success: boolean; data: LeaderboardData }>(path, {
+        apiGet<any>(path, {
           token: auth.token,
           headers: auth.headers
         }),
@@ -90,7 +107,36 @@ export default function LeaderboardPage() {
       ]);
 
       if (leaderboardRes?.success && leaderboardRes?.data) {
-        setData(leaderboardRes.data);
+        if (isGlobal) {
+          setData(leaderboardRes.data);
+        } else {
+          // Map class-level leaderboard to the generic topStudents schema
+          const list = Array.isArray(leaderboardRes.data.leaderboard) ? leaderboardRes.data.leaderboard : [];
+          const mappedTop: RankedStudent[] = list.map((item: any) => ({
+            rank: item.rank,
+            id: item.uuid_user,
+            full_name: item.user?.full_name || 'Student',
+            username: item.user?.username || '',
+            avatar_url: item.user?.avatar_url || null,
+            final_score: item.final_score,
+            status_kelulusan: item.is_passed ? 'Lulus' : 'Tidak Lulus'
+          }));
+          const currentUser = leaderboardRes.data.currentUser;
+          const mappedUser: RankedStudent | null = currentUser ? {
+            rank: currentUser.rank,
+            id: currentUser.uuid_user,
+            full_name: currentUser.user?.full_name || 'Student',
+            username: currentUser.user?.username || '',
+            avatar_url: currentUser.user?.avatar_url || null,
+            final_score: currentUser.final_score,
+            status_kelulusan: currentUser.is_passed ? 'Lulus' : 'Tidak Lulus'
+          } : null;
+
+          setData({
+            topStudents: mappedTop,
+            userRank: mappedUser
+          });
+        }
       } else {
         throw new Error('Format response tidak dikenali');
       }
@@ -108,7 +154,7 @@ export default function LeaderboardPage() {
 
   useEffect(() => {
     fetchLeaderboard();
-  }, []);
+  }, [selectedCourseId]);
 
   const handleRefresh = () => {
     setIsRefreshing(true);
@@ -176,6 +222,25 @@ export default function LeaderboardPage() {
           />
           <span>Refresh</span>
         </button>
+      </div>
+
+      {/* Filters */}
+      <div className="glass-panel" style={s.filterRow}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <TrendingUp size={15} color="var(--grey-blue)" />
+          <select 
+            value={selectedCourseId} 
+            onChange={e => setSelectedCourseId(e.target.value)} 
+            style={s.select}
+          >
+            <option value="global">Global Leaderboard</option>
+            {courses.map((c: any) => (
+              <option key={c.uuid_pembelajaran || c.id} value={c.uuid_pembelajaran || c.id}>
+                Leaderboard: {c.title || c.nama_pembelajaran}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
 
       {loading ? (
@@ -439,6 +504,27 @@ const s: Record<string, React.CSSProperties> = {
     margin: '0 auto',
     color: '#fff',
     minHeight: '100vh',
+  },
+  filterRow: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '16px',
+    padding: '12px 18px',
+    borderRadius: '10px',
+    marginBottom: '20px',
+    background: 'rgba(25, 25, 25, 0.95)',
+    border: '1px solid var(--border-color)',
+    flexWrap: 'wrap',
+  },
+  select: {
+    background: 'rgba(0,0,0,0.3)',
+    border: '1px solid rgba(255,255,255,0.1)',
+    borderRadius: '6px',
+    color: '#E2E8F0',
+    padding: '6px 12px',
+    fontSize: '0.85rem',
+    outline: 'none',
+    cursor: 'pointer',
   },
   topHeader: {
     display: 'flex',
