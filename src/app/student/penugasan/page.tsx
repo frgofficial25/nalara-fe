@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import {
   ClipboardList, Upload, CheckCircle2, AlertCircle, Loader2,
   FileText, Brain, X, Info, Calendar, ChevronRight,
-  ExternalLink, Clock, Play, Check
+  ExternalLink, Clock, Play, Check, Users, Lock, Crown
 } from 'lucide-react';
 import { apiGet, apiPost } from '@/lib/api';
 import { getStoredToken } from '@/services/auth';
@@ -18,6 +18,13 @@ interface UrgentTask {
   nama_pembelajaran: string;
   nama_modul: string;
   tipe: 'CaseStudy' | 'Practice' | 'Reading' | 'Video';
+  is_group_project?: boolean;
+  group_count?: number;
+  file_url?: string | null;
+  group_info?: {
+    group_name: string;
+    is_leader: boolean;
+  } | null;
 }
 
 interface Submission {
@@ -386,21 +393,81 @@ export default function PenugasanPage() {
               <div style={s.emptyState}><CheckCircle2 size={48} color="#00C853" /><h3>Semua Tugas Selesai! 🎉</h3><p>Tidak ada studi kasus yang perlu dikumpulkan.</p></div>
             ) : (
               <div style={s.cardList}>
-                {tasks.map(task => (
+                {tasks.map(task => {
+                  const isGroupTask = task.is_group_project;
+                  const isLeader = task.group_info?.is_leader === true;
+                  // If it's a group task and student is not assigned to a group or is not a leader → disable submit
+                  const canSubmit = !isGroupTask || isLeader;
+                  const noGroupAssigned = isGroupTask && !task.group_info;
+
+                  return (
                   <div key={task.id_tugas} className="glass-panel" style={s.taskCard}>
                     <div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8, flexWrap: 'wrap' }}>
                         <span style={s.typeBadge}>{task.tipe}</span>
                         <span style={s.courseLabel}>{task.nama_pembelajaran}</span>
+                        {isGroupTask && (
+                          <span style={{
+                            display: 'inline-flex', alignItems: 'center', gap: 4,
+                            padding: '2px 8px', borderRadius: 12, fontSize: '0.72rem',
+                            background: 'rgba(123, 97, 255, 0.12)', color: '#7B61FF',
+                            border: '1px solid rgba(123, 97, 255, 0.2)'
+                          }}>
+                            <Users size={10} /> Kelompok
+                          </span>
+                        )}
+                        {isGroupTask && task.group_info && (
+                          <span style={{
+                            display: 'inline-flex', alignItems: 'center', gap: 4,
+                            padding: '2px 8px', borderRadius: 12, fontSize: '0.72rem',
+                            background: isLeader ? 'rgba(255,193,7,0.12)' : 'rgba(255,255,255,0.06)',
+                            color: isLeader ? '#FFC107' : 'var(--grey-blue)',
+                            border: `1px solid ${isLeader ? 'rgba(255,193,7,0.2)' : 'rgba(255,255,255,0.1)'}`
+                          }}>
+                            {isLeader ? <Crown size={10} /> : <Users size={10} />}
+                            {task.group_info.group_name} {isLeader ? '(Ketua)' : '(Anggota)'}
+                          </span>
+                        )}
                       </div>
                       <h3 style={s.taskTitle}>{task.nama_tugas}</h3>
                       <p style={s.taskMeta}>Modul: {task.nama_modul}</p>
+                      {task.file_url && (
+                        <a
+                          href={task.file_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: '0.78rem', color: 'var(--azure)', marginTop: 6, textDecoration: 'none' }}
+                        >
+                          <FileText size={12} /> Lihat File Soal
+                        </a>
+                      )}
+                      {isGroupTask && !task.group_info && (
+                        <p style={{ fontSize: '0.78rem', color: '#FFB240', marginTop: 6, display: 'flex', alignItems: 'center', gap: 4 }}>
+                          <AlertCircle size={12} /> Anda belum ditugaskan ke kelompok manapun untuk tugas ini.
+                        </p>
+                      )}
+                      {isGroupTask && task.group_info && !isLeader && (
+                        <p style={{ fontSize: '0.78rem', color: 'var(--grey-blue)', marginTop: 6, display: 'flex', alignItems: 'center', gap: 4 }}>
+                          <Lock size={12} /> Hanya ketua kelompok yang dapat mengumpulkan tugas ini.
+                        </p>
+                      )}
                     </div>
-                    <button onClick={() => { setUploadTask(task); setIpynbFile(null); setPdfFile(null); setNotes(''); setSubmitError(null); setSubmitSuccess(false); }} style={s.btnUpload}>
-                      <Upload size={14} /><span>Kumpulkan Tugas</span>
-                    </button>
+                    {canSubmit && !noGroupAssigned ? (
+                      <button onClick={() => { setUploadTask(task); setIpynbFile(null); setPdfFile(null); setNotes(''); setSubmitError(null); setSubmitSuccess(false); }} style={s.btnUpload}>
+                        <Upload size={14} /><span>Kumpulkan Tugas</span>
+                      </button>
+                    ) : noGroupAssigned ? (
+                      <button disabled style={{ ...s.btnUpload, opacity: 0.4, cursor: 'not-allowed', background: 'rgba(255,255,255,0.05)' }}>
+                        <AlertCircle size={14} /><span>Belum Ada Kelompok</span>
+                      </button>
+                    ) : (
+                      <button disabled style={{ ...s.btnUpload, opacity: 0.4, cursor: 'not-allowed', background: 'rgba(255,255,255,0.05)' }}>
+                        <Lock size={14} /><span>Hanya Ketua</span>
+                      </button>
+                    )}
                   </div>
-                ))}
+                  );
+                })}
               </div>
             )
           ) : (
@@ -561,6 +628,23 @@ export default function PenugasanPage() {
             </div>
             <div>
               {submitError && <div style={{ ...s.errorBanner, marginBottom: 16 }}><AlertCircle size={15} /><span>{submitError}</span></div>}
+              {!submitSuccess && uploadTask?.is_group_project && uploadTask.group_info?.is_leader && (
+                <div style={{
+                  display: 'flex', alignItems: 'flex-start', gap: 10,
+                  padding: '10px 14px', borderRadius: 8, marginBottom: 4,
+                  background: 'rgba(255,193,7,0.08)', border: '1px solid rgba(255,193,7,0.2)'
+                }}>
+                  <Crown size={16} color="#FFC107" style={{ flexShrink: 0, marginTop: 2 }} />
+                  <div>
+                    <p style={{ margin: 0, fontSize: '0.82rem', fontWeight: 600, color: '#FFC107' }}>
+                      Kamu adalah Ketua {uploadTask.group_info.group_name}
+                    </p>
+                    <p style={{ margin: '2px 0 0', fontSize: '0.78rem', color: 'var(--grey-blue)' }}>
+                      Nilai yang kamu dapatkan akan otomatis diberikan kepada seluruh anggota kelompok.
+                    </p>
+                  </div>
+                </div>
+              )}
               {submitSuccess ? (
                 <div style={s.successBox}>
                   <CheckCircle2 size={40} color="#00C853" />

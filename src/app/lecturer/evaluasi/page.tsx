@@ -6,7 +6,7 @@ import {
   CheckCircle, Trash2, Edit2, PlusCircle,
   FileText, BookOpenCheck, FlaskConical, Video, PencilLine, Filter, Eye
 } from 'lucide-react';
-import { apiGet, apiPost, apiPut, apiDelete } from '@/lib/api';
+import { apiGet, apiPost, apiPut, apiDelete, apiUploadPost, apiUpload } from '@/lib/api';
 import { getStoredToken } from '@/services/auth';
 import { useRouter } from 'next/navigation';
 import type { Tugas, TugasType, Pembelajaran, Modul } from '@/types/lecturer.types';
@@ -66,6 +66,7 @@ export default function EvaluasiPage() {
     title: '', type: 'CaseStudy' as TugasType,
     youtube_link: '', content_text: '',
     uuid_pembelajaran: '', uuid_modul: '',
+    file: null as File | null, is_group_project: false, group_count: '' as number | '',
   });
   const [submitting, setSubmitting] = useState(false);
 
@@ -198,7 +199,7 @@ export default function EvaluasiPage() {
   useEffect(() => { if (selectedCourse) fetchModulesForCourse(selectedCourse); }, [selectedCourse]);
 
   // ── Study Case CRUD ──────────────────────────────────────────────────────
-  const resetForm = () => setForm({ title: '', type: 'CaseStudy', youtube_link: '', content_text: '', uuid_pembelajaran: '', uuid_modul: '' });
+  const resetForm = () => setForm({ title: '', type: 'CaseStudy', youtube_link: '', content_text: '', uuid_pembelajaran: '', uuid_modul: '', file: null, is_group_project: false, group_count: '' });
   const getFormModules = () => form.uuid_pembelajaran ? modules.filter(m => m.uuid_pembelajaran === form.uuid_pembelajaran) : modules;
 
   const handleCreate = async (e: React.FormEvent) => {
@@ -206,12 +207,28 @@ export default function EvaluasiPage() {
     setSubmitting(true);
     try {
       const auth = getAuthHeaders();
-      const payload: any = { title: form.title, type: form.type, uuid_pembelajaran: form.uuid_pembelajaran, uuid_modul: form.uuid_modul };
-      if (form.type === 'Video' && form.youtube_link) payload.youtube_link = form.youtube_link;
-      if ((form.type === 'Reading' || form.type === 'CaseStudy') && form.content_text) {
-        payload.content = { type: 'doc', content: [{ type: 'paragraph', content: [{ type: 'text', text: form.content_text }] }] };
+      const payloadForm = new FormData();
+      payloadForm.append('title', form.title);
+      payloadForm.append('type', form.type);
+      payloadForm.append('uuid_pembelajaran', form.uuid_pembelajaran);
+      if (form.uuid_modul) payloadForm.append('uuid_modul', form.uuid_modul);
+      
+      if (form.type === 'Video' && form.youtube_link) {
+        payloadForm.append('youtube_link', form.youtube_link);
       }
-      await apiPost('/api/tugas', payload, { token: auth.token, headers: auth.headers });
+      if ((form.type === 'Reading' || form.type === 'CaseStudy') && form.content_text) {
+        payloadForm.append('content', form.content_text);
+      }
+      if (form.type === 'CaseStudy') {
+        payloadForm.append('is_group_project', String(form.is_group_project));
+        if (form.is_group_project && form.group_count) {
+          payloadForm.append('group_count', String(form.group_count));
+        }
+        if (form.file) {
+          payloadForm.append('file', form.file);
+        }
+      }
+      await apiUploadPost('/api/tugas', payloadForm, { token: auth.token, headers: auth.headers });
       setShowCreateModal(false); resetForm(); fetchTugas();
     } catch (e: any) { alert(e.message || 'Gagal membuat tugas.'); }
     finally { setSubmitting(false); }
@@ -223,14 +240,23 @@ export default function EvaluasiPage() {
     setSubmitting(true);
     try {
       const auth = getAuthHeaders();
-      const payload: any = { title: form.title, type: form.type };
-      if (form.type === 'Video') payload.youtube_link = form.youtube_link;
-      if ((form.type === 'Reading' || form.type === 'CaseStudy') && form.content_text) {
-        payload.content = { type: 'doc', content: [{ type: 'paragraph', content: [{ type: 'text', text: form.content_text }] }] };
+      const payloadForm = new FormData();
+      payloadForm.append('title', form.title);
+      payloadForm.append('type', form.type);
+      if (form.uuid_pembelajaran) payloadForm.append('uuid_pembelajaran', form.uuid_pembelajaran);
+      if (form.uuid_modul) payloadForm.append('uuid_modul', form.uuid_modul);
+      
+      if (form.type === 'Video' && form.youtube_link) {
+        payloadForm.append('youtube_link', form.youtube_link);
       }
-      if (form.uuid_pembelajaran) payload.uuid_pembelajaran = form.uuid_pembelajaran;
-      if (form.uuid_modul) payload.uuid_modul = form.uuid_modul;
-      await apiPut(`/api/tugas/${currentTugas.id}`, payload, { token: auth.token, headers: auth.headers });
+      if ((form.type === 'Reading' || form.type === 'CaseStudy') && form.content_text) {
+        payloadForm.append('content', form.content_text);
+      }
+      if (form.type === 'CaseStudy' && form.file) {
+        payloadForm.append('file', form.file);
+      }
+      
+      await apiUpload(`/api/tugas/${currentTugas.id}`, payloadForm, { token: auth.token, headers: auth.headers });
       setShowEditModal(false); setCurrentTugas(null); resetForm(); fetchTugas();
     } catch (e: any) { alert(e.message || 'Gagal memperbarui tugas.'); }
     finally { setSubmitting(false); }
@@ -272,7 +298,10 @@ export default function EvaluasiPage() {
       youtube_link: tugas.youtube_link || '',
       content_text: initialText,
       uuid_pembelajaran: tugas.uuid_pembelajaran || '',
-      uuid_modul: tugas.uuid_modul || ''
+      uuid_modul: tugas.uuid_modul || '',
+      file: null,
+      is_group_project: (tugas as any).is_group_project || false,
+      group_count: (tugas as any).group_count || '',
     });
     setShowEditModal(true);
   };
@@ -607,6 +636,49 @@ export default function EvaluasiPage() {
                       <label style={s.label}>{form.type === 'CaseStudy' ? 'Soal / Deskripsi Tugas *' : 'Konten *'}</label>
                       <textarea required rows={5} value={form.content_text} onChange={e => setForm({ ...form, content_text: e.target.value })} placeholder={form.type === 'CaseStudy' ? 'Tuliskan pertanyaan/instruksi studi kasus...' : 'Isi bacaan...'} style={s.textarea} />
                     </div>
+                  )}
+                  {form.type === 'CaseStudy' && (
+                    <>
+                      <div style={s.fg}>
+                        <label style={s.label}>{showCreateModal ? 'File Soal Tambahan (Opsional - PDF/IPYNB)' : 'Update File Soal (Opsional - PDF/IPYNB)'}</label>
+                        <input
+                          type="file"
+                          accept=".pdf,.ipynb"
+                          onChange={(e) => setForm({ ...form, file: e.target.files?.[0] || null })}
+                          style={s.input}
+                        />
+                        {showEditModal && <p style={{ fontSize: '12px', color: '#666', marginTop: '4px' }}>Biarkan kosong jika tidak ingin mengubah file soal.</p>}
+                      </div>
+                      {showCreateModal && (
+                        <>
+                          <div style={s.fg}>
+                            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.88rem', color: 'rgba(255,255,255,0.7)' }}>
+                              <input
+                                type="checkbox"
+                                checked={form.is_group_project}
+                                onChange={(e) => setForm({ ...form, is_group_project: e.target.checked })}
+                                style={{ width: '16px', height: '16px' }}
+                              />
+                              Tugas Kelompok (Pembagian berdasarkan Leaderboard)
+                            </label>
+                          </div>
+                          {form.is_group_project && (
+                            <div style={s.fg}>
+                              <label style={s.label}>Jumlah Kelompok</label>
+                              <input
+                                type="number"
+                                min="1"
+                                value={form.group_count}
+                                onChange={(e) => setForm({ ...form, group_count: parseInt(e.target.value) || '' })}
+                                style={s.input}
+                                placeholder="Contoh: 5"
+                                required
+                              />
+                            </div>
+                          )}
+                        </>
+                      )}
+                    </>
                   )}
                 </div>
                 <div style={s.modalFoot}>
