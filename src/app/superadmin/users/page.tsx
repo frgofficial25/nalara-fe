@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { apiGet, apiPost, apiPut, apiDelete } from '@/lib/api';
 import { getStoredToken } from '@/services/auth';
+import Portal from '@/components/common/Portal';
 
 interface User {
   uuid_user: string;
@@ -543,220 +544,226 @@ export default function SuperadminUsers() {
 
       {/* Add User Modal */}
       {isAddModalOpen && (
-        <div style={s.modalOverlay}>
-          <div className="glass-panel" style={s.modalContent}>
-            <div style={s.modalHeader}>
-              <h3>Tambah User Baru</h3>
-              <button style={s.modalCloseBtn} onClick={() => setIsAddModalOpen(false)}>
-                <X size={18} />
-              </button>
+        <Portal>
+          <div style={s.modalOverlay}>
+            <div className="glass-panel" style={s.modalContent}>
+              <div style={s.modalHeader}>
+                <h3>Tambah User Baru</h3>
+                <button style={s.modalCloseBtn} onClick={() => setIsAddModalOpen(false)}>
+                  <X size={18} />
+                </button>
+              </div>
+              {formError && (
+                <div style={s.modalError}>
+                  <AlertTriangle size={16} />
+                  <span>{formError}</span>
+                </div>
+              )}
+              <form onSubmit={handleCreateUser} style={s.form}>
+                <div style={s.formGroup}>
+                  <label style={s.label}>Nama Lengkap</label>
+                  <input 
+                    type="text" 
+                    value={formFullName}
+                    onChange={(e) => setFormFullName(e.target.value)}
+                    placeholder="Contoh: Budi Santoso"
+                    style={s.input}
+                    required
+                  />
+                </div>
+                <div style={s.formGroup}>
+                  <label style={s.label}>Username</label>
+                  <input 
+                    type="text" 
+                    value={formUsername}
+                    onChange={(e) => setFormUsername(e.target.value.toLowerCase().replace(/\s+/g, ''))}
+                    placeholder="Contoh: budis123"
+                    style={s.input}
+                    required
+                  />
+                </div>
+                <div style={s.formGroup}>
+                  <label style={s.label}>Email</label>
+                  <input 
+                    type="email" 
+                    value={formEmail}
+                    onChange={(e) => setFormEmail(e.target.value)}
+                    placeholder="Contoh: budi@gmail.com"
+                    style={s.input}
+                    required
+                  />
+                </div>
+                <div style={s.formGroup}>
+                  <label style={s.label}>Hak Akses (Role)</label>
+                  <select 
+                    value={formRole} 
+                    onChange={(e: any) => setFormRole(e.target.value)}
+                    style={s.input}
+                  >
+                    <option value="User">Student (User)</option>
+                    <option value="Lecturer">Lecturer</option>
+                    <option value="Mentor">Tentor (Mentor)</option>
+                    <option value="SuperAdmin">SuperAdmin</option>
+                  </select>
+                </div>
+                <div style={s.modalFooter}>
+                  <button 
+                    type="button" 
+                    onClick={() => setIsAddModalOpen(false)} 
+                    style={s.cancelBtn}
+                    disabled={formLoading}
+                  >
+                    Batal
+                  </button>
+                  <button 
+                    type="submit" 
+                    style={s.submitBtn}
+                    disabled={formLoading}
+                  >
+                    {formLoading ? 'Memproses...' : 'Simpan Akun'}
+                  </button>
+                </div>
+              </form>
             </div>
-            {formError && (
-              <div style={s.modalError}>
-                <AlertTriangle size={16} />
-                <span>{formError}</span>
-              </div>
-            )}
-            <form onSubmit={handleCreateUser} style={s.form}>
-              <div style={s.formGroup}>
-                <label style={s.label}>Nama Lengkap</label>
-                <input 
-                  type="text" 
-                  value={formFullName}
-                  onChange={(e) => setFormFullName(e.target.value)}
-                  placeholder="Contoh: Budi Santoso"
-                  style={s.input}
-                  required
-                />
-              </div>
-              <div style={s.formGroup}>
-                <label style={s.label}>Username</label>
-                <input 
-                  type="text" 
-                  value={formUsername}
-                  onChange={(e) => setFormUsername(e.target.value.toLowerCase().replace(/\s+/g, ''))}
-                  placeholder="Contoh: budis123"
-                  style={s.input}
-                  required
-                />
-              </div>
-              <div style={s.formGroup}>
-                <label style={s.label}>Email</label>
-                <input 
-                  type="email" 
-                  value={formEmail}
-                  onChange={(e) => setFormEmail(e.target.value)}
-                  placeholder="Contoh: budi@gmail.com"
-                  style={s.input}
-                  required
-                />
-              </div>
-              <div style={s.formGroup}>
-                <label style={s.label}>Hak Akses (Role)</label>
-                <select 
-                  value={formRole} 
-                  onChange={(e: any) => setFormRole(e.target.value)}
-                  style={s.input}
-                >
-                  <option value="User">Student (User)</option>
-                  <option value="Lecturer">Lecturer</option>
-                  <option value="Mentor">Tentor (Mentor)</option>
-                  <option value="SuperAdmin">SuperAdmin</option>
-                </select>
-              </div>
-              <div style={s.modalFooter}>
-                <button 
-                  type="button" 
-                  onClick={() => setIsAddModalOpen(false)} 
-                  style={s.cancelBtn}
-                  disabled={formLoading}
-                >
-                  Batal
-                </button>
-                <button 
-                  type="submit" 
-                  style={s.submitBtn}
-                  disabled={formLoading}
-                >
-                  {formLoading ? 'Memproses...' : 'Simpan Akun'}
-                </button>
-              </div>
-            </form>
           </div>
-        </div>
+        </Portal>
       )}
 
       {/* Edit User Modal */}
       {isEditModalOpen && (
-        <div style={s.modalOverlay}>
-          <div className="glass-panel" style={s.modalContent}>
-            <div style={s.modalHeader}>
-              <h3>Ubah Data User</h3>
-              <button style={s.modalCloseBtn} onClick={() => setIsEditModalOpen(false)}>
-                <X size={18} />
-              </button>
+        <Portal>
+          <div style={s.modalOverlay}>
+            <div className="glass-panel" style={s.modalContent}>
+              <div style={s.modalHeader}>
+                <h3>Ubah Data User</h3>
+                <button style={s.modalCloseBtn} onClick={() => setIsEditModalOpen(false)}>
+                  <X size={18} />
+                </button>
+              </div>
+              {formError && (
+                <div style={s.modalError}>
+                  <AlertTriangle size={16} />
+                  <span>{formError}</span>
+                </div>
+              )}
+              <form onSubmit={handleUpdateUser} style={s.form}>
+                <div style={s.formGroup}>
+                  <label style={s.label}>Nama Lengkap</label>
+                  <input 
+                    type="text" 
+                    value={formFullName}
+                    onChange={(e) => setFormFullName(e.target.value)}
+                    style={s.input}
+                    required
+                  />
+                </div>
+                <div style={s.formGroup}>
+                  <label style={s.label}>Username</label>
+                  <input 
+                    type="text" 
+                    value={formUsername}
+                    onChange={(e) => setFormUsername(e.target.value)}
+                    style={s.input}
+                    required
+                  />
+                </div>
+                <div style={s.formGroup}>
+                  <label style={s.label}>Email</label>
+                  <input 
+                    type="email" 
+                    value={formEmail}
+                    onChange={(e) => setFormEmail(e.target.value)}
+                    style={s.input}
+                    required
+                  />
+                </div>
+                <div style={s.formGroup}>
+                  <label style={s.label}>Hak Akses (Role)</label>
+                  <select 
+                    value={formRole} 
+                    onChange={(e: any) => setFormRole(e.target.value)}
+                    style={s.input}
+                  >
+                    <option value="User">Student (User)</option>
+                    <option value="Lecturer">Lecturer</option>
+                    <option value="Mentor">Tentor (Mentor)</option>
+                    <option value="SuperAdmin">SuperAdmin</option>
+                  </select>
+                </div>
+                <div style={s.formGroup}>
+                  <label style={s.label}>Status Akun</label>
+                  <select 
+                    value={formStatus} 
+                    onChange={(e: any) => setFormStatus(e.target.value)}
+                    style={s.input}
+                  >
+                    <option value="Active">Active</option>
+                    <option value="Pending">Pending</option>
+                    <option value="Inactive">Inactive</option>
+                  </select>
+                </div>
+                <div style={s.modalFooter}>
+                  <button 
+                    type="button" 
+                    onClick={() => setIsEditModalOpen(false)} 
+                    style={s.cancelBtn}
+                    disabled={formLoading}
+                  >
+                    Batal
+                  </button>
+                  <button 
+                    type="submit" 
+                    style={s.submitBtn}
+                    disabled={formLoading}
+                  >
+                    {formLoading ? 'Menyimpan...' : 'Simpan Perubahan'}
+                  </button>
+                </div>
+              </form>
             </div>
-            {formError && (
-              <div style={s.modalError}>
-                <AlertTriangle size={16} />
-                <span>{formError}</span>
+          </div>
+        </Portal>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {isDeleteConfirmOpen && selectedUser && (
+        <Portal>
+          <div style={s.modalOverlay}>
+            <div className="glass-panel" style={{ ...s.modalContent, maxWidth: '400px' }}>
+              <div style={s.modalHeader}>
+                <h3 style={{ color: '#FF5252' }}>Konfirmasi Hapus</h3>
+                <button style={s.modalCloseBtn} onClick={() => setIsDeleteConfirmOpen(false)}>
+                  <X size={18} />
+                </button>
               </div>
-            )}
-            <form onSubmit={handleUpdateUser} style={s.form}>
-              <div style={s.formGroup}>
-                <label style={s.label}>Nama Lengkap</label>
-                <input 
-                  type="text" 
-                  value={formFullName}
-                  onChange={(e) => setFormFullName(e.target.value)}
-                  style={s.input}
-                  required
-                />
-              </div>
-              <div style={s.formGroup}>
-                <label style={s.label}>Username</label>
-                <input 
-                  type="text" 
-                  value={formUsername}
-                  onChange={(e) => setFormUsername(e.target.value)}
-                  style={s.input}
-                  required
-                />
-              </div>
-              <div style={s.formGroup}>
-                <label style={s.label}>Email</label>
-                <input 
-                  type="email" 
-                  value={formEmail}
-                  onChange={(e) => setFormEmail(e.target.value)}
-                  style={s.input}
-                  required
-                />
-              </div>
-              <div style={s.formGroup}>
-                <label style={s.label}>Hak Akses (Role)</label>
-                <select 
-                  value={formRole} 
-                  onChange={(e: any) => setFormRole(e.target.value)}
-                  style={s.input}
-                >
-                  <option value="User">Student (User)</option>
-                  <option value="Lecturer">Lecturer</option>
-                  <option value="Mentor">Tentor (Mentor)</option>
-                  <option value="SuperAdmin">SuperAdmin</option>
-                </select>
-              </div>
-              <div style={s.formGroup}>
-                <label style={s.label}>Status Akun</label>
-                <select 
-                  value={formStatus} 
-                  onChange={(e: any) => setFormStatus(e.target.value)}
-                  style={s.input}
-                >
-                  <option value="Active">Active</option>
-                  <option value="Pending">Pending</option>
-                  <option value="Inactive">Inactive</option>
-                </select>
+              <div style={{ padding: '8px 0 20px 0', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
+                  <ShieldAlert size={36} color="#FF5252" style={{ flexShrink: 0 }} />
+                  <p style={{ color: 'var(--silver)', fontSize: '0.88rem', lineHeight: 1.5, margin: 0 }}>
+                    Apakah Anda yakin ingin menghapus user <strong>{selectedUser.full_name}</strong> (<strong>@{selectedUser.username}</strong>)?
+                    Tindakan ini tidak dapat dibatalkan dan akan menghapus akun tersebut dari Supabase Auth serta database relasional.
+                  </p>
+                </div>
               </div>
               <div style={s.modalFooter}>
                 <button 
-                  type="button" 
-                  onClick={() => setIsEditModalOpen(false)} 
+                  onClick={() => setIsDeleteConfirmOpen(false)} 
                   style={s.cancelBtn}
                   disabled={formLoading}
                 >
                   Batal
                 </button>
                 <button 
-                  type="submit" 
-                  style={s.submitBtn}
+                  onClick={handleDeleteUser} 
+                  style={{ ...s.submitBtn, backgroundColor: '#ef4444' }}
                   disabled={formLoading}
                 >
-                  {formLoading ? 'Menyimpan...' : 'Simpan Perubahan'}
+                  {formLoading ? 'Menghapus...' : 'Hapus Permanen'}
                 </button>
               </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Delete Confirmation Modal */}
-      {isDeleteConfirmOpen && selectedUser && (
-        <div style={s.modalOverlay}>
-          <div className="glass-panel" style={{ ...s.modalContent, maxWidth: '400px' }}>
-            <div style={s.modalHeader}>
-              <h3 style={{ color: '#FF5252' }}>Konfirmasi Hapus</h3>
-              <button style={s.modalCloseBtn} onClick={() => setIsDeleteConfirmOpen(false)}>
-                <X size={18} />
-              </button>
-            </div>
-            <div style={{ padding: '8px 0 20px 0', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
-                <ShieldAlert size={36} color="#FF5252" style={{ flexShrink: 0 }} />
-                <p style={{ color: 'var(--silver)', fontSize: '0.88rem', lineHeight: 1.5, margin: 0 }}>
-                  Apakah Anda yakin ingin menghapus user <strong>{selectedUser.full_name}</strong> (<strong>@{selectedUser.username}</strong>)?
-                  Tindakan ini tidak dapat dibatalkan dan akan menghapus akun tersebut dari Supabase Auth serta database relasional.
-                </p>
-              </div>
-            </div>
-            <div style={s.modalFooter}>
-              <button 
-                onClick={() => setIsDeleteConfirmOpen(false)} 
-                style={s.cancelBtn}
-                disabled={formLoading}
-              >
-                Batal
-              </button>
-              <button 
-                onClick={handleDeleteUser} 
-                style={{ ...s.submitBtn, backgroundColor: '#ef4444' }}
-                disabled={formLoading}
-              >
-                {formLoading ? 'Menghapus...' : 'Hapus Permanen'}
-              </button>
             </div>
           </div>
-        </div>
+        </Portal>
       )}
 
       <style>{`

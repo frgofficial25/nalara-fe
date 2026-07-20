@@ -20,6 +20,7 @@ interface UpcomingTask {
 interface StudentData {
   current_level: string;
   enrolled_courses: number;
+  total_materials: number;
   completed_materials: number;
   pending_exams: number;
   pending_assignments: {
@@ -47,6 +48,7 @@ interface StudentTaskRaw {
 interface StudentDashboardResponse {
   current_level?: string;
   enrolled_courses?: number;
+  total_materials?: number;
   completed_materials?: number;
   pending_exams?: number;
   pending_assignments?: {
@@ -131,6 +133,7 @@ export default function StudentDashboard() {
       setData({
         current_level: rawData.current_level || '',
         enrolled_courses: rawData.enrolled_courses || 0,
+        total_materials: rawData.total_materials || 0,
         completed_materials: rawData.completed_materials || 0,
         pending_exams: rawData.pending_exams || 0,
         pending_assignments: rawData.pending_assignments || { done: 0, ongoing: 0, overdue: 0 },
@@ -159,6 +162,7 @@ export default function StudentDashboard() {
   };
 
   const completed = data?.completed_materials ?? 0;
+  const totalMaterials = data?.total_materials ?? 0;
   const enrolled = data?.enrolled_courses ?? 0;
   const exams = data?.pending_exams ?? 0;
   const streak = data?.learning_streak ?? 0;
@@ -171,7 +175,9 @@ export default function StudentDashboard() {
   const kpiCards = [
     {
       title: "Modules Completed",
-      value: data ? `${formatNumber(completed)} / ${formatNumber(completed + 2)}` : "0 / 0",
+      value: data
+        ? `${formatNumber(completed)} / ${formatNumber(Math.max(totalMaterials, completed))}`
+        : "0 / 0",
       desc: "Overall progress",
       icon: BookOpen,
       color: "#00C853", // Green
