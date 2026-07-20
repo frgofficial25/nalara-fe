@@ -517,9 +517,15 @@ p {
   transform: scaleX(1);
 }
 
+.nav-links-desktop {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
+
 @media (max-width: 768px) {
   .nav-links-desktop {
-    display: none;
+    display: none !important;
   }
 
   .hamburger-btn {

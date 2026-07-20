@@ -5,6 +5,11 @@ export const metadata: Metadata = {
   title: "Nalara — National AI & Deep Learning Acceleration Bootcamp",
   description:
     "Program bootcamp intensif AI, Deep Learning, dan MLOps di bawah naungan FILKOM Research Group (FRG) Universitas Brawijaya. 32 jam per level, 12 hari instruksional.",
+  icons: {
+    icon: "/image/logo_nalara_fix.png",
+    shortcut: "/image/logo_nalara_fix.png",
+    apple: "/image/logo_nalara_fix.png",
+  },
   keywords: [
     "AI bootcamp",
     "deep learning",

@@ -39,10 +39,9 @@ export default function Footer() {
           {/* Social Media Col */}
           <div style={styles.col}>
             <span style={styles.colTitle}>Social Media</span>
-            <a href="#" style={styles.link}>Instagram</a>
-            <a href="#" style={styles.link}>LinkedIn</a>
-            <a href="#" style={styles.link}>Github</a>
-            <a href="#" style={styles.link}>Email</a>
+            <a href="https://www.instagram.com/nalaraacademy/" style={styles.link}>Instagram</a>
+            <a href="https://www.linkedin.com/company/nalara-academy" style={styles.link}>LinkedIn</a>
+            <a href="https://www.youtube.com/@NalaraAcademy" style={styles.link}>Youtube</a>
           </div>
         </div>
       </div>

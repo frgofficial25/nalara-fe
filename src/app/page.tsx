@@ -74,7 +74,7 @@ export default function LandingPage() {
             <img src="/image/logonalara2.png" alt="Nalara Academy" style={styles.logoImg} />
           </div>
           
-          <div className="nav-links-desktop" style={styles.navLinks}>
+          <div className="nav-links-desktop">
             <a 
               href="#hero" 
               className={`nav-link ${activeItem === 'ECOSYSTEM' ? 'active' : ''}`}
@@ -110,6 +110,9 @@ export default function LandingPage() {
             >
               TEAM
             </a>
+          </div>
+
+          <div style={styles.navRightGroup}>
             <button
               className="nalara-btn"
               style={styles.navCta}
@@ -117,19 +120,19 @@ export default function LandingPage() {
             >
               SIGN IN
             </button>
+            <button 
+              className={`hamburger-btn ${isMobileMenuOpen ? 'open' : ''}`} 
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              aria-label="Toggle navigation menu"
+            >
+              <span></span>
+              <span></span>
+              <span></span>
+            </button>
           </div>
-
-          <button 
-            className={`hamburger-btn ${isMobileMenuOpen ? 'open' : ''}`} 
-            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-          >
-            <span></span>
-            <span></span>
-            <span></span>
-          </button>
         </div>
 
-        <div className={`mobile-menu ${isMobileMenuOpen ? 'open' : ''}`} style={styles.mobileMenu}>
+        <div className={`mobile-menu ${isMobileMenuOpen ? 'open' : ''}`}>
           <a 
             href="#hero" 
             className={activeItem === 'ECOSYSTEM' ? 'active' : ''}
@@ -165,13 +168,6 @@ export default function LandingPage() {
           >
             TEAM
           </a>
-          <button
-            className="nalara-btn"
-            style={{ ...styles.navCta, width: '100%' }}
-            onClick={() => router.push('/login')}
-          >
-            SIGN IN
-          </button>
         </div>
       </nav>
 
@@ -239,18 +235,10 @@ const styles: Record<string, React.CSSProperties> = {
     height: '38px',
     width: 'auto',
   },
-  navLinks: {
+  navRightGroup: {
     display: 'flex',
     alignItems: 'center',
-    gap: '1.5rem',
-  },
-  navLink: {
-    fontSize: '0.8rem',
-    fontWeight: 700,
-    color: '#94a3b8',
-    textDecoration: 'none',
-    letterSpacing: '0.05em',
-    transition: 'color 0.2s ease',
+    gap: '0.85rem',
   },
   navCta: {
     padding: '0.5rem 1.5rem',
@@ -269,15 +257,5 @@ const styles: Record<string, React.CSSProperties> = {
     height: '1px',
     background:
       'linear-gradient(90deg, transparent, var(--border-color) 30%, var(--border-color) 70%, transparent)',
-  },
-  mobileMenu: {
-    display: 'none',
-    flexDirection: 'column',
-    background: 'rgba(11, 11, 12, 0.95)',
-    borderRadius: '20px',
-    marginTop: '0.5rem',
-    padding: '1.5rem',
-    border: '1px solid rgba(255, 255, 255, 0.08)',
-    gap: '1rem',
   },
 };

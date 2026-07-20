@@ -12,7 +12,7 @@ interface Member {
 const commissioners: Member[] = [
   {
     name: "Athallah Anargya Mahardika",
-    role: "COMMISIONER",
+    role: "COMMISSIONER",
     image: "/image/team/athalah.png"
   },
   {
@@ -89,17 +89,28 @@ const boardOfManagers: Member[] = [
     name: "Naufal Fadhil Arkani",
     role: "PROGRAM DELIVERY MANAGER",
     image: "/image/team/arkan.png"
+  },
+  {
+    name: "Inas Tuqa Haura",
+    role: "PROGRAM DELIVERY MANAGER",
+    image: "/image/team/inas.png"
+  },
+  {
+    name: "Akmal Baihaqi",
+    role: "PROGRAM DELIVERY MANAGER",
+    image: "/image/team/akmal.png"
   }
 ];
 
-// Helper component to avoid raw alt-text/broken-image layout shifts
 const SafeTeamImage = ({ src, alt, className }: { src: string; alt: string; className: string }) => {
   const [hasError, setHasError] = React.useState(false);
-  if (hasError) return null;
+  if (hasError || !src) {
+    return null;
+  }
   return (
     <img 
       src={src} 
-      alt={alt} 
+      alt="" 
       className={className} 
       onError={() => setHasError(true)} 
     />
@@ -107,7 +118,11 @@ const SafeTeamImage = ({ src, alt, className }: { src: string; alt: string; clas
 };
 
 export default function Team() {
-  const renderCard = (member: Member, theme: 'commissioner' | 'director' | 'manager') => {
+  const renderCard = (
+    member: Member, 
+    theme: 'commissioner' | 'director' | 'manager',
+    offsetY?: string
+  ) => {
     let themeColor = '#ffffff';
     let borderColor = 'rgba(255, 255, 255, 0.1)';
     let roleColor = '#ffffff';
@@ -140,9 +155,9 @@ export default function Team() {
           '--theme-color': themeColor,
           '--border-color-custom': borderColor,
           '--glow-color': glowColor,
+          ...(offsetY ? { transform: `translateY(${offsetY})` } : {}),
         } as React.CSSProperties}
       >
-        {/* Photo with pop-out container in normal flex flow */}
         <div className="team-card-photo-container">
           <div className="team-card-placeholder">👤</div>
           <SafeTeamImage 
@@ -152,7 +167,6 @@ export default function Team() {
           />
         </div>
         
-        {/* Name and role bar always at the bottom */}
         <div className="team-card-info">
           <h4 className="team-card-name">{member.name}</h4>
           <span className="team-card-role" style={{ color: roleColor }}>{member.role}</span>
@@ -161,6 +175,17 @@ export default function Team() {
     );
   };
 
+  const managerOffsets = [
+    '-20px', // Gerard (high)
+    '-8px',  // Rifky
+    '8px',   // Sayyid
+    '22px',  // Athala (low center)
+    '22px',  // Zaki (low center)
+    '8px',   // Arkan
+    '-8px',  // Inas
+    '-20px', // Akmal (high)
+  ];
+
   return (
     <section className="the-masterminds-section" id="team">
       <div className="section-container">
@@ -168,7 +193,7 @@ export default function Team() {
         <div className="masterminds-header">
           <h2 className="masterminds-title">The Masterminds</h2>
           <p className="masterminds-desc">
-            Struktur tata kelola dan tim pelaksana operasional bootcamp Nalara Academy yang terorganisir untuk memastikan standar akademik & keberhasilan program.
+            Struktur tata kelola dan tim pelaksana operasional bootcamp Nalara Academy yang terorganisir untuk memastikan standar akademik &amp; keberhasilan program.
           </p>
         </div>
 
@@ -203,14 +228,14 @@ export default function Team() {
           </div>
 
           {/* Connection Line 2 -> 3 */}
-          <div className="connector-path">
+          <div className="connector-path csuite-connector">
             <div className="vertical-line"></div>
             <div className="horizontal-branch branch-4"></div>
             <div className="vertical-drops-4">
-              <div className="drop-line"></div>
-              <div className="drop-line"></div>
-              <div className="drop-line"></div>
-              <div className="drop-line"></div>
+              <div className="drop-line drop-line-0"></div>
+              <div className="drop-line drop-line-1"></div>
+              <div className="drop-line drop-line-2"></div>
+              <div className="drop-line drop-line-3"></div>
             </div>
           </div>
 
@@ -222,12 +247,12 @@ export default function Team() {
           </div>
 
           {/* Connection Line 3 -> 4 */}
-          <div className="connector-path">
+          <div className="connector-path csuite-join-connector">
             <div className="vertical-joins-4">
-              <div className="join-line"></div>
-              <div className="join-line"></div>
-              <div className="join-line"></div>
-              <div className="join-line"></div>
+              <div className="join-line join-line-0"></div>
+              <div className="join-line join-line-1"></div>
+              <div className="join-line join-line-2"></div>
+              <div className="join-line join-line-3"></div>
             </div>
             <div className="horizontal-branch branch-4-join"></div>
             <div className="vertical-line v-mid-to-managers"></div>
@@ -238,20 +263,22 @@ export default function Team() {
             <div className="badge-wrapper">
               <span className="tier-badge badge-managers">BOARD OF MANAGERS</span>
             </div>
-            {/* Horizontal Line Branch above managers */}
+            {/* Horizontal Line Branch above managers (8 items) */}
             <div className="managers-connector-top">
-              <div className="horizontal-branch branch-6"></div>
-              <div className="vertical-drops-6">
-                <div className="drop-line"></div>
-                <div className="drop-line"></div>
-                <div className="drop-line"></div>
-                <div className="drop-line"></div>
-                <div className="drop-line"></div>
-                <div className="drop-line"></div>
+              <div className="horizontal-branch branch-8"></div>
+              <div className="vertical-drops-8">
+                <div className="drop-line drop-m-0"></div>
+                <div className="drop-line drop-m-1"></div>
+                <div className="drop-line drop-m-2"></div>
+                <div className="drop-line drop-m-3"></div>
+                <div className="drop-line drop-m-4"></div>
+                <div className="drop-line drop-m-5"></div>
+                <div className="drop-line drop-m-6"></div>
+                <div className="drop-line drop-m-7"></div>
               </div>
             </div>
             <div className="tier-cards-row managers-row">
-              {boardOfManagers.map(m => renderCard(m, 'manager'))}
+              {boardOfManagers.map((m, idx) => renderCard(m, 'manager', managerOffsets[idx]))}
             </div>
           </div>
 
@@ -261,7 +288,7 @@ export default function Team() {
       <style jsx global>{`
         /* Masterminds Section Styling */
         .the-masterminds-section {
-          padding: 80px 24px;
+          padding: 80px 16px;
           display: flex;
           justify-content: center;
           width: 100%;
@@ -269,7 +296,7 @@ export default function Team() {
         }
 
         .section-container {
-          max-width: 1400px;
+          max-width: 1480px;
           width: 100%;
           display: flex;
           flex-direction: column;
@@ -329,7 +356,7 @@ export default function Team() {
           padding: 6px 16px;
           border-radius: 20px;
           border: 1px solid;
-          background: rgba(18, 18, 20, 0.9);
+          background: rgba(18, 18, 20, 0.95);
         }
 
         .badge-commissioners {
@@ -352,27 +379,30 @@ export default function Team() {
           display: flex;
           justify-content: center;
           align-items: flex-end;
-          gap: 32px;
+          gap: 24px;
           width: 100%;
           flex-wrap: wrap;
           z-index: 5;
         }
 
         .csuite-row {
-          max-width: 1120px;
+          width: 912px;
           display: flex;
           justify-content: center;
           gap: 24px;
         }
 
-        /* Managers Row: Force single row on desktop */
+        /* FORCE ALL 8 MANAGERS IN ONE SINGLE ROW ON DESKTOP */
         .managers-row {
-          max-width: 1380px;
+          width: 1244px;
           display: flex;
           flex-direction: row;
-          flex-wrap: nowrap;
+          flex-wrap: nowrap !important;
           justify-content: center;
-          gap: 16px;
+          align-items: flex-end;
+          gap: 12px;
+          padding-top: 10px;
+          padding-bottom: 35px;
         }
 
         /* Connecting Lines Design */
@@ -386,90 +416,89 @@ export default function Team() {
 
         .vertical-line {
           width: 1px;
-          height: 45px;
-          background: rgba(255, 255, 255, 0.15);
+          height: 40px;
+          background: rgba(255, 255, 255, 0.25);
         }
 
         .v-mid-to-managers {
           width: 1px;
           height: 30px;
-          background: rgba(255, 255, 255, 0.15);
+          background: rgba(255, 255, 255, 0.25);
         }
 
-        /* Horizontal branching */
         .horizontal-branch {
           height: 1px;
-          background: rgba(255, 255, 255, 0.15);
+          background: rgba(255, 255, 255, 0.25);
+          position: relative;
         }
 
-        /* C-Suite Branching (4 items) */
-        .branch-4 {
-          width: 75%;
-          max-width: 820px;
+        /* C-Suite Branching (4 items - 912px container) */
+        .csuite-connector, .csuite-join-connector {
+          width: 912px;
+          position: relative;
         }
 
-        .vertical-drops-4 {
-          display: flex;
-          justify-content: space-between;
-          width: 75%;
-          max-width: 820px;
+        .branch-4, .branch-4-join {
+          width: 702px;
+          left: 0;
+          margin: 0 auto;
+        }
+
+        .vertical-drops-4, .vertical-joins-4 {
+          position: relative;
+          width: 912px;
           height: 25px;
         }
 
-        .vertical-drops-4 .drop-line {
+        .vertical-drops-4 .drop-line, .vertical-joins-4 .join-line {
+          position: absolute;
           width: 1px;
           height: 100%;
-          background: rgba(255, 255, 255, 0.15);
+          background: rgba(255, 255, 255, 0.25);
         }
 
-        /* C-Suite Joining (4 items to 1) */
-        .vertical-joins-4 {
-          display: flex;
-          justify-content: space-between;
-          width: 75%;
-          max-width: 820px;
-          height: 25px;
-        }
+        .drop-line-0, .join-line-0 { left: 105px; }
+        .drop-line-1, .join-line-1 { left: 339px; }
+        .drop-line-2, .join-line-2 { left: 573px; }
+        .drop-line-3, .join-line-3 { left: 807px; }
 
-        .vertical-joins-4 .join-line {
-          width: 1px;
-          height: 100%;
-          background: rgba(255, 255, 255, 0.15);
-        }
-
-        .branch-4-join {
-          width: 75%;
-          max-width: 820px;
-        }
-
-        /* Managers Branching (6 items) */
+        /* Managers Branching (8 items - 1244px container) */
         .managers-connector-top {
           display: flex;
           flex-direction: column;
           align-items: center;
-          width: 100%;
-          margin-bottom: 15px;
+          width: 1244px;
+          position: relative;
+          margin-bottom: 12px;
         }
 
-        .branch-6 {
-          width: 84%;
-          max-width: 1140px;
+        .branch-8 {
+          width: 1099px;
+          left: 0;
+          margin: 0 auto;
         }
 
-        .vertical-drops-6 {
-          display: flex;
-          justify-content: space-between;
-          width: 84%;
-          max-width: 1140px;
+        .vertical-drops-8 {
+          position: relative;
+          width: 1244px;
           height: 20px;
         }
 
-        .vertical-drops-6 .drop-line {
+        .vertical-drops-8 .drop-line {
+          position: absolute;
           width: 1px;
           height: 100%;
-          background: rgba(255, 255, 255, 0.15);
+          background: rgba(255, 255, 255, 0.25);
         }
 
+        .drop-m-0 { left: 72.5px; }
+        .drop-m-1 { left: 229.5px; }
+        .drop-m-2 { left: 386.5px; }
+        .drop-m-3 { left: 543.5px; }
+        .drop-m-4 { left: 700.5px; }
+        .drop-m-5 { left: 857.5px; }
+        .drop-m-6 { left: 1014.5px; }
+        .drop-m-7 { left: 1171.5px; }
 
         /* ==================== POP-OUT CARD DESIGN ==================== */
         .team-card {
@@ -483,12 +512,11 @@ export default function Team() {
           position: relative;
           transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s ease, border-color 0.3s ease;
           box-shadow: 0 4px 24px var(--glow-color);
-          overflow: visible; /* CRITICAL: Allows image to pop out of the top */
+          overflow: visible !important; /* ALLOWS POP-OUT HEAD ABOVE TOP BORDER */
           margin-top: 40px; /* Space for the popped out head */
         }
 
         .team-card:hover {
-          transform: translateY(-4px);
           border-color: var(--theme-color) !important;
           box-shadow: 0 12px 32px var(--glow-color);
         }
@@ -502,7 +530,7 @@ export default function Team() {
         .team-card-president {
           width: 250px;
           height: 330px;
-          margin-top: 50px; /* More space for larger president card */
+          margin-top: 50px;
         }
 
         .team-card-director {
@@ -511,15 +539,16 @@ export default function Team() {
         }
 
         .team-card-manager {
-          width: 185px;
-          height: 245px;
+          width: 145px;
+          height: 235px;
+          flex-shrink: 0;
         }
 
-        /* Photo Pop-out Container (Now in normal block flow inside card) */
+        /* Photo Pop-out Container */
         .team-card-photo-container {
           position: relative;
           width: 100%;
-          overflow: visible; /* Allow image to go beyond top boundary */
+          overflow: visible !important;
         }
 
         .team-card-commissioner .team-card-photo-container {
@@ -535,7 +564,7 @@ export default function Team() {
         }
 
         .team-card-manager .team-card-photo-container {
-          height: 180px; 
+          height: 170px; 
         }
 
         /* Placeholder avatar */
@@ -555,21 +584,21 @@ export default function Team() {
           z-index: 1;
         }
 
-        /* Popped out Image (Absolutely positioned relative to the photo container) */
+        /* Popped out Image (Extends out of top border) */
         .team-card-img {
           position: absolute;
           bottom: 0;
           left: 0;
           width: 100%;
-          height: 120%; /* Taller than the container to pop out of the top */
-          object-fit: contain; /* Contain ensures portraits pop out cleanly without cropping at the top */
+          height: 120%; /* Taller than container so head pops out */
+          object-fit: contain;
           object-position: bottom center;
           z-index: 2;
         }
 
         /* Bottom Info Bar */
         .team-card-info {
-          padding: 12px 10px;
+          padding: 10px 6px;
           text-align: center;
           background: rgba(18, 18, 20, 0.95);
           border-top: 1px solid rgba(255, 255, 255, 0.05);
@@ -578,11 +607,11 @@ export default function Team() {
           display: flex;
           flex-direction: column;
           justify-content: center;
-          gap: 4px;
+          gap: 3px;
           height: 74px;
           z-index: 3;
           position: relative;
-          margin-top: auto; /* Push info bar to bottom of card */
+          margin-top: auto;
         }
 
         .team-card-president .team-card-info {
@@ -592,7 +621,7 @@ export default function Team() {
 
         .team-card-manager .team-card-info {
           height: 65px;
-          padding: 8px;
+          padding: 6px 4px;
         }
 
         .team-card-name {
@@ -601,7 +630,7 @@ export default function Team() {
           font-weight: 700;
           color: #ffffff;
           margin: 0;
-          line-height: 1.3;
+          line-height: 1.25;
           letter-spacing: 0.1px;
         }
 
@@ -611,7 +640,7 @@ export default function Team() {
         }
 
         .team-card-manager .team-card-name {
-          font-size: 10.5px;
+          font-size: 10px;
         }
 
         .team-card-role {
@@ -623,27 +652,29 @@ export default function Team() {
         }
 
         .team-card-manager .team-card-role {
-          font-size: 8px;
+          font-size: 7.5px;
         }
 
         /* Responsive Breakpoints */
         @media (max-width: 1200px) {
           .managers-row {
-            flex-wrap: wrap;
-            justify-content: center;
-            gap: 16px;
+            width: 100%;
+            flex-wrap: wrap !important;
+            gap: 14px;
+          }
+          .managers-connector-top, .csuite-connector, .csuite-join-connector {
+            display: none;
           }
           .team-card-manager {
-            width: 170px;
-          }
-          .branch-6, .vertical-drops-6 {
-            display: none;
+            transform: none !important;
+            width: 155px;
           }
         }
 
         @media (max-width: 900px) {
-          .branch-4, .vertical-drops-4,
-          .branch-4-join, .vertical-joins-4,
+          .csuite-row {
+            width: 100%;
+          }
           .vertical-line, .v-mid-to-managers {
             display: none;
           }
@@ -654,13 +685,13 @@ export default function Team() {
             font-size: 32px;
           }
           .tier-cards-row {
-            gap: 20px;
+            gap: 16px;
           }
           .team-card {
-            width: 180px !important;
+            width: 160px !important;
           }
           .team-card-president {
-            width: 200px !important;
+            width: 180px !important;
           }
         }
       `}</style>
