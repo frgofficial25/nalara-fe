@@ -116,7 +116,7 @@ export default function StudentDashboard() {
           headers
         }
       );
-      const rawData = 'data' in (response || {}) ? response.data : response;
+      const rawData = response && 'data' in response ? response.data : response;
 
       if (!rawData || typeof rawData !== 'object') {
         throw new Error('Format response data tidak valid');

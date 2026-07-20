@@ -84,7 +84,7 @@ export default function TentorDashboard() {
         { token: token || undefined, headers }
       );
 
-      const raw = 'data' in (response || {}) ? response.data : response;
+      const raw = response && 'data' in response ? response.data : response;
 
       setData({
         managed_courses: raw?.managed_courses ?? 0,
@@ -98,7 +98,7 @@ export default function TentorDashboard() {
           module_name: t.module_name ?? t.modul_asal ?? '-',
           ungraded_count: t.ungraded_count ?? t.jumlah_belum_dinilai ?? 0,
           total_submissions: t.total_submissions ?? 0,
-          deadline: t.deadline ?? null,
+          deadline: t.deadline || undefined,
         }))
       });
     } catch (err) {

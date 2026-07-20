@@ -46,7 +46,7 @@ export default function SuperadminDashboard() {
           headers
         }
       );
-      const responseData = 'data' in (response || {}) ? response.data : response;
+      const responseData = (response && 'data' in response && response.data) ? response.data : (response as DashboardData);
 
       if (responseData && typeof responseData === 'object') {
         setData({
