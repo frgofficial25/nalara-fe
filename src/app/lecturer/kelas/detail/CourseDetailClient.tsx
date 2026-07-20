@@ -582,25 +582,7 @@ export default function CourseDetailClient() {
         </div>
       )}
 
-      {/* Tabs */}
-      <div style={tabsContainer}>
-        <button
-          onClick={() => setActiveTab('modul')}
-          style={{ ...tabBtn, ...(activeTab === 'modul' ? activeTabStyle : {}) }}
-        >
-          Modul & Materi
-        </button>
-        <button
-          onClick={() => setActiveTab('rekap')}
-          style={{ ...tabBtn, ...(activeTab === 'rekap' ? activeTabStyle : {}) }}
-        >
-          Rekap Nilai
-        </button>
-      </div>
-
-      {activeTab === 'modul' ? (
-        <>
-          {/* Modules */}
+      {/* Modules List */}
       {moduls.length === 0 ? (
         <div style={emptyState}>
           <Package size={42} color="#4a5568" />
@@ -680,62 +662,6 @@ export default function CourseDetailClient() {
               </div>
             );
           })}
-        </div>
-      )}
-      </>
-      ) : (
-        <div style={recapContainer}>
-          <div style={recapHeader}>
-            <h2 style={recapTitle}>Rekapitulasi Nilai Kelas</h2>
-            <p style={recapDesc}>Daftar nilai akhir siswa yang telah menyelesaikan kuis di kelas ini.</p>
-          </div>
-          
-          {loadingRecap ? (
-            <div style={{ display: 'flex', justifyContent: 'center', padding: '40px 0' }}>
-              <Loader2 size={24} color="#6366f1" style={{ animation: 'spin 1s linear infinite' }} />
-            </div>
-          ) : recapData.length === 0 ? (
-            <div style={emptyState}>
-              <FileText size={42} color="#4a5568" />
-              <p style={{ color: '#94a3b8', fontWeight: 600, marginTop: 12 }}>Belum ada data nilai</p>
-              <p style={{ color: '#64748b', fontSize: '0.82rem' }}>Data nilai rekap belum tersedia untuk kelas ini.</p>
-            </div>
-          ) : (
-            <div style={tableWrapper}>
-              <table style={table}>
-                <thead>
-                  <tr>
-                    <th style={th}>No</th>
-                    <th style={th}>Nama Siswa</th>
-                    <th style={th}>Username</th>
-                    <th style={th}>Nilai Akhir</th>
-                    <th style={th}>Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {recapData.map((grade, idx) => (
-                    <tr key={grade.uuid_user} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                      <td style={td}>{idx + 1}</td>
-                      <td style={td}>{grade.user?.full_name || '-'}</td>
-                      <td style={td}>{grade.user?.username || '-'}</td>
-                      <td style={td}>
-                        <span style={{ fontWeight: 700, fontSize: '1rem', color: grade.final_score >= 70 ? '#10b981' : '#f59e0b' }}>
-                          {grade.final_score.toFixed(1)}
-                        </span>
-                      </td>
-                      <td style={td}>
-                        {grade.is_passed ? (
-                          <span style={{ ...statusBadge, background: 'rgba(16, 185, 129, 0.1)', color: '#10b981' }}>Lulus</span>
-                        ) : (
-                          <span style={{ ...statusBadge, background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444' }}>Tidak Lulus</span>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
         </div>
       )}
 

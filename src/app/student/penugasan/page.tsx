@@ -35,9 +35,14 @@ interface Submission {
   pdf_url?: string;
   student_notes?: string;
   ai_score?: number;
+  ai_reason?: string;
+  ai_feedback?: any;
   lecture_status?: string;
   mentor_status?: string;
+  lecture_notes?: string;
+  mentor_notes?: string;
   released_score?: number;
+  released_reason?: string;
   is_released?: boolean;
   submitted_at?: string;
 }
@@ -163,9 +168,14 @@ export default function PenugasanPage() {
         pdf_url: s.pdf_url,
         student_notes: s.student_notes,
         ai_score: s.ai_score,
+        ai_reason: s.ai_reason,
+        ai_feedback: s.feedback || s.ai_feedback,
         lecture_status: s.lecture_status,
         mentor_status: s.mentor_status,
-        released_score: s.score,
+        lecture_notes: s.lecture_notes,
+        mentor_notes: s.mentor_notes,
+        released_score: s.released_score ?? s.score,
+        released_reason: s.released_reason ?? s.reason,
         is_released: s.is_released,
         submitted_at: s.submitted_at,
       }));
@@ -753,36 +763,145 @@ export default function PenugasanPage() {
 
       {selectedSub && (
         <Portal>
-          <div style={s.overlay}>
-            <div style={{ ...s.modal, maxWidth: 520 }} className="glass-panel">
-            <div style={s.modalHead}>
-              <h3 style={{ margin: 0 }}>{selectedSub.tugas?.title || 'Detail Pengumpulan'}</h3>
-              <button onClick={() => setSelectedSub(null)} style={s.closeBtn}><X size={18} /></button>
-            </div>
-            <div style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: 14 }}>
-              {[
-                { label: 'Status', value: selectedSub.is_released ? '✓ Nilai Dirilis' : '⏳ Menunggu Verifikasi' },
-                { label: 'Kelas', value: selectedSub.tugas?.pembelajaran?.title || '-' },
-                { label: 'Modul', value: selectedSub.tugas?.modul?.title || '-' },
-                { label: 'Final Score', value: selectedSub.released_score ?? (selectedSub.is_released ? 0 : '-') },
-              ].map(({ label, value }) => (
-                <div key={label} style={{ display: 'flex', gap: 12, borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: 10 }}>
-                  <span style={{ minWidth: 100, fontSize: '0.8rem', color: 'var(--grey-blue)', fontWeight: 600 }}>{label}</span>
-                  <span style={{ fontSize: '0.88rem', color: '#fff' }}>{String(value)}</span>
+          <div style={s.overlay} onClick={() => setSelectedSub(null)}>
+            <div
+              style={{
+                ...s.modal,
+                maxWidth: 580,
+                padding: '24px',
+                borderRadius: '16px',
+                backgroundColor: 'rgba(21, 21, 23, 0.95)',
+                border: '1px solid var(--border-color)',
+                boxShadow: '0 20px 50px rgba(0, 0, 0, 0.6)',
+                maxHeight: '85vh',
+                overflowY: 'auto',
+              }}
+              className="glass-panel"
+              onClick={e => e.stopPropagation()}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '1px solid var(--border-color)', paddingBottom: 16, marginBottom: 20 }}>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '1.2rem', color: '#fff', fontWeight: 700, lineHeight: 1.3 }}>
+                    {selectedSub.tugas?.title || (selectedSub.tugas as any)?.nama_tugas || 'Detail Pengumpulan Studi Kasus'}
+                  </h3>
+                  <span style={{ fontSize: '0.8rem', color: 'var(--azure)', marginTop: 4, display: 'inline-block' }}>
+                    {selectedSub.tugas?.pembelajaran?.title || (selectedSub.tugas as any)?.nama_pembelajaran || 'Studi Kasus'} {selectedSub.tugas?.modul?.title ? `• Modul: ${selectedSub.tugas.modul.title}` : ''}
+                  </span>
                 </div>
-              ))}
-              {selectedSub.student_notes && (
-                <div style={{ background: 'rgba(255,255,255,0.02)', borderRadius: 8, padding: '10px 14px', fontSize: '0.82rem', color: '#CBD5E1', fontStyle: 'italic' }}>
-                  "{selectedSub.student_notes}"
+                <button onClick={() => setSelectedSub(null)} style={s.closeBtn}><X size={18} /></button>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                {/* Header Status & Score Grid */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                  <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border-color)', borderRadius: 10, padding: '12px 14px' }}>
+                    <span style={{ fontSize: '0.74rem', color: 'var(--grey-blue)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Status Verifikasi</span>
+                    <div style={{ marginTop: 6, display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <span style={{
+                        fontSize: '0.84rem', fontWeight: 700,
+                        color: selectedSub.is_released ? '#00C853' : '#FFB240',
+                      }}>
+                        {selectedSub.is_released ? 'Diverifikasi & Dirilis' : 'Menunggu Verifikasi'}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div style={{ background: 'rgba(6,113,224,0.06)', border: '1px solid rgba(6,113,224,0.2)', borderRadius: 10, padding: '12px 14px' }}>
+                    <span style={{ fontSize: '0.74rem', color: 'var(--azure)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Nilai Akhir</span>
+                    <div style={{ marginTop: 4, fontSize: '1.4rem', fontWeight: 800, color: selectedSub.is_released ? 'var(--azure)' : 'var(--grey-blue)' }}>
+                      {selectedSub.released_score ?? (selectedSub.is_released ? 0 : '-')}
+                      {selectedSub.ai_score !== undefined && (
+                        <span style={{ fontSize: '0.78rem', color: 'var(--grey-blue)', fontWeight: 500, marginLeft: 8 }}>
+                          (Skor AI: {selectedSub.ai_score})
+                        </span>
+                      )}
+                    </div>
+                  </div>
                 </div>
-              )}
-              <div style={{ display: 'flex', gap: 10 }}>
-                {selectedSub.ipynb_url && <a href={selectedSub.ipynb_url} target="_blank" rel="noopener noreferrer" style={s.attachLink}><FileText size={13} /><span>Notebook</span></a>}
-                {selectedSub.pdf_url && <a href={selectedSub.pdf_url} target="_blank" rel="noopener noreferrer" style={s.attachLink}><FileText size={13} /><span>PDF Report</span></a>}
+
+                {/* Feedback Lecturer / Dosen */}
+                {selectedSub.lecture_notes && (
+                  <div style={{ background: 'rgba(6, 113, 224, 0.08)', border: '1px solid rgba(6, 113, 224, 0.25)', borderRadius: 10, padding: '14px 16px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                      <FileText size={16} color="var(--azure)" />
+                      <span style={{ fontSize: '0.84rem', fontWeight: 700, color: '#fff' }}>Catatan & Umpan Balik Dosen (Lecturer)</span>
+                    </div>
+                    <p style={{ margin: 0, fontSize: '0.86rem', color: '#E2E8F0', lineHeight: 1.5 }}>
+                      {selectedSub.lecture_notes}
+                    </p>
+                  </div>
+                )}
+
+                {/* Feedback Tentor / Mentor */}
+                {selectedSub.mentor_notes && (
+                  <div style={{ background: 'rgba(123, 97, 255, 0.08)', border: '1px solid rgba(123, 97, 255, 0.25)', borderRadius: 10, padding: '14px 16px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                      <Users size={16} color="#7B61FF" />
+                      <span style={{ fontSize: '0.84rem', fontWeight: 700, color: '#fff' }}>Catatan & Umpan Balik Tentor (Mentor)</span>
+                    </div>
+                    <p style={{ margin: 0, fontSize: '0.86rem', color: '#E2E8F0', lineHeight: 1.5 }}>
+                      {selectedSub.mentor_notes}
+                    </p>
+                  </div>
+                )}
+
+                {/* Alasan Perubahan Nilai */}
+                {selectedSub.released_reason && (
+                  <div style={{ background: 'rgba(255, 193, 7, 0.06)', border: '1px solid rgba(255, 193, 7, 0.2)', borderRadius: 10, padding: '12px 16px' }}>
+                    <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#FFC107', display: 'block', marginBottom: 4 }}>
+                      Alasan / Catatan Penilaian
+                    </span>
+                    <p style={{ margin: 0, fontSize: '0.84rem', color: '#CBD5E1', lineHeight: 1.4 }}>
+                      {selectedSub.released_reason}
+                    </p>
+                  </div>
+                )}
+
+                {/* Analisis AI */}
+                {selectedSub.ai_reason && (
+                  <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border-color)', borderRadius: 10, padding: '12px 16px' }}>
+                    <span style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--grey-blue)', display: 'block', marginBottom: 4 }}>
+                      Analisis Otomatis AI
+                    </span>
+                    <p style={{ margin: 0, fontSize: '0.82rem', color: 'var(--grey-blue)', lineHeight: 1.4 }}>
+                      {selectedSub.ai_reason}
+                    </p>
+                  </div>
+                )}
+
+                {/* Catatan Siswa */}
+                {selectedSub.student_notes && (
+                  <div>
+                    <span style={{ fontSize: '0.78rem', color: 'var(--grey-blue)', fontWeight: 600, display: 'block', marginBottom: 4 }}>
+                      Catatan Pengumpulan Anda:
+                    </span>
+                    <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: 8, padding: '10px 14px', fontSize: '0.82rem', color: '#CBD5E1', fontStyle: 'italic' }}>
+                      "{selectedSub.student_notes}"
+                    </div>
+                  </div>
+                )}
+
+                {/* File Uploaded Links */}
+                <div>
+                  <span style={{ fontSize: '0.78rem', color: 'var(--grey-blue)', fontWeight: 600, display: 'block', marginBottom: 8 }}>
+                    File Terlampir:
+                  </span>
+                  <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                    {selectedSub.ipynb_url && (
+                      <a href={selectedSub.ipynb_url} target="_blank" rel="noopener noreferrer" style={s.attachLink}>
+                        <FileText size={14} /><span>Download Jupyter Notebook (.ipynb)</span>
+                      </a>
+                    )}
+                    {selectedSub.pdf_url && (
+                      <a href={selectedSub.pdf_url} target="_blank" rel="noopener noreferrer" style={s.attachLink}>
+                        <FileText size={14} /><span>Download Laporan (.pdf)</span>
+                      </a>
+                    )}
+                  </div>
+                </div>
               </div>
             </div>
           </div>
-        </div>
         </Portal>
       )}
 

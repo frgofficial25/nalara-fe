@@ -270,7 +270,7 @@ export default function TentorDashboard() {
                   </span>
                 </div>
                 <button
-                  onClick={() => router.push(`/tentor/tugas`)}
+                  onClick={() => router.push(`/tentor/penilaian`)}
                   style={s.ctaBtn}
                 >
                   <span>Lanjutkan Pemberian Penilaian</span>

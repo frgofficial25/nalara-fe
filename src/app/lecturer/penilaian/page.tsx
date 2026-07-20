@@ -4,10 +4,11 @@ import React, { useState, useEffect } from 'react';
 import {
   TrendingUp, Award, Search, BookOpen, Brain,
   CheckCircle2, Loader2, X, RefreshCw,
-  FileText, AlertCircle, ChevronRight, PenLine, Star,
+  FileText, AlertCircle, ChevronRight, PenLine, Star, Layers, ArrowLeft,
 } from 'lucide-react';
 import { apiGet, apiPost, apiPatch } from '@/lib/api';
 import { getStoredToken } from '@/services/auth';
+import Portal from '@/components/common/Portal';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface GradeAttempt {
@@ -68,7 +69,7 @@ function getAuth() {
 // ─── Main Component ───────────────────────────────────────────────────────────
 export default function PenilaianPage() {
   // ── Tab state ────────────────────────────────────────────────────────────
-  const [tab, setTab] = useState<'quiz' | 'studycase'>('quiz');
+  const [tab, setTab] = useState<'quiz' | 'studycase' | 'recap'>('quiz');
 
   // Toast state
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
@@ -81,11 +82,21 @@ export default function PenilaianPage() {
   // ── User role (Lecturer / Mentor) ────────────────────────────────────────
   const [userRole, setUserRole] = useState<'Lecturer' | 'Mentor'>('Lecturer');
   useEffect(() => {
+    if (typeof window !== 'undefined' && window.location.pathname.startsWith('/tentor')) {
+      setUserRole('Mentor');
+      setTab('studycase');
+      return;
+    }
     const raw = localStorage.getItem('nalara_user_info') || sessionStorage.getItem('nalara_user_info');
     if (!raw) return;
     try {
       const r = JSON.parse(raw).role?.toLowerCase();
-      setUserRole(r === 'mentor' || r === 'tentor' ? 'Mentor' : 'Lecturer');
+      if (r === 'mentor' || r === 'tentor') {
+        setUserRole('Mentor');
+        setTab('studycase');
+      } else {
+        setUserRole('Lecturer');
+      }
     } catch {}
   }, []);
 
@@ -99,9 +110,10 @@ export default function PenilaianPage() {
   const [quizLoading, setQuizLoading] = useState(false);
   const [quizError, setQuizError] = useState<string | null>(null);
   
-  // Tab 1 Filters
+  // Tab 1 & Tab 3 Filters
   const [quizSearch, setQuizSearch] = useState('');
   const [selectedCourse, setSelectedCourse] = useState('all');
+  const [selectedRecapCourse, setSelectedRecapCourse] = useState<any | null>(null);
   const [quizStatusFilter, setQuizStatusFilter] = useState('all');
   const [selectedStudent, setSelectedStudent] = useState<GradeRow | null>(null);
   const [refreshing, setRefreshing] = useState(false);
@@ -286,7 +298,7 @@ export default function PenilaianPage() {
 
   // ── Effects ──────────────────────────────────────────────────────────────
   useEffect(() => {
-    if (tab === 'quiz') fetchQuiz();
+    if (tab === 'quiz' || tab === 'recap') fetchQuiz();
     else if (tab === 'studycase') fetchQueue();
   }, [tab]);
 
@@ -340,9 +352,7 @@ export default function PenilaianPage() {
     // 3. Status filter
     let statusMatch = true;
     if (subStatusFilter !== 'all') {
-      const isVerified = userRole === 'Mentor'
-        ? sub.mentor_status === 'Verified'
-        : sub.lecture_status === 'Verified';
+      const isVerified = Boolean(sub.is_released || sub.lecture_status === 'Verified' || sub.mentor_status === 'Verified');
       if (subStatusFilter === 'verified') statusMatch = isVerified;
       if (subStatusFilter === 'pending') statusMatch = !isVerified;
     }
@@ -356,9 +366,10 @@ export default function PenilaianPage() {
 
   const openModal = (sub: StudyCaseSubmission) => {
     setModal(sub);
-    setModalNotes('');
-    setModalScore(sub.ai_score !== undefined ? String(sub.ai_score) : '');
-    setModalReason('');
+    const existingNotes = userRole === 'Mentor' ? sub.mentor_notes : sub.lecture_notes;
+    setModalNotes(existingNotes || '');
+    setModalScore(sub.released_score !== undefined ? String(sub.released_score) : (sub.ai_score !== undefined ? String(sub.ai_score) : ''));
+    setModalReason(sub.released_reason || '');
   };
 
   return (
@@ -379,7 +390,11 @@ export default function PenilaianPage() {
       <div style={s.header}>
         <div>
           <h1 style={s.title}>Penilaian</h1>
-          <p style={s.subtitle}>Pantau nilai kuis & verifikasi studi kasus siswa</p>
+          <p style={s.subtitle}>
+            {userRole === 'Mentor' 
+              ? 'Verifikasi & beri umpan balik tugas studi kasus siswa' 
+              : 'Pantau nilai kuis & verifikasi studi kasus siswa'}
+          </p>
         </div>
         <button
           onClick={() => { 
@@ -395,13 +410,20 @@ export default function PenilaianPage() {
         </button>
       </div>
 
-      {/* ── Tabs ── */}
+      {/* ── Sub-Tabs ── */}
       <div style={s.tabBar}>
-        {([
-          { key: 'quiz',      label: 'Nilai Kuis',            icon: <Brain size={15} /> },
-          { key: 'studycase', label: 'Verifikasi Studi Kasus', icon: <FileText size={15} /> },
-        ] as const).map(t => (
-          <button key={t.key} onClick={() => setTab(t.key)} style={{ ...s.tabBtn, ...(tab === t.key ? s.tabActive : {}) }}>
+        {(userRole === 'Mentor'
+          ? [
+              { key: 'studycase', label: 'Verifikasi Studi Kasus', icon: <FileText size={15} /> },
+              { key: 'recap',     label: 'Rekap Nilai Kelas',      icon: <Award size={15} /> },
+            ]
+          : [
+              { key: 'quiz',      label: 'Nilai Kuis',            icon: <Brain size={15} /> },
+              { key: 'studycase', label: 'Verifikasi Studi Kasus', icon: <FileText size={15} /> },
+              { key: 'recap',     label: 'Rekap Nilai Kelas',      icon: <Award size={15} /> },
+            ]
+        ).map(t => (
+          <button key={t.key} onClick={() => setTab(t.key as any)} style={{ ...s.tabBtn, ...(tab === t.key ? s.tabActive : {}) }}>
             {t.icon}<span>{t.label}</span>
           </button>
         ))}
@@ -516,49 +538,51 @@ export default function PenilaianPage() {
 
           {/* Student Recap Modal */}
           {selectedStudent && (
-            <div style={s.overlay}>
-              <div style={s.modal} className="glass-panel">
-                <div style={s.modalHead}>
-                  <div>
-                    <h3 style={{ margin: 0 }}>{selectedStudent.studentName}</h3>
-                    <span style={{ fontSize: '0.8rem', color: 'var(--grey-blue)' }}>{selectedStudent.studentEmail}</span>
-                  </div>
-                  <button onClick={() => setSelectedStudent(null)} style={s.closeBtn}><X size={18} /></button>
-                </div>
-                <div style={{ padding: '18px 24px', overflowY: 'auto', maxHeight: '60vh' }}>
-                  <h4 style={{ marginTop: 0, fontSize: '0.85rem', color: 'var(--grey-blue)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Riwayat Kuis</h4>
-                  {selectedStudent.attempts.length === 0 ? (
-                    <p style={{ color: 'var(--grey-blue)', fontSize: '0.85rem' }}>Siswa ini belum mengerjakan kuis apapun.</p>
-                  ) : (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                      {selectedStudent.attempts.map((a, i) => (
-                        <div key={i} className="glass-panel" style={{ borderRadius: 10, padding: 14 }}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                              <Brain size={15} color="var(--azure)" />
-                              <span style={{ fontWeight: 600, color: '#fff', fontSize: '0.88rem' }}>{a.quizTitle}</span>
-                            </div>
-                            <span style={{ fontSize: '0.75rem', padding: '3px 9px', borderRadius: 12, background: a.isPassed ? 'rgba(0,200,83,0.1)' : 'rgba(255,82,82,0.1)', color: a.isPassed ? '#00C853' : '#FF5252' }}>
-                              {a.isPassed ? 'Lulus' : 'Tidak Lulus'}
-                            </span>
-                          </div>
-                          <div style={{ fontSize: '0.78rem', color: 'var(--grey-blue)', marginBottom: 8 }}>
-                            Kelas: <strong>{a.courseTitle}</strong>&nbsp;•&nbsp;{a.date}
-                          </div>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.82rem', marginBottom: 6 }}>
-                            <span>Nilai</span>
-                            <strong style={{ color: a.score >= a.passingScore ? 'var(--azure)' : '#FF5252' }}>{a.score}%</strong>
-                          </div>
-                          <div style={{ background: 'rgba(255,255,255,0.05)', borderRadius: 4, height: 6 }}>
-                            <div style={{ width: `${Math.min(a.score, 100)}%`, background: a.score >= a.passingScore ? 'var(--azure)' : '#FF5252', height: '100%', borderRadius: 4, transition: 'width 0.5s' }} />
-                          </div>
-                        </div>
-                      ))}
+            <Portal>
+              <div style={s.overlay} onClick={() => setSelectedStudent(null)}>
+                <div style={s.modal} className="glass-panel" onClick={e => e.stopPropagation()}>
+                  <div style={s.modalHead}>
+                    <div>
+                      <h3 style={{ margin: 0 }}>{selectedStudent.studentName}</h3>
+                      <span style={{ fontSize: '0.8rem', color: 'var(--grey-blue)' }}>{selectedStudent.studentEmail}</span>
                     </div>
-                  )}
+                    <button onClick={() => setSelectedStudent(null)} style={s.closeBtn}><X size={18} /></button>
+                  </div>
+                  <div style={{ padding: '18px 24px', overflowY: 'auto', maxHeight: '60vh' }}>
+                    <h4 style={{ marginTop: 0, fontSize: '0.85rem', color: 'var(--grey-blue)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Riwayat Kuis</h4>
+                    {selectedStudent.attempts.length === 0 ? (
+                      <p style={{ color: 'var(--grey-blue)', fontSize: '0.85rem' }}>Siswa ini belum mengerjakan kuis apapun.</p>
+                    ) : (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                        {selectedStudent.attempts.map((a, i) => (
+                          <div key={i} className="glass-panel" style={{ borderRadius: 10, padding: 14 }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                <Brain size={15} color="var(--azure)" />
+                                <span style={{ fontWeight: 600, color: '#fff', fontSize: '0.88rem' }}>{a.quizTitle}</span>
+                              </div>
+                              <span style={{ fontSize: '0.75rem', padding: '3px 9px', borderRadius: 12, background: a.isPassed ? 'rgba(0,200,83,0.1)' : 'rgba(255,82,82,0.1)', color: a.isPassed ? '#00C853' : '#FF5252' }}>
+                                {a.isPassed ? 'Lulus' : 'Tidak Lulus'}
+                              </span>
+                            </div>
+                            <div style={{ fontSize: '0.78rem', color: 'var(--grey-blue)', marginBottom: 8 }}>
+                              Kelas: <strong>{a.courseTitle}</strong>&nbsp;•&nbsp;{a.date}
+                            </div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.82rem', marginBottom: 6 }}>
+                              <span>Nilai</span>
+                              <strong style={{ color: a.score >= a.passingScore ? 'var(--azure)' : '#FF5252' }}>{a.score}%</strong>
+                            </div>
+                            <div style={{ background: 'rgba(255,255,255,0.05)', borderRadius: 4, height: 6 }}>
+                              <div style={{ width: `${Math.min(a.score, 100)}%`, background: a.score >= a.passingScore ? 'var(--azure)' : '#FF5252', height: '100%', borderRadius: 4, transition: 'width 0.5s' }} />
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
-            </div>
+            </Portal>
           )}
         </>
       )}
@@ -622,9 +646,14 @@ export default function PenilaianPage() {
           ) : (
             <div style={s.subGrid}>
               {filteredSubmissions.map(sub => {
-                const verifiedByMe = userRole === 'Mentor'
-                  ? sub.mentor_status === 'Verified'
-                  : sub.lecture_status === 'Verified';
+                const isVerified = Boolean(sub.is_released || sub.lecture_status === 'Verified' || sub.mentor_status === 'Verified');
+                const verifiedRoleLabel = sub.lecture_status === 'Verified' && sub.mentor_status === 'Verified'
+                  ? 'Dosen & Tentor'
+                  : sub.lecture_status === 'Verified'
+                  ? 'Dosen'
+                  : sub.mentor_status === 'Verified'
+                  ? 'Tentor'
+                  : 'Dirilis';
 
                 return (
                   <div key={sub.id} className="glass-panel" style={s.subCard}>
@@ -632,10 +661,10 @@ export default function PenilaianPage() {
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <span style={{
                         display: 'inline-flex', padding: '3px 10px', borderRadius: 12, fontSize: '0.74rem', fontWeight: 600,
-                        background: verifiedByMe ? 'rgba(0,200,83,0.1)' : 'rgba(255,178,64,0.1)',
-                        color: verifiedByMe ? '#00C853' : '#FFB240',
+                        background: isVerified ? 'rgba(0,200,83,0.1)' : 'rgba(255,178,64,0.1)',
+                        color: isVerified ? '#00C853' : '#FFB240',
                       }}>
-                        {verifiedByMe ? `Terverifikasi (${userRole})` : `Menunggu (${userRole})`}
+                        {isVerified ? `Terverifikasi (${verifiedRoleLabel})` : 'Menunggu Verifikasi'}
                       </span>
                     </div>
 
@@ -740,12 +769,12 @@ export default function PenilaianPage() {
                         onClick={() => openModal(sub)}
                         style={{
                           ...s.btnVerify,
-                          background: verifiedByMe ? 'rgba(255,255,255,0.05)' : 'linear-gradient(135deg, var(--navy), var(--m-blue))',
-                          border: verifiedByMe ? '1px solid var(--border-color)' : 'none',
+                          background: isVerified ? 'rgba(255,255,255,0.05)' : 'linear-gradient(135deg, var(--navy), var(--m-blue))',
+                          border: isVerified ? '1px solid var(--border-color)' : 'none',
                         }}
                       >
                         <PenLine size={14} />
-                        <span>{verifiedByMe ? 'Edit Verifikasi' : `Verifikasi Sebagai ${userRole}`}</span>
+                        <span>{isVerified ? 'Edit Verifikasi' : `Verifikasi Sebagai ${userRole}`}</span>
                       </button>
                     </div>
                   </div>
@@ -756,70 +785,339 @@ export default function PenilaianPage() {
 
           {/* Verify Modal */}
           {modal && (
-            <div style={s.overlay}>
-              <div style={s.modal} className="glass-panel">
-                <div style={s.modalHead}>
-                  <div>
-                    <h3 style={{ margin: 0 }}>Verifikasi Studi Kasus</h3>
-                    <span style={{ fontSize: '0.8rem', color: 'var(--azure)' }}>
-                      {modal.student.full_name} — {modal.tugas.title}
-                    </span>
-                  </div>
-                  <button onClick={() => setModal(null)} style={s.closeBtn}><X size={18} /></button>
-                </div>
-
-                <div style={{ padding: '18px 24px', display: 'flex', flexDirection: 'column', gap: 14 }}>
-                  <div style={{ fontSize: '0.8rem', color: 'var(--grey-blue)', background: 'rgba(255,255,255,0.03)', padding: 10, borderRadius: 6 }}>
-                    Role Anda: <strong style={{ color: '#fff' }}>{userRole}</strong>.
-                    Nilai AI bawaan: <strong style={{ color: 'var(--lemon)' }}>{modal.ai_score ?? '-'}</strong>.
-                    Jika Anda memasukkan nilai baru, nilai tersebut akan dipasang sebagai <em>released_score</em> untuk siswa.
-                  </div>
-
-                  <div>
-                    <label style={s.label}>Catatan Verifikasi ({userRole})</label>
-                    <textarea
-                      placeholder="Masukkan umpan balik atau catatan tambahan..."
-                      value={modalNotes}
-                      onChange={e => setModalNotes(e.target.value)}
-                      style={s.textarea}
-                    />
-                  </div>
-
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 10 }}>
+            <Portal>
+              <div style={s.overlay} onClick={() => setModal(null)}>
+                <div style={s.modal} className="glass-panel" onClick={e => e.stopPropagation()}>
+                  <div style={s.modalHead}>
                     <div>
-                      <label style={s.label}>Override Nilai (Opsional)</label>
-                      <input
-                        type="number"
-                        min={0}
-                        max={100}
-                        placeholder={String(modal.ai_score ?? 80)}
-                        value={modalScore}
-                        onChange={e => setModalScore(e.target.value)}
-                        style={s.input}
+                      <h3 style={{ margin: 0, fontSize: '1.25rem', color: '#fff', fontWeight: 700 }}>Verifikasi Studi Kasus</h3>
+                      <span style={{ fontSize: '0.8rem', color: 'var(--azure)' }}>
+                        {modal.student.full_name} — {modal.tugas.title}
+                      </span>
+                    </div>
+                    <button onClick={() => setModal(null)} style={s.closeBtn}><X size={18} /></button>
+                  </div>
+
+                  <div style={{ padding: '18px 24px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+                    <div style={{ fontSize: '0.8rem', color: 'var(--grey-blue)', background: 'rgba(255,255,255,0.03)', padding: 10, borderRadius: 6 }}>
+                      Role Anda: <strong style={{ color: '#fff' }}>{userRole}</strong>.
+                      Nilai AI bawaan: <strong style={{ color: 'var(--lemon)' }}>{modal.ai_score ?? '-'}</strong>.
+                      Jika Anda memasukkan nilai baru, nilai tersebut akan dipasang sebagai <em>released_score</em> untuk siswa.
+                    </div>
+
+                    <div>
+                      <label style={s.label}>Catatan Verifikasi ({userRole})</label>
+                      <textarea
+                        placeholder="Masukkan umpan balik atau catatan tambahan..."
+                        value={modalNotes}
+                        onChange={e => setModalNotes(e.target.value)}
+                        style={s.textarea}
                       />
                     </div>
-                    <div>
-                      <label style={s.label}>Alasan Override Nilai</label>
-                      <input
-                        type="text"
-                        placeholder="Contoh: Kualitas kode baik tetapi penulisan laporan kurang rapi"
-                        value={modalReason}
-                        onChange={e => setModalReason(e.target.value)}
-                        style={s.input}
-                      />
-                    </div>
-                  </div>
 
-                  <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 10 }}>
-                    <button onClick={() => setModal(null)} style={s.btnGhost}>Batal</button>
-                    <button onClick={handleVerify} disabled={verifying} style={s.btnPrimary}>
-                      {verifying ? <Loader2 size={15} style={{ animation: 'spin 1s linear infinite' }} /> : <CheckCircle2 size={15} />}
-                      <span>Simpan Verifikasi</span>
-                    </button>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 10 }}>
+                      <div>
+                        <label style={s.label}>Override Nilai (Opsional)</label>
+                        <input
+                          type="number"
+                          min={0}
+                          max={100}
+                          placeholder={String(modal.ai_score ?? 80)}
+                          value={modalScore}
+                          onChange={e => setModalScore(e.target.value)}
+                          style={s.input}
+                        />
+                      </div>
+                      <div>
+                        <label style={s.label}>Alasan Override Nilai</label>
+                        <input
+                          type="text"
+                          placeholder="Contoh: Kualitas kode baik tetapi penulisan laporan kurang rapi"
+                          value={modalReason}
+                          onChange={e => setModalReason(e.target.value)}
+                          style={s.input}
+                        />
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 10 }}>
+                      <button onClick={() => setModal(null)} style={s.btnGhost}>Batal</button>
+                      <button onClick={handleVerify} disabled={verifying} style={s.btnPrimary}>
+                        {verifying ? <Loader2 size={15} style={{ animation: 'spin 1s linear infinite' }} /> : <CheckCircle2 size={15} />}
+                        <span>Simpan Verifikasi</span>
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
+            </Portal>
+          )}
+        </>
+      )}
+
+      {/* ═══════════════════════════════════════════════
+          TAB 3: REKAP NILAI KELAS
+      ═══════════════════════════════════════════════ */}
+      {tab === 'recap' && (
+        <>
+          {!selectedRecapCourse ? (
+            /* ── LEVEL 1: LIST / GRID CARD KELAS ── */
+            <>
+              <div style={{ marginBottom: 20 }}>
+                <h2 style={{ fontSize: '1.15rem', fontWeight: 700, color: '#fff', margin: 0 }}>
+                  Pilih Kelas Pembelajaran
+                </h2>
+                <p style={{ fontSize: '0.82rem', color: 'var(--grey-blue)', margin: '4px 0 0' }}>
+                  Pilih salah satu kelas di bawah ini untuk melihat rekapitulasi nilai akhir peserta
+                </p>
+              </div>
+
+              {quizLoading ? (
+                <div style={s.centered}>
+                  <Loader2 size={32} style={{ animation: 'spin 1s linear infinite' }} />
+                  <p>Memuat daftar kelas...</p>
+                </div>
+              ) : courses.length === 0 ? (
+                <div style={s.empty}>
+                  <BookOpen size={48} color="var(--grey-blue)" />
+                  <h3>Belum Ada Kelas</h3>
+                  <p>Belum ada data kelas pembelajaran yang tersedia.</p>
+                </div>
+              ) : (
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+                  gap: 20,
+                }}>
+                  {/* Card "Semua Kelas" */}
+                  <div
+                    onClick={() => {
+                      setSelectedCourse('all');
+                      setSelectedRecapCourse({ id: 'all', title: 'Semua Kelas', description: 'Rekapitulasi nilai gabungan seluruh kelas pembelajaran' });
+                    }}
+                    className="glass-panel"
+                    style={{
+                      padding: 22,
+                      borderRadius: 16,
+                      cursor: 'pointer',
+                      transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+                      border: '1px solid var(--border-color)',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      justifyContent: 'space-between',
+                      minHeight: 180,
+                    }}
+                  >
+                    <div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+                        <div style={{
+                          width: 44, height: 44, borderRadius: 12,
+                          background: 'linear-gradient(135deg, var(--azure), #0077ff)',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff',
+                        }}>
+                          <BookOpen size={22} />
+                        </div>
+                        <span style={{ fontSize: '0.75rem', padding: '3px 10px', borderRadius: 12, background: 'rgba(0,168,255,0.1)', color: 'var(--azure)', fontWeight: 600 }}>
+                          Gabungan
+                        </span>
+                      </div>
+                      <h3 style={{ margin: '0 0 6px', fontSize: '1.05rem', fontWeight: 700, color: '#fff' }}>Semua Kelas</h3>
+                      <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--grey-blue)', lineHeight: 1.4 }}>
+                        Rekapitulasi nilai gabungan seluruh peserta di semua kelas.
+                      </p>
+                    </div>
+
+                    <div style={{ marginTop: 18, paddingTop: 12, borderTop: '1px solid rgba(255,255,255,0.06)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ fontSize: '0.78rem', color: 'var(--grey-blue)', fontWeight: 600 }}>
+                        {grades.length} Total Siswa
+                      </span>
+                      <span style={{ fontSize: '0.8rem', color: 'var(--azure)', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 4 }}>
+                        Masuk Rekap <ChevronRight size={14} />
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Course Cards */}
+                  {courses.map((c: any) => {
+                    const cId = c.uuid_pembelajaran || c.id;
+                    const cTitle = c.title || c.nama_pembelajaran || 'Kelas Pembelajaran';
+                    const cDesc = c.deskripsi || c.description || 'Kelas pembelajaran aktif pada platform Nalara.';
+
+                    return (
+                      <div
+                        key={cId}
+                        onClick={() => {
+                          setSelectedCourse(cId);
+                          setSelectedRecapCourse(c);
+                        }}
+                        className="glass-panel"
+                        style={{
+                          padding: 22,
+                          borderRadius: 16,
+                          cursor: 'pointer',
+                          transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+                          border: '1px solid var(--border-color)',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          justifyContent: 'space-between',
+                          minHeight: 180,
+                        }}
+                      >
+                        <div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+                            <div style={{
+                              width: 44, height: 44, borderRadius: 12,
+                              background: 'rgba(255,255,255,0.06)',
+                              display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--azure)',
+                            }}>
+                              <Layers size={22} />
+                            </div>
+                            <span style={{ fontSize: '0.75rem', padding: '3px 10px', borderRadius: 12, background: 'rgba(255,255,255,0.05)', color: 'var(--grey-blue)', fontWeight: 600 }}>
+                              {c.difficulty || c.level || 'Kelas'}
+                            </span>
+                          </div>
+                          <h3 style={{ margin: '0 0 6px', fontSize: '1.05rem', fontWeight: 700, color: '#fff' }}>{cTitle}</h3>
+                          <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--grey-blue)', lineHeight: 1.4, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                            {cDesc}
+                          </p>
+                        </div>
+
+                        <div style={{ marginTop: 18, paddingTop: 12, borderTop: '1px solid rgba(255,255,255,0.06)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <span style={{ fontSize: '0.78rem', color: 'var(--grey-blue)', fontWeight: 600 }}>
+                            Klik untuk membuka
+                          </span>
+                          <span style={{ fontSize: '0.8rem', color: 'var(--azure)', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 4 }}>
+                            Masuk Rekap <ChevronRight size={14} />
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </>
+          ) : (
+            /* ── LEVEL 2: ENTERED CLASS REKAP VIEW ("DIA BAKAL MASUK") ── */
+            <>
+              {/* Back Button & Header */}
+              <div style={{ marginBottom: 20, display: 'flex', alignItems: 'center', gap: 14 }}>
+                <button
+                  onClick={() => {
+                    setSelectedRecapCourse(null);
+                    setSelectedCourse('all');
+                  }}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 6,
+                    padding: '8px 14px',
+                    borderRadius: 10,
+                    background: 'rgba(255,255,255,0.06)',
+                    border: '1px solid var(--border-color)',
+                    color: '#fff',
+                    fontSize: '0.82rem',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                  }}
+                >
+                  <ArrowLeft size={16} />
+                  <span>Kembali ke Daftar Kelas</span>
+                </button>
+              </div>
+
+              <div style={{ marginBottom: 20 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <h2 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#fff', margin: 0 }}>
+                    Rekapitulasi Nilai: {selectedRecapCourse.title || selectedRecapCourse.nama_pembelajaran}
+                  </h2>
+                  <span style={{ fontSize: '0.75rem', padding: '3px 10px', borderRadius: 12, background: 'rgba(0,168,255,0.1)', color: 'var(--azure)', fontWeight: 600 }}>
+                    {selectedRecapCourse.difficulty || selectedRecapCourse.level || 'Aktif'}
+                  </span>
+                </div>
+                <p style={{ fontSize: '0.82rem', color: 'var(--grey-blue)', margin: '4px 0 0' }}>
+                  Daftar nilai hasil pengerjaan kuis peserta di kelas {selectedRecapCourse.title || selectedRecapCourse.nama_pembelajaran}
+                </p>
+              </div>
+
+              {/* Search Bar for Entered Class */}
+              <div className="glass-panel" style={{ ...s.filterRow, marginBottom: 16 }}>
+                <div style={s.searchWrap}>
+                  <Search size={15} color="var(--grey)" />
+                  <input
+                    type="text"
+                    placeholder="Cari nama atau email siswa di kelas ini..."
+                    value={quizSearch}
+                    onChange={e => setQuizSearch(e.target.value)}
+                    style={s.searchInput}
+                  />
+                </div>
+                <span style={{ fontSize: '0.8rem', color: 'var(--azure)', fontWeight: 600 }}>
+                  Menampilkan {filteredGrades.length} Siswa
+                </span>
+              </div>
+
+              {quizError && <div style={s.errBanner}><AlertCircle size={16} /><span>{quizError}</span></div>}
+
+              {quizLoading ? (
+                <div style={s.centered}>
+                  <Loader2 size={32} style={{ animation: 'spin 1s linear infinite' }} />
+                  <p>Memuat rekapitulasi nilai...</p>
+                </div>
+              ) : filteredGrades.length === 0 ? (
+                <div style={s.empty}>
+                  <Award size={48} color="var(--grey-blue)" />
+                  <h3>Belum Ada Data Rekap</h3>
+                  <p>Tidak ada siswa atau data nilai yang cocok untuk kelas ini.</p>
+                </div>
+              ) : (
+                <div className="glass-panel" style={{ borderRadius: 12, overflow: 'hidden' }}>
+                  <table style={s.table}>
+                    <thead>
+                      <tr>
+                        <th style={s.th}>No</th>
+                        <th style={s.th}>Nama Siswa</th>
+                        <th style={s.th}>Email</th>
+                        <th style={s.th}>Selesai Pengerjaan</th>
+                        <th style={s.th}>Rata-rata Nilai</th>
+                        <th style={s.th}>Status Akhir</th>
+                        <th style={{ ...s.th, textAlign: 'right' }}>Aksi</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredGrades.map((row, idx) => (
+                        <tr key={row.studentEmail + idx} style={s.tr}>
+                          <td style={s.td}>{idx + 1}</td>
+                          <td style={{ ...s.td, fontWeight: 700, color: '#fff' }}>{row.studentName}</td>
+                          <td style={{ ...s.td, color: 'var(--grey-blue)' }}>{row.studentEmail}</td>
+                          <td style={s.td}>
+                            <span style={s.pill}>{row.completedCount} Selesai</span>
+                          </td>
+                          <td style={s.td}>
+                            <span style={{ fontWeight: 800, fontSize: '0.95rem', color: row.averageScore >= 75 ? 'var(--azure)' : '#FF5252' }}>
+                              {row.averageScore}%
+                            </span>
+                          </td>
+                          <td style={s.td}>
+                            <span style={row.status === 'Passed' ? s.pillGreen : s.pillRed}>
+                              {row.status === 'Passed' ? 'Lulus' : 'Belum Lulus'}
+                            </span>
+                          </td>
+                          <td style={{ ...s.td, textAlign: 'right' }}>
+                            <button
+                              onClick={() => setSelectedStudent(row)}
+                              style={s.btnGhost}
+                            >
+                              <Award size={13} />
+                              <span>Detail Riwayat</span>
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </>
           )}
         </>
       )}
@@ -1108,20 +1406,29 @@ const s: Record<string, React.CSSProperties> = {
   },
   overlay: {
     position: 'fixed',
-    top: 0, left: 0, right: 0, bottom: 0,
-    background: 'rgba(0,0,0,0.7)',
-    backdropFilter: 'blur(4px)',
-    zIndex: 999,
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.75)',
+    backdropFilter: 'blur(8px)',
+    WebkitBackdropFilter: 'blur(8px)',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 16,
+    zIndex: 9999,
+    padding: '16px',
   },
   modal: {
     width: '100%',
     maxWidth: 540,
-    borderRadius: 14,
-    overflow: 'hidden',
+    backgroundColor: 'rgba(21, 21, 23, 0.95)',
+    border: '1px solid var(--border-color)',
+    borderRadius: 16,
+    padding: 0,
+    boxShadow: '0 20px 50px rgba(0, 0, 0, 0.6)',
+    maxHeight: '85vh',
+    overflowY: 'auto',
     display: 'flex',
     flexDirection: 'column',
   },
