@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Hero from '../components/landingpage/Hero';
 import Pathway from '../components/landingpage/Pathway';
@@ -11,8 +11,8 @@ import Footer from '../components/landingpage/Footer';
 
 export default function LandingPage() {
   const router = useRouter();
-  const [activeItem, setActiveItem] = React.useState('ECOSYSTEM');
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
+  const [activeItem, setActiveItem] = useState('ECOSYSTEM');
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const scrollToSection = (id: string) => {
     const el = document.getElementById(id);
@@ -26,6 +26,38 @@ export default function LandingPage() {
     scrollToSection(id);
   };
 
+  // ScrollSpy observer to activate active navbar item on scroll
+  useEffect(() => {
+    const sections = [
+      { id: 'hero', name: 'ECOSYSTEM' },
+      { id: 'pathway', name: 'LEARNING PATH' },
+      { id: 'syllabus', name: 'CURRICULUM' },
+      { id: 'pricing', name: 'GELOMBANG' },
+      { id: 'team', name: 'TEAM' },
+    ];
+
+    const handleScroll = () => {
+      const scrollPosition = window.scrollY + 200; // offset for fixed header
+      for (let i = sections.length - 1; i >= 0; i--) {
+        const el = document.getElementById(sections[i].id);
+        if (el) {
+          const top = el.offsetTop;
+          if (scrollPosition >= top) {
+            setActiveItem(sections[i].name);
+            break;
+          }
+        }
+      }
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    handleScroll();
+
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+    };
+  }, []);
+
   return (
     <>
       {/* Ambient Floating Glow Blobs */}
@@ -34,18 +66,19 @@ export default function LandingPage() {
         <div className="ambient-blob blob-yellow-2"></div>
         <div className="ambient-blob blob-blue-3"></div>
       </div>
+
       {/* Navigation Bar */}
       <nav style={styles.navbar}>
         <div style={styles.navInner}>
-          <div style={styles.logoContainer}>
+          <div style={{ ...styles.logoContainer, cursor: 'pointer' }} onClick={() => scrollToSection('hero')}>
             <img src="/image/logonalara2.png" alt="Nalara Academy" style={styles.logoImg} />
           </div>
           
           <div className="nav-links-desktop" style={styles.navLinks}>
             <a 
-              href="#syllabus" 
+              href="#hero" 
               className={`nav-link ${activeItem === 'ECOSYSTEM' ? 'active' : ''}`}
-              onClick={(e) => handleLinkClick(e, 'ECOSYSTEM', 'syllabus')}
+              onClick={(e) => handleLinkClick(e, 'ECOSYSTEM', 'hero')}
             >
               ECOSYSTEM
             </a>
@@ -62,6 +95,13 @@ export default function LandingPage() {
               onClick={(e) => handleLinkClick(e, 'CURRICULUM', 'syllabus')}
             >
               CURRICULUM
+            </a>
+            <a 
+              href="#pricing" 
+              className={`nav-link ${activeItem === 'GELOMBANG' ? 'active' : ''}`}
+              onClick={(e) => handleLinkClick(e, 'GELOMBANG', 'pricing')}
+            >
+              GELOMBANG
             </a>
             <a 
               href="#team" 
@@ -91,9 +131,9 @@ export default function LandingPage() {
 
         <div className={`mobile-menu ${isMobileMenuOpen ? 'open' : ''}`} style={styles.mobileMenu}>
           <a 
-            href="#syllabus" 
+            href="#hero" 
             className={activeItem === 'ECOSYSTEM' ? 'active' : ''}
-            onClick={(e) => handleLinkClick(e, 'ECOSYSTEM', 'syllabus')}
+            onClick={(e) => handleLinkClick(e, 'ECOSYSTEM', 'hero')}
           >
             ECOSYSTEM
           </a>
@@ -110,6 +150,13 @@ export default function LandingPage() {
             onClick={(e) => handleLinkClick(e, 'CURRICULUM', 'syllabus')}
           >
             CURRICULUM
+          </a>
+          <a 
+            href="#pricing" 
+            className={activeItem === 'GELOMBANG' ? 'active' : ''}
+            onClick={(e) => handleLinkClick(e, 'GELOMBANG', 'pricing')}
+          >
+            GELOMBANG
           </a>
           <a 
             href="#team" 
@@ -131,7 +178,7 @@ export default function LandingPage() {
       <main>
         {/* Section 1: Hero */}
         <Hero
-          onRegisterClick={() => scrollToSection('pricing')}
+          onRegisterClick={() => router.push('/login')}
           onSyllabusClick={() => scrollToSection('syllabus')}
         />
 
@@ -143,12 +190,12 @@ export default function LandingPage() {
 
         <div style={styles.sectionDivider} />
 
-        {/* Section 3: Curriculum & Timeline */}
+        {/* Section 3: Curriculum */}
         <Curriculum />
 
         <div style={styles.sectionDivider} />
 
-        {/* Section 4: Registration Waves & Referral */}
+        {/* Section 4: Registration Waves (Closed) */}
         <Pricing />
 
         <div style={styles.sectionDivider} />
@@ -191,23 +238,6 @@ const styles: Record<string, React.CSSProperties> = {
   logoImg: {
     height: '38px',
     width: 'auto',
-  },
-  logoTextGroup: {
-    display: 'flex',
-    flexDirection: 'column',
-    lineHeight: 1.1,
-  },
-  logoTitle: {
-    fontSize: '0.95rem',
-    fontWeight: 800,
-    color: '#38bdf8',
-    letterSpacing: '0.15em',
-  },
-  logoSubtitle: {
-    fontSize: '0.75rem',
-    fontWeight: 700,
-    color: '#ffa826',
-    letterSpacing: '0.08em',
   },
   navLinks: {
     display: 'flex',

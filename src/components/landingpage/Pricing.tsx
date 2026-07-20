@@ -5,39 +5,35 @@ import React from 'react';
 const waves = [
   {
     name: 'Early Bird',
-    period: '20 – 24 Juni',
-    highlight: 'Potongan harga khusus 20% dari tarif normal',
-    isFeatured: true,
-    badge: 'RECOMMENDED',
+    period: '20 – 27 Juni 2026',
+    highlight: 'Pendaftaran tahap awal dengan kuota khusus',
+    badge: 'CLOSED',
     icon: '🐣',
-    borderColor: '#ffa826',
+    borderColor: 'rgba(239, 68, 68, 0.3)',
   },
   {
     name: 'Wave 1',
-    period: '25 Juni – 08 Juli',
-    highlight: 'Tarif normal tahap awal',
-    isFeatured: false,
-    badge: null,
+    period: '27 Juni – 10 Juli 2026',
+    highlight: 'Pendaftaran reguler gelombang pertama',
+    badge: 'CLOSED',
     icon: '🌊',
-    borderColor: 'rgba(255,255,255,0.08)',
+    borderColor: 'rgba(239, 68, 68, 0.3)',
   },
   {
     name: 'Wave 2',
-    period: '09 – 13 Juli',
-    highlight: 'Tarif normal tahap kedua',
-    isFeatured: false,
-    badge: null,
+    period: '11 – 15 Juli 2026',
+    highlight: 'Pendaftaran reguler gelombang kedua',
+    badge: 'CLOSED',
     icon: '🌊',
-    borderColor: 'rgba(255,255,255,0.08)',
+    borderColor: 'rgba(239, 68, 68, 0.3)',
   },
   {
     name: 'Last Wave',
-    period: '14 – 22 Juli',
-    highlight: 'Penutupan pendaftaran menjelang Technical Meeting',
-    isFeatured: false,
-    badge: 'LATE REGISTRATION',
+    period: '16 – 18 Juli 2026',
+    highlight: 'Penutupan seluruh pendaftaran bootcamp',
+    badge: 'CLOSED',
     icon: '❗',
-    borderColor: '#ef4444',
+    borderColor: 'rgba(239, 68, 68, 0.3)',
   },
 ];
 
@@ -47,7 +43,7 @@ export default function Pricing() {
       <div style={styles.sectionHeader}>
         <h2 style={styles.sectionTitle}>Gelombang Pendaftaran</h2>
         <p style={styles.sectionDesc}>
-          Pilih gelombang yang sesuai. Semakin awal mendaftar, semakin besar keuntungan yang Anda dapatkan.
+          Seluruh gelombang pendaftaran telah <strong>DITUTUP (CLOSED)</strong>. Silakan masuk ke portal untuk mengakses kelas bagi peserta terdaftar.
         </p>
       </div>
 
@@ -59,32 +55,23 @@ export default function Pricing() {
             style={{
               ...styles.waveCard,
               border: `1px solid ${wave.borderColor}`,
-              boxShadow: wave.isFeatured ? '0 0 30px rgba(255,168,38,0.1)' : 'none',
-              background: wave.isFeatured 
-                ? 'linear-gradient(180deg, rgba(255,168,38,0.03) 0%, rgba(11,11,12,0.8) 100%)'
-                : 'rgba(255,255,255,0.01)',
+              background: 'rgba(255, 255, 255, 0.01)',
             }}
           >
-            {wave.badge && (
-              <span
-                style={{
-                  ...styles.cardBadge,
-                  background: wave.isFeatured ? '#ffa826' : 'rgba(255,255,255,0.08)',
-                  color: wave.isFeatured ? '#000000' : '#94a3b8',
-                }}
-              >
-                {wave.badge}
-              </span>
-            )}
+            <span
+              style={{
+                ...styles.cardBadge,
+                background: 'rgba(239, 68, 68, 0.15)',
+                color: '#ef4444',
+                borderColor: 'rgba(239, 68, 68, 0.3)',
+              }}
+            >
+              {wave.badge}
+            </span>
             <span style={styles.waveIcon}>{wave.icon}</span>
             <h3 style={styles.waveName}>{wave.name}</h3>
             <span style={styles.wavePeriod}>{wave.period}</span>
-            <p style={styles.waveHighlight}>{wave.highlight}</p>
-            {wave.isFeatured && (
-              <button className="nalara-btn" style={styles.waveBtn}>
-                Daftar Sekarang
-              </button>
-            )}
+            <p style={{ ...styles.waveHighlight, marginBottom: 0 }}>{wave.highlight}</p>
           </div>
         ))}
       </div>
@@ -95,31 +82,23 @@ export default function Pricing() {
           <div style={styles.referralIcon}>🎁</div>
           <div style={styles.referralText}>
             <h3 style={styles.referralTitle}>
-              Referral Booster — Subsidi Hingga 100%!
+              Informasi Peserta Terdaftar
             </h3>
             <p style={styles.referralDesc}>
-              Dapatkan potongan harga tambahan:{' '}
-              <strong style={{ color: '#ffa826' }}>
-                Hingga 100% bagi Mahasiswa Aktif (via KTM)
-              </strong>{' '}
-              &amp;{' '}
-              <strong style={{ color: '#38bdf8' }}>
-                50–75% bagi peserta Umum
-              </strong>
-              .
+              Bagi peserta yang telah melakukan registrasi, silakan masuk ke portal Nalara Academy menggunakan akun yang telah terdaftar untuk melihat status kelas dan materi.
             </p>
             <div style={styles.referralSteps}>
               <div style={styles.stepChip}>
                 <span style={styles.stepNum}>1</span>
-                Share poster ke min. 5 grup WhatsApp (≥100 anggota)
+                Masuk via tombol Sign In / Masuk Ke Portal dengan credentials Anda.
               </div>
               <div style={styles.stepChip}>
                 <span style={styles.stepNum}>2</span>
-                Post official Twibbon di Instagram Feed / Story
+                Akses Dashboard Student untuk mengikuti jadwal dan pengerjaan tugas.
               </div>
             </div>
             <span style={styles.referralNote}>
-              * Syarat &amp; ketentuan berlaku, sedang dalam konfirmasi dengan Dosen Pembina.
+              * Jika membutuhkan bantuan kendala login, silakan hubungi tim panitia Nalara Academy.
             </span>
           </div>
         </div>
@@ -149,7 +128,7 @@ const styles: Record<string, React.CSSProperties> = {
   },
   sectionDesc: {
     fontSize: '1.1rem',
-    maxWidth: '600px',
+    maxWidth: '650px',
     margin: '0 auto',
     color: '#94a3b8',
     lineHeight: '1.6',
@@ -210,12 +189,12 @@ const styles: Record<string, React.CSSProperties> = {
     padding: '0.7rem 1.25rem',
     fontSize: '0.9rem',
     fontWeight: 700,
-    color: '#000000',
-    background: '#ffa826',
+    color: '#FFFFFF',
+    background: 'linear-gradient(135deg, #2563eb, #1d4ed8)',
     border: 'none',
     borderRadius: '8px',
     cursor: 'pointer',
-    boxShadow: '0 4px 12px rgba(255, 168, 38, 0.2)',
+    boxShadow: '0 4px 12px rgba(37, 99, 235, 0.3)',
   },
 
   /* Referral Banner */

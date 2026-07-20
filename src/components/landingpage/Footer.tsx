@@ -21,8 +21,8 @@ export default function Footer() {
           {/* Nalara Col */}
           <div style={styles.col}>
             <span style={styles.colTitle}>Nalara</span>
-            <a href="#syllabus" style={styles.link}>Ecosystem</a>
-            <a href="#syllabus" style={styles.link}>Learning Path</a>
+            <a href="#hero" style={styles.link}>Ecosystem</a>
+            <a href="#pathway" style={styles.link}>Learning Path</a>
             <a href="#syllabus" style={styles.link}>Curriculum</a>
             <a href="#team" style={styles.link}>Team</a>
           </div>
