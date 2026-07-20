@@ -115,6 +115,12 @@ export default function GradeCenterPage() {
         gradeList = gradesRes.data;
       }
       
+      // Create lookup map for course titles
+      const courseMap = new Map<string, string>();
+      courseList.forEach((c: any) => {
+        if (c.uuid_pembelajaran) courseMap.set(c.uuid_pembelajaran, c.title || c.nama_pembelajaran || '');
+      });
+
       // Transform gradeList to match the expected StudentGradeDetail interface
       const mappedGrades: StudentGradeDetail[] = gradeList.map((g: any) => ({
         studentName: g.studentName || g.name || g.full_name || 'Unknown',
@@ -122,14 +128,21 @@ export default function GradeCenterPage() {
         completedCount: g.completedCount || g.attempts?.length || 0,
         averageScore: g.averageScore || g.score || 0,
         status: g.status === 'Lulus' || g.status === 'Passed' ? 'Passed' : 'Failed',
-        attempts: (g.attempts || []).map((a: any) => ({
-          quizTitle: a.quizTitle || a.title || 'Unknown Quiz',
-          courseTitle: a.courseTitle || 'Unknown Course',
-          score: a.score || 0,
-          passingScore: a.passingScore || 70,
-          isPassed: a.isPassed || a.status === 'Passed' || a.status === 'Lulus',
-          date: a.date ? new Date(a.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Unknown'
-        }))
+        attempts: (g.attempts || []).map((a: any) => {
+          const cId = a.quiz?.uuid_pembelajaran || a.uuid_pembelajaran || '';
+          const cTitle = a.courseTitle && a.courseTitle !== 'Unknown Course' 
+            ? a.courseTitle 
+            : courseMap.get(cId) || a.quiz?.pembelajaran?.title || 'Unknown Course';
+          return {
+            quizTitle: a.quizTitle || a.quiz?.title || a.title || 'Unknown Quiz',
+            courseTitle: cTitle,
+            courseId: cId,
+            score: a.score || 0,
+            passingScore: a.passingScore || 70,
+            isPassed: a.isPassed || a.status === 'Passed' || a.status === 'Lulus',
+            date: a.date ? new Date(a.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Unknown'
+          };
+        })
       }));
       setStudents(mappedGrades as any); // Storing the mapped grades directly in state 
 
@@ -162,11 +175,13 @@ export default function GradeCenterPage() {
     if (selectedCourseId === 'all') return matchesSearch;
 
     const course = courses.find(c => c.uuid_pembelajaran === selectedCourseId);
-    if (!course) return matchesSearch;
-
-    // Filter attempts that match course title
-    const hasAttemptsInCourse = g.attempts.some(att => att.courseTitle === course.title);
-    return matchesSearch && (hasAttemptsInCourse || (selectedCourseId === 'all'));
+    
+    // Filter attempts that match course title or course ID
+    const hasAttemptsInCourse = g.attempts.some((att: any) => 
+      (course && att.courseTitle === course.title) || 
+      att.courseId === selectedCourseId
+    );
+    return matchesSearch && hasAttemptsInCourse;
   });
 
   // KPI calculations

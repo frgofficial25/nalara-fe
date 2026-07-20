@@ -13,6 +13,7 @@ import { getStoredToken } from '@/services/auth';
 interface GradeAttempt {
   quizTitle: string;
   courseTitle: string;
+  courseId?: string;
   score: number;
   passingScore: number;
   isPassed: boolean;
@@ -31,9 +32,9 @@ interface GradeRow {
 interface StudyCaseSubmission {
   id: string;
   student: { full_name: string; email: string };
-  tugas: { title: string };
-  pembelajaran?: { title: string };
-  modul?: { title: string };
+  tugas: { title: string; uuid_pembelajaran?: string };
+  pembelajaran?: { title: string; uuid_pembelajaran?: string };
+  modul?: { title: string; uuid_pembelajaran?: string };
   student_notes?: string;
   ipynb_url?: string;
   pdf_url?: string;
@@ -53,8 +54,6 @@ interface StudyCaseSubmission {
   is_released: boolean;
   submitted_at?: string;
 }
-
-
 
 // ─── Auth helper ──────────────────────────────────────────────────────────────
 function getAuth() {
@@ -90,20 +89,22 @@ export default function PenilaianPage() {
     } catch {}
   }, []);
 
+  // Shared courses list across tabs
+  const [courses, setCourses] = useState<any[]>([]);
+
   // ─────────────────────────────────────────────────────────────────────────
   // TAB 1 — QUIZ GRADE CENTER
-  // API: GET /api/grade-center/students
   // ─────────────────────────────────────────────────────────────────────────
   const [grades, setGrades] = useState<GradeRow[]>([]);
-  const [courses, setCourses] = useState<any[]>([]);
   const [quizLoading, setQuizLoading] = useState(false);
   const [quizError, setQuizError] = useState<string | null>(null);
+  
+  // Tab 1 Filters
   const [quizSearch, setQuizSearch] = useState('');
   const [selectedCourse, setSelectedCourse] = useState('all');
+  const [quizStatusFilter, setQuizStatusFilter] = useState('all');
   const [selectedStudent, setSelectedStudent] = useState<GradeRow | null>(null);
   const [refreshing, setRefreshing] = useState(false);
-
-
 
   const fetchQuiz = async () => {
     setQuizLoading(true);
@@ -114,7 +115,15 @@ export default function PenilaianPage() {
         apiGet<any>('/api/pembelajaran', { token: auth.token, headers: auth.headers }),
         apiGet<any>('/api/grade-center/students', { token: auth.token, headers: auth.headers }),
       ]);
-      setCourses(Array.isArray(cRes) ? cRes : (cRes?.data ?? []));
+      const fetchedCourses = Array.isArray(cRes) ? cRes : (cRes?.data ?? []);
+      setCourses(fetchedCourses);
+
+      // Create lookup map for course title by ID
+      const courseMap = new Map<string, string>();
+      fetchedCourses.forEach((c: any) => {
+        const id = c.uuid_pembelajaran || c.id;
+        if (id) courseMap.set(id, c.title || c.nama_pembelajaran || '');
+      });
 
       // Backend returns flat array of QuizAttempt records — group by student
       const rawAttempts: any[] = Array.isArray(gRes) ? gRes : (gRes?.data ?? []);
@@ -143,18 +152,23 @@ export default function PenilaianPage() {
           completedCount: attempts.length,
           averageScore: avg,
           status: anyPassed ? 'Passed' : 'Failed',
-          attempts: attempts.map((a: any) => ({
-            quizTitle: a.quiz?.title || '-',
-            courseTitle: '-', // not in backend response
-            score: a.score ?? 0,
-            passingScore: 75, // backend hardcodes 75
-            isPassed: !!a.is_passed,
-            date: a.completed_at
-              ? new Date(a.completed_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })
-              : a.started_at
-              ? new Date(a.started_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })
-              : '-',
-          })),
+          attempts: attempts.map((a: any) => {
+            const cId = a.quiz?.uuid_pembelajaran || a.uuid_pembelajaran || '';
+            const cTitle = courseMap.get(cId) || a.quiz?.pembelajaran?.title || a.pembelajaran?.title || '-';
+            return {
+              quizTitle: a.quiz?.title || '-',
+              courseTitle: cTitle,
+              courseId: cId,
+              score: a.score ?? 0,
+              passingScore: 75,
+              isPassed: !!a.is_passed,
+              date: a.completed_at
+                ? new Date(a.completed_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })
+                : a.started_at
+                ? new Date(a.started_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })
+                : '-',
+            };
+          }),
         };
       });
       setGrades(grouped);
@@ -168,12 +182,15 @@ export default function PenilaianPage() {
 
   // ─────────────────────────────────────────────────────────────────────────
   // TAB 2 — STUDY CASE VERIFICATION
-  // API: GET  /api/study-case-submissions/review-queue
-  //      PATCH /api/study-case-submissions/:id/verify
   // ─────────────────────────────────────────────────────────────────────────
   const [submissions, setSubmissions] = useState<StudyCaseSubmission[]>([]);
   const [subLoading, setSubLoading] = useState(false);
   const [subError, setSubError] = useState<string | null>(null);
+
+  // Tab 2 Filters
+  const [subSearch, setSubSearch] = useState('');
+  const [subSelectedCourse, setSubSelectedCourse] = useState('all');
+  const [subStatusFilter, setSubStatusFilter] = useState<'all' | 'pending' | 'verified'>('all');
 
   // Verify modal state
   const [modal, setModal] = useState<StudyCaseSubmission | null>(null);
@@ -190,11 +207,14 @@ export default function PenilaianPage() {
     setSubError(null);
     try {
       const auth = getAuth();
-      const res = await apiGet<any>('/api/study-case-submissions/review-queue', {
-        token: auth.token,
-        headers: auth.headers,
-      });
-      const raw: any[] = Array.isArray(res) ? res : (res?.data ?? []);
+      const [cRes, sRes] = await Promise.all([
+        apiGet<any>('/api/pembelajaran', { token: auth.token, headers: auth.headers }),
+        apiGet<any>('/api/study-case-submissions/review-queue', { token: auth.token, headers: auth.headers }),
+      ]);
+      const fetchedCourses = Array.isArray(cRes) ? cRes : (cRes?.data ?? []);
+      setCourses(fetchedCourses);
+
+      const raw: any[] = Array.isArray(sRes) ? sRes : (sRes?.data ?? []);
       setSubmissions(raw.map(s => ({
         id: s.uuid_submission,
         student: s.student ?? { full_name: 'Unknown', email: '-' },
@@ -220,18 +240,15 @@ export default function PenilaianPage() {
       setSubError(e.message || 'Gagal memuat antrian review studi kasus.');
     } finally {
       setSubLoading(false);
+      setRefreshing(false);
     }
   };
 
-  // PATCH /api/study-case-submissions/:id/verify
-  // Body: { verifier_role, notes?, score_override?, reason_override? }
-  // Backend expects verifier_role as lowercase: 'lecturer' or 'mentor'
   const handleVerify = async () => {
     if (!modal) return;
     setVerifying(true);
     try {
       const auth = getAuth();
-      // Backend verifier_role must be lowercase
       const verifierRole = userRole === 'Mentor' ? 'mentor' : 'lecturer';
       const body: Record<string, any> = { verifier_role: verifierRole };
       if (modalNotes.trim()) body.notes = modalNotes.trim();
@@ -273,24 +290,70 @@ export default function PenilaianPage() {
     else if (tab === 'studycase') fetchQueue();
   }, [tab]);
 
-  // ── Quiz derived data ─────────────────────────────────────────────────────
+  // ── Quiz derived data & filter ───────────────────────────────────────────
   const graded = grades.filter(g => g.completedCount > 0);
   const passRate = graded.length > 0 ? Math.round(graded.filter(g => g.status === 'Passed').length / graded.length * 100) : 0;
   const classAvg = graded.length > 0 ? Math.round(graded.reduce((s, g) => s + g.averageScore, 0) / graded.length) : 0;
 
   const filteredGrades = grades.filter(g => {
-    const q = quizSearch.toLowerCase();
-    const nameMatch = g.studentName.toLowerCase().includes(q) || g.studentEmail.toLowerCase().includes(q);
-    if (selectedCourse === 'all') return nameMatch;
-    const course = courses.find((c: any) => (c.uuid_pembelajaran || c.id) === selectedCourse);
-    return nameMatch && (!course || g.attempts.some(a => a.courseTitle === course.title));
+    // 1. Search filter
+    const q = quizSearch.toLowerCase().trim();
+    const nameMatch = !q || g.studentName.toLowerCase().includes(q) || g.studentEmail.toLowerCase().includes(q);
+    
+    // 2. Course filter
+    let courseMatch = true;
+    if (selectedCourse !== 'all') {
+      const courseObj = courses.find((c: any) => (c.uuid_pembelajaran || c.id) === selectedCourse);
+      courseMatch = g.attempts.some((a: any) => 
+        a.courseId === selectedCourse || 
+        (courseObj && (a.courseTitle === courseObj.title || a.courseTitle === courseObj.nama_pembelajaran))
+      );
+    }
+
+    // 3. Status filter
+    let statusMatch = true;
+    if (quizStatusFilter !== 'all') {
+      statusMatch = g.status === quizStatusFilter;
+    }
+
+    return nameMatch && courseMatch && statusMatch;
   });
 
-  // Grade letter thresholds match backend deriveGradeLetter
+  // ── Study case derived data & filter ─────────────────────────────────────
+  const filteredSubmissions = submissions.filter(sub => {
+    // 1. Search filter
+    const q = subSearch.toLowerCase().trim();
+    const nameMatch = !q || 
+      (sub.student?.full_name || '').toLowerCase().includes(q) || 
+      (sub.student?.email || '').toLowerCase().includes(q) ||
+      (sub.tugas?.title || '').toLowerCase().includes(q);
+
+    // 2. Course filter
+    let courseMatch = true;
+    if (subSelectedCourse !== 'all') {
+      const subCourseId = sub.pembelajaran?.uuid_pembelajaran || sub.tugas?.uuid_pembelajaran || sub.modul?.uuid_pembelajaran;
+      const subCourseTitle = sub.pembelajaran?.title;
+      const courseObj = courses.find((c: any) => (c.uuid_pembelajaran || c.id) === subSelectedCourse);
+      courseMatch = subCourseId === subSelectedCourse || (courseObj && subCourseTitle === (courseObj.title || courseObj.nama_pembelajaran));
+    }
+
+    // 3. Status filter
+    let statusMatch = true;
+    if (subStatusFilter !== 'all') {
+      const isVerified = userRole === 'Mentor'
+        ? sub.mentor_status === 'Verified'
+        : sub.lecture_status === 'Verified';
+      if (subStatusFilter === 'verified') statusMatch = isVerified;
+      if (subStatusFilter === 'pending') statusMatch = !isVerified;
+    }
+
+    return nameMatch && courseMatch && statusMatch;
+  });
+
+  // Grade letter thresholds
   const getLetter = (s: number) =>
     s >= 85 ? 'A' : s >= 80 ? 'B+' : s >= 70 ? 'B' : s >= 65 ? 'C+' : s >= 55 ? 'C' : s >= 45 ? 'D' : s > 0 ? 'E' : '-';
 
-  // ── Open verify modal ─────────────────────────────────────────────────────
   const openModal = (sub: StudyCaseSubmission) => {
     setModal(sub);
     setModalNotes('');
@@ -300,6 +363,18 @@ export default function PenilaianPage() {
 
   return (
     <div style={s.page}>
+      {/* Toast Banner */}
+      {toast && (
+        <div style={{
+          position: 'fixed', top: 20, right: 20, zIndex: 9999, padding: '12px 20px', borderRadius: 8,
+          background: toast.type === 'success' ? '#00C853' : '#FF5252', color: '#fff', fontWeight: 600,
+          boxShadow: '0 4px 14px rgba(0,0,0,0.3)', display: 'flex', alignItems: 'center', gap: 8
+        }}>
+          {toast.type === 'success' ? <CheckCircle2 size={18} /> : <AlertCircle size={18} />}
+          <span>{toast.message}</span>
+        </div>
+      )}
+
       {/* ── Header ── */}
       <div style={s.header}>
         <div>
@@ -363,16 +438,26 @@ export default function PenilaianPage() {
                 style={s.searchInput}
               />
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <BookOpen size={15} color="var(--grey-blue)" />
-              <select value={selectedCourse} onChange={e => setSelectedCourse(e.target.value)} style={s.select}>
-                <option value="all">Semua Kelas</option>
-                {courses.map((c: any) => (
-                  <option key={c.uuid_pembelajaran || c.id} value={c.uuid_pembelajaran || c.id}>
-                    {c.title || c.nama_pembelajaran}
-                  </option>
-                ))}
-              </select>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <BookOpen size={15} color="var(--grey-blue)" />
+                <select value={selectedCourse} onChange={e => setSelectedCourse(e.target.value)} style={s.select}>
+                  <option value="all">Semua Kelas</option>
+                  {courses.map((c: any) => (
+                    <option key={c.uuid_pembelajaran || c.id} value={c.uuid_pembelajaran || c.id}>
+                      {c.title || c.nama_pembelajaran}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <Award size={15} color="var(--grey-blue)" />
+                <select value={quizStatusFilter} onChange={e => setQuizStatusFilter(e.target.value)} style={s.select}>
+                  <option value="all">Semua Status</option>
+                  <option value="Passed">Lulus</option>
+                  <option value="Failed">Tidak Lulus</option>
+                </select>
+              </div>
             </div>
           </div>
 
@@ -383,8 +468,8 @@ export default function PenilaianPage() {
           ) : filteredGrades.length === 0 ? (
             <div style={s.empty}>
               <Award size={48} color="var(--border-color)" />
-              <h3>Belum Ada Data</h3>
-              <p>Belum ada siswa yang menyelesaikan kuis.</p>
+              <h3>Data Tidak Ditemukan</h3>
+              <p>Tidak ada data siswa yang cocok dengan filter yang dipilih.</p>
             </div>
           ) : (
             <div className="glass-panel" style={{ borderRadius: 12, overflow: 'hidden' }}>
@@ -489,19 +574,54 @@ export default function PenilaianPage() {
             <span>Login sebagai <strong>{userRole}</strong> — tombol verifikasi aktif sesuai role Anda.</span>
           </div>
 
+          {/* Filters for Tab 2 */}
+          <div className="glass-panel" style={s.filterRow}>
+            <div style={s.searchWrap}>
+              <Search size={15} color="var(--grey)" />
+              <input
+                type="text"
+                placeholder="Cari nama, email, atau judul studi kasus..."
+                value={subSearch}
+                onChange={e => setSubSearch(e.target.value)}
+                style={s.searchInput}
+              />
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <BookOpen size={15} color="var(--grey-blue)" />
+                <select value={subSelectedCourse} onChange={e => setSubSelectedCourse(e.target.value)} style={s.select}>
+                  <option value="all">Semua Kelas</option>
+                  {courses.map((c: any) => (
+                    <option key={c.uuid_pembelajaran || c.id} value={c.uuid_pembelajaran || c.id}>
+                      {c.title || c.nama_pembelajaran}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <TrendingUp size={15} color="var(--grey-blue)" />
+                <select value={subStatusFilter} onChange={e => setSubStatusFilter(e.target.value as any)} style={s.select}>
+                  <option value="all">Semua Status</option>
+                  <option value="pending">Menunggu Verifikasi</option>
+                  <option value="verified">Terverifikasi</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
           {subError && <div style={s.errBanner}><AlertCircle size={16} /><span>{subError}</span></div>}
 
           {subLoading ? (
             <div style={s.centered}><Loader2 size={32} style={{ animation: 'spin 1s linear infinite' }} /><p>Memuat antrian review...</p></div>
-          ) : submissions.length === 0 ? (
+          ) : filteredSubmissions.length === 0 ? (
             <div style={s.empty}>
               <CheckCircle2 size={48} color="#00C853" />
-              <h3>Antrian Kosong</h3>
-              <p>Belum ada pengumpulan studi kasus yang menunggu verifikasi.</p>
+              <h3>Tidak Ada Data</h3>
+              <p>Tidak ada pengumpulan studi kasus yang cocok dengan filter yang dipilih.</p>
             </div>
           ) : (
             <div style={s.subGrid}>
-              {submissions.map(sub => {
+              {filteredSubmissions.map(sub => {
                 const verifiedByMe = userRole === 'Mentor'
                   ? sub.mentor_status === 'Verified'
                   : sub.lecture_status === 'Verified';
@@ -515,7 +635,7 @@ export default function PenilaianPage() {
                         background: verifiedByMe ? 'rgba(0,200,83,0.1)' : 'rgba(255,178,64,0.1)',
                         color: verifiedByMe ? '#00C853' : '#FFB240',
                       }}>
-                        {verifiedByMe ? `✓ Terverifikasi (${userRole})` : `⏳ Menunggu (${userRole})`}
+                        {verifiedByMe ? `Terverifikasi (${userRole})` : `Menunggu (${userRole})`}
                       </span>
                     </div>
 
@@ -550,246 +670,501 @@ export default function PenilaianPage() {
                       )}
                       {sub.pdf_url && (
                         <a href={sub.pdf_url} target="_blank" rel="noopener noreferrer" style={s.fileLink}>
-                          <FileText size={12} /><span>Laporan PDF</span>
+                          <FileText size={12} /><span>Laporan (.pdf)</span>
                         </a>
                       )}
                     </div>
 
-                    {/* AI Feedback toggle */}
-                    {sub.ai_feedback && (
-                      <button
-                        onClick={() => setExpandedAI(expandedAI === sub.id ? null : sub.id)}
-                        style={s.btnView}
-                      >
-                        <span>{expandedAI === sub.id ? 'Sembunyikan' : 'Lihat'} Feedback AI</span>
-                        <ChevronRight size={13} style={{ transform: expandedAI === sub.id ? 'rotate(90deg)' : 'none', transition: '0.2s' }} />
-                      </button>
-                    )}
-                    {expandedAI === sub.id && sub.ai_feedback && (
-                      <div style={{ background: 'rgba(6,113,224,0.04)', border: '1px solid rgba(6,113,224,0.12)', borderRadius: 8, padding: '10px 14px', fontSize: '0.78rem', display: 'flex', flexDirection: 'column', gap: 6 }}>
-                        {sub.ai_reason && <p style={{ margin: 0, color: '#CBD5E1' }}>{sub.ai_reason}</p>}
-                        {sub.ai_feedback.strengths && sub.ai_feedback.strengths.length > 0 && (
-                          <div>
-                            <strong style={{ color: '#00C853' }}>Kelebihan:</strong>
-                            <ul style={{ margin: '4px 0 0 16px', padding: 0 }}>
-                              {sub.ai_feedback.strengths.map((s2, i) => <li key={i} style={{ color: '#CBD5E1' }}>{s2}</li>)}
-                            </ul>
+                    {/* AI Evaluation Box */}
+                    {sub.ai_score !== undefined && (
+                      <div style={s.aiBox}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                            <Brain size={14} color="var(--lemon)" />
+                            <span style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--lemon)' }}>Penilaian Otomatis AI</span>
                           </div>
+                          <span style={{ fontSize: '1rem', fontWeight: 800, color: sub.ai_score >= 75 ? '#00C853' : '#FFB240' }}>
+                            {sub.ai_score}/100
+                          </span>
+                        </div>
+                        {sub.ai_reason && (
+                          <p style={{ margin: 0, fontSize: '0.76rem', color: 'var(--grey-blue)', lineHeight: 1.4 }}>
+                            {sub.ai_reason}
+                          </p>
                         )}
-                        {sub.ai_feedback.deductions && sub.ai_feedback.deductions.length > 0 && (
-                          <div>
-                            <strong style={{ color: '#FF5252' }}>Pemotongan:</strong>
-                            {sub.ai_feedback.deductions.map((d, i) => (
-                              <div key={i} style={{ marginTop: 4, color: '#CBD5E1' }}>
-                                <strong>{d.section}</strong> (-{d.points_lost} poin): {d.reason}
+                        {sub.ai_feedback && (
+                          <button
+                            onClick={() => setExpandedAI(expandedAI === sub.id ? null : sub.id)}
+                            style={{ background: 'none', border: 'none', color: 'var(--azure)', fontSize: '0.72rem', cursor: 'pointer', padding: 0, marginTop: 4, display: 'flex', alignItems: 'center', gap: 4 }}
+                          >
+                            <span>{expandedAI === sub.id ? 'Sembunyikan Detail AI' : 'Lihat Detail Feedback AI'}</span>
+                            <ChevronRight size={12} style={{ transform: expandedAI === sub.id ? 'rotate(90deg)' : 'none', transition: 'transform 0.2s' }} />
+                          </button>
+                        )}
+                        {expandedAI === sub.id && sub.ai_feedback && (
+                          <div style={{ marginTop: 8, paddingTop: 8, borderTop: '1px solid rgba(255,255,255,0.06)', fontSize: '0.74rem', color: 'var(--grey-blue)', display: 'flex', flexDirection: 'column', gap: 6 }}>
+                            {sub.ai_feedback.strengths && sub.ai_feedback.strengths.length > 0 && (
+                              <div>
+                                <strong style={{ color: '#00C853' }}>Keunggulan:</strong>
+                                <ul style={{ margin: '2px 0 0 16px', padding: 0 }}>
+                                  {sub.ai_feedback.strengths.map((st, k) => <li key={k}>{st}</li>)}
+                                </ul>
                               </div>
-                            ))}
+                            )}
+                            {sub.ai_feedback.deductions && sub.ai_feedback.deductions.length > 0 && (
+                              <div>
+                                <strong style={{ color: '#FF5252' }}>Pengurangan Nilai:</strong>
+                                <ul style={{ margin: '2px 0 0 16px', padding: 0 }}>
+                                  {sub.ai_feedback.deductions.map((d, k) => (
+                                    <li key={k}>[{d.section}] -{d.points_lost} poin: {d.reason}</li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
                           </div>
                         )}
-                        {sub.ai_feedback.improvement_summary && (
-                          <p style={{ margin: 0, color: 'var(--grey-blue)', fontStyle: 'italic' }}>{sub.ai_feedback.improvement_summary}</p>
-                        )}
                       </div>
                     )}
 
-                    {/* Dual verification status */}
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 3, fontSize: '0.74rem', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: 8 }}>
-                      <span style={{ color: sub.lecture_status === 'Verified' ? '#00C853' : 'var(--grey-blue)' }}>
-                        {sub.lecture_status === 'Verified' ? '✓ Dosen terverifikasi' : '○ Dosen belum verifikasi'}
-                        {sub.lecture_notes && <em style={{ marginLeft: 6, color: 'var(--grey-blue)' }}>— {sub.lecture_notes}</em>}
-                      </span>
-                      <span style={{ color: sub.mentor_status === 'Verified' ? '#00C853' : 'var(--grey-blue)' }}>
-                        {sub.mentor_status === 'Verified' ? '✓ Mentor terverifikasi' : '○ Mentor belum verifikasi'}
-                        {sub.mentor_notes && <em style={{ marginLeft: 6, color: 'var(--grey-blue)' }}>— {sub.mentor_notes}</em>}
-                      </span>
+                    {/* Existing verification notes */}
+                    {(sub.lecture_notes || sub.mentor_notes) && (
+                      <div style={{ fontSize: '0.74rem', color: 'var(--grey-blue)', background: 'rgba(255,255,255,0.02)', padding: 8, borderRadius: 6 }}>
+                        {sub.lecture_notes && <div><strong>Dosen:</strong> {sub.lecture_notes}</div>}
+                        {sub.mentor_notes && <div><strong>Mentor:</strong> {sub.mentor_notes}</div>}
+                      </div>
+                    )}
+
+                    {/* Action Button */}
+                    <div style={{ marginTop: 'auto', paddingTop: 8 }}>
+                      <button
+                        onClick={() => openModal(sub)}
+                        style={{
+                          ...s.btnVerify,
+                          background: verifiedByMe ? 'rgba(255,255,255,0.05)' : 'linear-gradient(135deg, var(--navy), var(--m-blue))',
+                          border: verifiedByMe ? '1px solid var(--border-color)' : 'none',
+                        }}
+                      >
+                        <PenLine size={14} />
+                        <span>{verifiedByMe ? 'Edit Verifikasi' : `Verifikasi Sebagai ${userRole}`}</span>
+                      </button>
                     </div>
-
-                    {/* Released score */}
-                    {sub.is_released && sub.released_score !== undefined && (
-                      <div style={{ background: 'rgba(0,200,83,0.08)', border: '1px solid rgba(0,200,83,0.2)', borderRadius: 8, padding: '8px 12px', fontSize: '0.82rem', color: '#00C853' }}>
-                        ✓ Nilai Dirilis ke Siswa: <strong>{sub.released_score}/100</strong>
-                        {sub.released_reason && <p style={{ margin: '4px 0 0', fontSize: '0.74rem', color: '#CBD5E1' }}>{sub.released_reason}</p>}
-                      </div>
-                    )}
-
-                    {/* Verify button */}
-                    <button
-                      onClick={() => openModal(sub)}
-                      disabled={verifiedByMe}
-                      style={{
-                        border: 'none', borderRadius: 8, padding: '9px 16px', fontSize: '0.88rem', fontWeight: 600,
-                        width: '100%', marginTop: 4, cursor: verifiedByMe ? 'not-allowed' : 'pointer',
-                        opacity: verifiedByMe ? 0.5 : 1,
-                        background: verifiedByMe ? 'rgba(255,255,255,0.05)' : 'linear-gradient(135deg, #1a2744, #0671E0)',
-                        color: verifiedByMe ? 'var(--grey-blue)' : '#fff',
-                      }}
-                    >
-                      {verifiedByMe ? `Sudah Diverifikasi (${userRole})` : `Verifikasi sebagai ${userRole}`}
-                    </button>
                   </div>
                 );
               })}
             </div>
           )}
+
+          {/* Verify Modal */}
+          {modal && (
+            <div style={s.overlay}>
+              <div style={s.modal} className="glass-panel">
+                <div style={s.modalHead}>
+                  <div>
+                    <h3 style={{ margin: 0 }}>Verifikasi Studi Kasus</h3>
+                    <span style={{ fontSize: '0.8rem', color: 'var(--azure)' }}>
+                      {modal.student.full_name} — {modal.tugas.title}
+                    </span>
+                  </div>
+                  <button onClick={() => setModal(null)} style={s.closeBtn}><X size={18} /></button>
+                </div>
+
+                <div style={{ padding: '18px 24px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+                  <div style={{ fontSize: '0.8rem', color: 'var(--grey-blue)', background: 'rgba(255,255,255,0.03)', padding: 10, borderRadius: 6 }}>
+                    Role Anda: <strong style={{ color: '#fff' }}>{userRole}</strong>.
+                    Nilai AI bawaan: <strong style={{ color: 'var(--lemon)' }}>{modal.ai_score ?? '-'}</strong>.
+                    Jika Anda memasukkan nilai baru, nilai tersebut akan dipasang sebagai <em>released_score</em> untuk siswa.
+                  </div>
+
+                  <div>
+                    <label style={s.label}>Catatan Verifikasi ({userRole})</label>
+                    <textarea
+                      placeholder="Masukkan umpan balik atau catatan tambahan..."
+                      value={modalNotes}
+                      onChange={e => setModalNotes(e.target.value)}
+                      style={s.textarea}
+                    />
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 10 }}>
+                    <div>
+                      <label style={s.label}>Override Nilai (Opsional)</label>
+                      <input
+                        type="number"
+                        min={0}
+                        max={100}
+                        placeholder={String(modal.ai_score ?? 80)}
+                        value={modalScore}
+                        onChange={e => setModalScore(e.target.value)}
+                        style={s.input}
+                      />
+                    </div>
+                    <div>
+                      <label style={s.label}>Alasan Override Nilai</label>
+                      <input
+                        type="text"
+                        placeholder="Contoh: Kualitas kode baik tetapi penulisan laporan kurang rapi"
+                        value={modalReason}
+                        onChange={e => setModalReason(e.target.value)}
+                        style={s.input}
+                      />
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 10 }}>
+                    <button onClick={() => setModal(null)} style={s.btnGhost}>Batal</button>
+                    <button onClick={handleVerify} disabled={verifying} style={s.btnPrimary}>
+                      {verifying ? <Loader2 size={15} style={{ animation: 'spin 1s linear infinite' }} /> : <CheckCircle2 size={15} />}
+                      <span>Simpan Verifikasi</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
         </>
       )}
-
-
-
-      {/* ═══════════════════════════════════════════════
-          VERIFY MODAL
-          PATCH /api/study-case-submissions/:id/verify
-          Body: { verifier_role, notes?, score_override?, reason_override? }
-      ═══════════════════════════════════════════════ */}
-      {modal && (
-        <div style={s.overlay}>
-          <div style={{ ...s.modal, maxWidth: 520 }} className="glass-panel">
-            <div style={s.modalHead}>
-              <div>
-                <h3 style={{ margin: 0 }}>Verifikasi Studi Kasus</h3>
-                <span style={{ fontSize: '0.8rem', color: 'var(--grey-blue)' }}>
-                  {modal.student.full_name} — {modal.tugas.title}
-                </span>
-              </div>
-              <button onClick={() => setModal(null)} style={s.closeBtn}><X size={18} /></button>
-            </div>
-
-            <div style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: 16 }}>
-              {/* Info */}
-              <div style={{ background: 'rgba(6,113,224,0.07)', border: '1px solid rgba(6,113,224,0.15)', borderRadius: 8, padding: '10px 14px', fontSize: '0.82rem', color: 'var(--azure)' }}>
-                Anda login sebagai <strong>{userRole}</strong>. Verifikasi ini akan mencatat
-                <code style={{ margin: '0 4px' }}>{userRole === 'Lecturer' ? 'lecture_status' : 'mentor_status'} = "Verified"</code>
-                pada submission. Nilai dirilis ke siswa setelah Lecturer atau Mentor memverifikasi.
-              </div>
-
-              {/* Score override */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                <label style={s.formLabel}>
-                  Masukkan Nilai <span style={{ fontWeight: 400, color: 'var(--grey)' }}>(Maksimal 100)</span>
-                </label>
-                <input
-                  type="number" min="0" max="100"
-                  value={modalScore}
-                  onChange={e => setModalScore(e.target.value)}
-                  placeholder="Masukkan nilai (0-100)"
-                  style={s.input}
-                />
-              </div>
-
-              {/* Notes */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                <label style={s.formLabel}>Catatan / Feedback ke Siswa <span style={{ fontWeight: 400, color: 'var(--grey)' }}>(opsional)</span></label>
-                <textarea
-                  rows={3}
-                  value={modalNotes}
-                  onChange={e => setModalNotes(e.target.value)}
-                  placeholder="Tuliskan catatan untuk siswa..."
-                  style={s.textarea}
-                />
-              </div>
-
-              {/* Reason override */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                <label style={s.formLabel}>Alasan Override Nilai <span style={{ fontWeight: 400, color: 'var(--grey)' }}>(opsional)</span></label>
-                <input
-                  type="text"
-                  value={modalReason}
-                  onChange={e => setModalReason(e.target.value)}
-                  placeholder="Mengapa Anda mengubah nilai dari skor AI?"
-                  style={s.input}
-                />
-              </div>
-
-              {/* Actions */}
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, paddingTop: 4 }}>
-                <button onClick={() => setModal(null)} style={s.btnGhost} disabled={verifying}>Batal</button>
-                <button onClick={handleVerify} disabled={verifying} style={s.btnPrimary}>
-                  {verifying
-                    ? <><Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} /><span>Menyimpan...</span></>
-                    : <><CheckCircle2 size={14} /><span>Konfirmasi Verifikasi</span></>}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Toast Alert */}
-      {toast && (
-        <div style={{
-          position: 'fixed',
-          bottom: 24,
-          right: 24,
-          background: toast.type === 'success' ? '#00C853' : '#FF5252',
-          color: '#fff',
-          padding: '12px 20px',
-          borderRadius: 8,
-          boxShadow: '0 4px 12px rgba(0,0,0,0.25)',
-          zIndex: 1000,
-          display: 'flex',
-          alignItems: 'center',
-          gap: 10,
-          fontWeight: 600,
-          fontSize: '0.88rem',
-          animation: 'slideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards'
-        }}>
-          {toast.type === 'success' ? <CheckCircle2 size={16} /> : <AlertCircle size={16} />}
-          <span>{toast.message}</span>
-          <button onClick={() => setToast(null)} style={{ background: 'none', border: 'none', color: '#fff', cursor: 'pointer', fontSize: '1.1rem', marginLeft: 8, lineHeight: 1 }}>×</button>
-        </div>
-      )}
-
-      <style>{`
-        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-        @keyframes slideIn {
-          from { transform: translateY(20px); opacity: 0; }
-          to { transform: translateY(0); opacity: 1; }
-        }
-      `}</style>
     </div>
   );
 }
 
-// ─── Styles ───────────────────────────────────────────────────────────────────
+// ─── Inline styles ────────────────────────────────────────────────────────────
 const s: Record<string, React.CSSProperties> = {
-  page: { padding: '4px 0', color: '#E2E8F0' },
-  header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24, flexWrap: 'wrap', gap: 16 },
-  title: { fontSize: '1.75rem', fontWeight: 700, color: '#fff', fontFamily: 'var(--font-display)', margin: 0 },
-  subtitle: { fontSize: '0.85rem', color: 'var(--grey-blue)', marginTop: 4, margin: 0 },
-  tabBar: { display: 'flex', gap: 4, borderBottom: '1px solid rgba(255,255,255,0.08)', paddingBottom: 1, marginBottom: 22 },
-  tabBtn: { display: 'flex', alignItems: 'center', gap: 7, background: 'none', border: 'none', borderBottom: '2px solid transparent', color: 'var(--grey-blue)', padding: '9px 18px', fontSize: '0.88rem', fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s' },
-  tabActive: { borderBottom: '2px solid var(--azure)', color: 'var(--azure)' },
-  kpiGrid: { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 20 },
-  kpiCard: { borderRadius: 12, padding: '18px 20px', display: 'flex', flexDirection: 'column', gap: 6 },
-  kpiLabel: { fontSize: '0.78rem', fontWeight: 600, color: 'var(--grey-blue)', textTransform: 'uppercase', letterSpacing: '0.05em' },
-  kpiVal: { fontSize: '2rem', fontWeight: 700 },
-  filterRow: { display: 'flex', alignItems: 'center', gap: 16, padding: '12px 18px', borderRadius: 10, marginBottom: 18, flexWrap: 'wrap' },
-  searchWrap: { display: 'flex', alignItems: 'center', gap: 8, flex: 1, minWidth: 200 },
-  searchInput: { background: 'none', border: 'none', outline: 'none', color: '#E2E8F0', fontSize: '0.88rem', width: '100%' },
-  select: { background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 6, color: '#E2E8F0', padding: '6px 12px', fontSize: '0.85rem', outline: 'none' },
-  errBanner: { display: 'flex', alignItems: 'center', gap: 10, background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 8, padding: '10px 16px', color: '#EF4444', marginBottom: 16 },
-  centered: { display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '60px 0', color: 'var(--grey-blue)', gap: 12 },
-  empty: { display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '80px 0', textAlign: 'center', border: '2px dashed rgba(255,255,255,0.08)', borderRadius: 14, gap: 10 },
-  table: { width: '100%', borderCollapse: 'collapse' },
-  th: { padding: '12px 16px', textAlign: 'left', fontSize: '0.75rem', fontWeight: 700, color: 'var(--grey-blue)', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid rgba(255,255,255,0.07)' },
-  tr: { borderBottom: '1px solid rgba(255,255,255,0.04)' },
-  td: { padding: '13px 16px', fontSize: '0.88rem', verticalAlign: 'middle' },
-  pill: { display: 'inline-flex', padding: '3px 10px', borderRadius: 12, fontSize: '0.76rem', fontWeight: 600, background: 'rgba(255,255,255,0.07)', color: 'var(--grey-blue)' },
-  pillGreen: { display: 'inline-flex', padding: '3px 10px', borderRadius: 12, fontSize: '0.76rem', fontWeight: 600, background: 'rgba(0,200,83,0.1)', color: '#00C853' },
-  pillRed: { display: 'inline-flex', padding: '3px 10px', borderRadius: 12, fontSize: '0.76rem', fontWeight: 600, background: 'rgba(255,82,82,0.1)', color: '#FF5252' },
-  pillGrey: { display: 'inline-flex', padding: '3px 10px', borderRadius: 12, fontSize: '0.76rem', fontWeight: 600, background: 'rgba(255,255,255,0.04)', color: 'var(--grey)' },
-  btnView: { display: 'inline-flex', alignItems: 'center', gap: 5, background: 'rgba(6,113,224,0.08)', border: '1px solid rgba(6,113,224,0.15)', color: 'var(--azure)', borderRadius: 7, padding: '5px 12px', fontSize: '0.82rem', fontWeight: 600, cursor: 'pointer' },
-  subGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 18 },
-  subCard: { borderRadius: 12, padding: 20, display: 'flex', flexDirection: 'column', gap: 10 },
-  noteBox: { background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 8, padding: '8px 12px', fontSize: '0.8rem', color: '#CBD5E1', fontStyle: 'italic' },
-  fileLink: { display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: '0.78rem', color: 'var(--azure)', textDecoration: 'none' },
-  overlay: { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.65)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100, padding: 20 },
-  modal: { width: '100%', maxWidth: 640, maxHeight: '90vh', display: 'flex', flexDirection: 'column', borderRadius: 16 },
-  modalHead: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '18px 24px', borderBottom: '1px solid rgba(255,255,255,0.07)' },
-  closeBtn: { background: 'none', border: 'none', color: 'var(--grey-blue)', cursor: 'pointer' },
-  formLabel: { fontSize: '0.8rem', fontWeight: 600, color: 'var(--grey-blue)' },
-  input: { background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, color: '#E2E8F0', padding: '9px 13px', fontSize: '0.88rem', outline: 'none', width: '100%', boxSizing: 'border-box' },
-  textarea: { background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, color: '#E2E8F0', padding: '9px 13px', fontSize: '0.88rem', outline: 'none', width: '100%', resize: 'vertical', boxSizing: 'border-box' },
-  btnPrimary: { display: 'inline-flex', alignItems: 'center', gap: 7, background: '#0671E0', color: '#fff', border: 'none', padding: '9px 18px', borderRadius: 8, fontWeight: 600, fontSize: '0.88rem', cursor: 'pointer' },
-  btnGhost: { display: 'inline-flex', alignItems: 'center', gap: 7, background: 'transparent', color: 'var(--grey-blue)', border: '1px solid rgba(255,255,255,0.12)', padding: '9px 18px', borderRadius: 8, fontWeight: 600, fontSize: '0.88rem', cursor: 'pointer' },
+  page: {
+    padding: '28px 32px',
+    maxWidth: 1280,
+    margin: '0 auto',
+  },
+  header: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 20,
+  },
+  title: {
+    fontSize: '1.6rem',
+    fontWeight: 800,
+    color: '#fff',
+    margin: 0,
+  },
+  subtitle: {
+    fontSize: '0.85rem',
+    color: 'var(--grey-blue)',
+    marginTop: 4,
+  },
+  btnGhost: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: 6,
+    padding: '8px 14px',
+    borderRadius: 8,
+    background: 'rgba(255,255,255,0.05)',
+    border: '1px solid var(--border-color)',
+    color: '#fff',
+    fontSize: '0.8rem',
+    fontWeight: 600,
+    cursor: 'pointer',
+  },
+  btnPrimary: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: 6,
+    padding: '8px 18px',
+    borderRadius: 8,
+    background: 'linear-gradient(135deg, var(--navy), var(--m-blue))',
+    border: 'none',
+    color: '#fff',
+    fontSize: '0.84rem',
+    fontWeight: 600,
+    cursor: 'pointer',
+  },
+  tabBar: {
+    display: 'flex',
+    gap: 4,
+    borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
+    paddingBottom: 1,
+    marginBottom: 22,
+  },
+  tabBtn: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: 7,
+    background: 'none',
+    border: 'none',
+    borderBottom: '2px solid transparent',
+    color: 'var(--grey-blue)',
+    padding: '9px 18px',
+    fontSize: '0.88rem',
+    fontWeight: 600,
+    cursor: 'pointer',
+    transition: 'all 0.2s',
+  },
+  tabActive: {
+    borderBottom: '2px solid var(--azure)',
+    color: 'var(--azure)',
+  },
+  kpiGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(3, 1fr)',
+    gap: 16,
+    marginBottom: 20,
+  },
+  kpiCard: {
+    padding: '16px 20px',
+    borderRadius: 12,
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 6,
+  },
+  kpiLabel: {
+    fontSize: '0.78rem',
+    color: 'var(--grey-blue)',
+    textTransform: 'uppercase',
+    letterSpacing: '0.04em',
+  },
+  kpiVal: {
+    fontSize: '1.6rem',
+    fontWeight: 800,
+  },
+  filterRow: {
+    padding: '12px 16px',
+    borderRadius: 12,
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: 16,
+    marginBottom: 20,
+    flexWrap: 'wrap',
+  },
+  searchWrap: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 8,
+    flex: 1,
+    minWidth: 220,
+  },
+  searchInput: {
+    background: 'transparent',
+    border: 'none',
+    color: '#fff',
+    fontSize: '0.85rem',
+    outline: 'none',
+    width: '100%',
+  },
+  select: {
+    background: '#18181b',
+    border: '1px solid var(--border-color)',
+    borderRadius: 6,
+    color: '#fff',
+    fontSize: '0.8rem',
+    padding: '6px 12px',
+    outline: 'none',
+    cursor: 'pointer',
+  },
+  errBanner: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 8,
+    padding: '12px 16px',
+    borderRadius: 8,
+    background: 'rgba(255,82,82,0.1)',
+    border: '1px solid rgba(255,82,82,0.3)',
+    color: '#FF5252',
+    fontSize: '0.83rem',
+    marginBottom: 16,
+  },
+  centered: {
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: '60px 0',
+    gap: 12,
+    color: 'var(--grey-blue)',
+    fontSize: '0.85rem',
+  },
+  empty: {
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: '60px 0',
+    gap: 8,
+    color: 'var(--grey-blue)',
+    textAlign: 'center',
+  },
+  table: {
+    width: '100%',
+    borderCollapse: 'collapse',
+    fontSize: '0.85rem',
+  },
+  th: {
+    padding: '12px 16px',
+    textAlign: 'left',
+    fontSize: '0.76rem',
+    color: 'var(--grey-blue)',
+    borderBottom: '1px solid var(--border-color)',
+    textTransform: 'uppercase',
+    letterSpacing: '0.04em',
+  },
+  tr: {
+    borderBottom: '1px solid rgba(255,255,255,0.04)',
+  },
+  td: {
+    padding: '12px 16px',
+    verticalAlign: 'middle',
+  },
+  pill: {
+    fontSize: '0.76rem',
+    padding: '3px 8px',
+    borderRadius: 10,
+    background: 'rgba(255,255,255,0.06)',
+    color: 'var(--grey-blue)',
+  },
+  pillGrey: {
+    fontSize: '0.74rem',
+    padding: '3px 9px',
+    borderRadius: 12,
+    background: 'rgba(255,255,255,0.06)',
+    color: 'var(--grey-blue)',
+  },
+  pillGreen: {
+    fontSize: '0.74rem',
+    padding: '3px 9px',
+    borderRadius: 12,
+    background: 'rgba(0,200,83,0.1)',
+    color: '#00C853',
+    fontWeight: 600,
+  },
+  pillRed: {
+    fontSize: '0.74rem',
+    padding: '3px 9px',
+    borderRadius: 12,
+    background: 'rgba(255,82,82,0.1)',
+    color: '#FF5252',
+    fontWeight: 600,
+  },
+  btnView: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: 4,
+    padding: '5px 10px',
+    borderRadius: 6,
+    background: 'rgba(255,255,255,0.05)',
+    border: '1px solid var(--border-color)',
+    color: 'var(--azure)',
+    fontSize: '0.76rem',
+    fontWeight: 600,
+    cursor: 'pointer',
+  },
+  subGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
+    gap: 16,
+  },
+  subCard: {
+    padding: 18,
+    borderRadius: 12,
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 12,
+  },
+  noteBox: {
+    fontSize: '0.78rem',
+    color: 'var(--grey-blue)',
+    background: 'rgba(255,255,255,0.03)',
+    padding: 8,
+    borderRadius: 6,
+    borderLeft: '2px solid var(--azure)',
+  },
+  fileLink: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: 5,
+    fontSize: '0.74rem',
+    color: 'var(--azure)',
+    textDecoration: 'none',
+    background: 'rgba(6,113,224,0.08)',
+    padding: '4px 8px',
+    borderRadius: 6,
+  },
+  aiBox: {
+    background: 'rgba(255,168,38,0.05)',
+    border: '1px solid rgba(255,168,38,0.2)',
+    borderRadius: 8,
+    padding: 10,
+  },
+  btnVerify: {
+    width: '100%',
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    padding: '8px 12px',
+    borderRadius: 8,
+    color: '#fff',
+    fontSize: '0.8rem',
+    fontWeight: 600,
+    cursor: 'pointer',
+  },
+  overlay: {
+    position: 'fixed',
+    top: 0, left: 0, right: 0, bottom: 0,
+    background: 'rgba(0,0,0,0.7)',
+    backdropFilter: 'blur(4px)',
+    zIndex: 999,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 16,
+  },
+  modal: {
+    width: '100%',
+    maxWidth: 540,
+    borderRadius: 14,
+    overflow: 'hidden',
+    display: 'flex',
+    flexDirection: 'column',
+  },
+  modalHead: {
+    padding: '16px 24px',
+    borderBottom: '1px solid var(--border-color)',
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  closeBtn: {
+    background: 'none',
+    border: 'none',
+    color: 'var(--grey-blue)',
+    cursor: 'pointer',
+  },
+  label: {
+    display: 'block',
+    fontSize: '0.78rem',
+    color: 'var(--grey-blue)',
+    marginBottom: 4,
+    fontWeight: 600,
+  },
+  input: {
+    width: '100%',
+    padding: '8px 12px',
+    borderRadius: 6,
+    background: '#18181b',
+    border: '1px solid var(--border-color)',
+    color: '#fff',
+    fontSize: '0.83rem',
+    outline: 'none',
+  },
+  textarea: {
+    width: '100%',
+    height: 70,
+    padding: '8px 12px',
+    borderRadius: 6,
+    background: '#18181b',
+    border: '1px solid var(--border-color)',
+    color: '#fff',
+    fontSize: '0.83rem',
+    outline: 'none',
+    resize: 'none',
+  },
 };

@@ -239,23 +239,19 @@ export default function AgendaSection({ allowManage = false }: AgendaSectionProp
     }
 
     const isDelete = modalMode === 'delete';
-    const heading = modalMode === 'create' ? 'Create New Event' : modalMode === 'edit' ? 'Edit Event' : 'Delete Event';
+    const heading = modalMode === 'create' ? 'Tambah Agenda Baru' : modalMode === 'edit' ? 'Edit Agenda' : 'Hapus Agenda';
 
     return (
       <Portal>
         <div style={s.modalOverlay} onClick={closeModal}>
           <div
-            style={{ ...s.modalContent, maxWidth: isDelete ? 440 : 760 }}
+            className="glass-panel"
+            style={{ ...s.modalContent, maxWidth: isDelete ? 440 : 480 }}
             onClick={(event) => event.stopPropagation()}
           >
             <div style={s.modalHeader}>
-              <div>
-                <h3 style={s.modalTitle}>{heading}</h3>
-                {!isDelete && (
-                  <p style={s.modalSubtitle}>Schedule teaching activity, meeting, consultation, assessment, or academic event.</p>
-                )}
-              </div>
-              <button onClick={closeModal} style={s.closeBtn} type="button">
+              <h3 style={s.modalTitle}>{heading}</h3>
+              <button onClick={closeModal} style={s.modalCloseBtn} type="button">
                 <X size={18} />
               </button>
             </div>
@@ -274,64 +270,62 @@ export default function AgendaSection({ allowManage = false }: AgendaSectionProp
                 </p>
                 <div style={s.modalFooter}>
                   <button type="button" onClick={closeModal} style={s.cancelBtn} disabled={submitting}>
-                    Cancel
+                    Batal
                   </button>
                   <button type="button" onClick={handleDelete} style={s.dangerBtn} disabled={submitting}>
-                    {submitting ? 'Deleting...' : 'Delete Event'}
+                    {submitting ? 'Menghapus...' : 'Hapus Agenda'}
                   </button>
                 </div>
               </div>
             ) : (
               <form onSubmit={handleCreateOrUpdate} style={s.form}>
-                <div style={s.formGrid}>
-                  <div style={s.formGroupWide}>
-                    <label style={s.label}>Event Title</label>
-                    <input
-                      type="text"
-                      required
-                      value={form.nama_agenda}
-                      onChange={(event) => setForm((current) => ({ ...current, nama_agenda: event.target.value }))}
-                      placeholder="e.g. Database Systems Lecture"
-                      style={s.input}
-                    />
-                  </div>
-                  <div style={s.formGroup}>
-                    <label style={s.label}>Start Time</label>
-                    <input
-                      type="datetime-local"
-                      required
-                      value={form.waktu_mulai}
-                      onChange={(event) => setForm((current) => ({ ...current, waktu_mulai: event.target.value }))}
-                      style={s.input}
-                    />
-                  </div>
-                  <div style={s.formGroup}>
-                    <label style={s.label}>End Time</label>
-                    <input
-                      type="datetime-local"
-                      required
-                      value={form.waktu_selesai}
-                      onChange={(event) => setForm((current) => ({ ...current, waktu_selesai: event.target.value }))}
-                      style={s.input}
-                    />
-                  </div>
-                  <div style={s.formGroupWide}>
-                    <label style={s.label}>Meeting Link</label>
-                    <input
-                      type="url"
-                      value={form.link_meet}
-                      onChange={(event) => setForm((current) => ({ ...current, link_meet: event.target.value }))}
-                      placeholder="https://meet.google.com/xxx-xxxx-xxx"
-                      style={s.input}
-                    />
-                  </div>
+                <div style={s.formGroup}>
+                  <label style={s.label}>Nama Agenda</label>
+                  <input
+                    type="text"
+                    required
+                    value={form.nama_agenda}
+                    onChange={(event) => setForm((current) => ({ ...current, nama_agenda: event.target.value }))}
+                    placeholder="Contoh: Kuliah Pengantar AI & MLOps"
+                    style={s.input}
+                  />
+                </div>
+                <div style={s.formGroup}>
+                  <label style={s.label}>Waktu Mulai</label>
+                  <input
+                    type="datetime-local"
+                    required
+                    value={form.waktu_mulai}
+                    onChange={(event) => setForm((current) => ({ ...current, waktu_mulai: event.target.value }))}
+                    style={s.input}
+                  />
+                </div>
+                <div style={s.formGroup}>
+                  <label style={s.label}>Waktu Selesai</label>
+                  <input
+                    type="datetime-local"
+                    required
+                    value={form.waktu_selesai}
+                    onChange={(event) => setForm((current) => ({ ...current, waktu_selesai: event.target.value }))}
+                    style={s.input}
+                  />
+                </div>
+                <div style={s.formGroup}>
+                  <label style={s.label}>Link Meeting (Opsional)</label>
+                  <input
+                    type="url"
+                    value={form.link_meet}
+                    onChange={(event) => setForm((current) => ({ ...current, link_meet: event.target.value }))}
+                    placeholder="Contoh: https://meet.google.com/xxx-xxxx-xxx"
+                    style={s.input}
+                  />
                 </div>
                 <div style={s.modalFooter}>
                   <button type="button" onClick={closeModal} style={s.cancelBtn} disabled={submitting}>
-                    Cancel
+                    Batal
                   </button>
                   <button type="submit" style={s.submitBtn} disabled={submitting}>
-                    {submitting ? 'Saving...' : modalMode === 'create' ? 'Create Event' : 'Save Changes'}
+                    {submitting ? 'Menyimpan...' : modalMode === 'create' ? 'Tambah Agenda' : 'Simpan Perubahan'}
                   </button>
                 </div>
               </form>
@@ -695,138 +689,130 @@ const s: Record<string, React.CSSProperties> = {
   },
   modalOverlay: {
     position: 'fixed',
-    inset: 0,
-    zIndex: 9999,
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.75)',
+    backdropFilter: 'blur(8px)',
+    WebkitBackdropFilter: 'blur(8px)',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    padding: '24px',
-    background: 'rgba(2, 6, 23, 0.72)',
-    backdropFilter: 'blur(10px)',
+    zIndex: 1000,
+    padding: '16px',
   },
   modalContent: {
     width: '100%',
-    maxWidth: '760px',
-    borderRadius: '20px',
-    border: '1px solid rgba(255,255,255,0.08)',
-    background: 'linear-gradient(180deg, rgba(7, 12, 22, 0.98) 0%, rgba(4, 10, 20, 0.98) 100%)',
-    boxShadow: '0 24px 80px rgba(0,0,0,0.45)',
-    overflow: 'hidden',
+    maxWidth: '480px',
+    backgroundColor: 'rgba(21, 21, 23, 0.95)',
+    border: '1px solid var(--border-color)',
+    borderRadius: '16px',
+    padding: '24px',
+    boxShadow: '0 20px 50px rgba(0, 0, 0, 0.6)',
   },
   modalHeader: {
     display: 'flex',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    gap: '16px',
-    padding: '24px 24px 18px',
-    borderBottom: '1px solid rgba(255,255,255,0.06)',
+    alignItems: 'center',
+    marginBottom: '20px',
+    paddingBottom: '12px',
+    borderBottom: '1px solid var(--border-color)',
   },
   modalTitle: {
-    margin: 0,
-    color: '#fff',
-    fontSize: '1.75rem',
+    fontSize: '1.25rem',
     fontWeight: 700,
+    color: '#ffffff',
+    margin: 0,
   },
-  modalSubtitle: {
-    margin: '6px 0 0',
-    color: 'rgba(226, 232, 240, 0.68)',
-    fontSize: '0.88rem',
-  },
-  closeBtn: {
-    width: '40px',
-    height: '40px',
-    borderRadius: '999px',
-    border: '1px solid rgba(255,255,255,0.08)',
-    background: 'rgba(255,255,255,0.04)',
-    color: '#CBD5E1',
-    display: 'inline-flex',
+  modalCloseBtn: {
+    background: 'none',
+    border: 'none',
+    color: 'var(--grey-blue)',
+    cursor: 'pointer',
+    padding: '4px',
+    display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    cursor: 'pointer',
-    flexShrink: 0,
   },
   modalAlert: {
     display: 'flex',
     alignItems: 'center',
     gap: '8px',
-    margin: '18px 24px 0',
-    padding: '10px 12px',
-    borderRadius: '10px',
-    background: 'rgba(248, 113, 113, 0.12)',
-    border: '1px solid rgba(248, 113, 113, 0.18)',
-    color: '#FCA5A5',
-    fontSize: '0.82rem',
+    padding: '10px 14px',
+    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+    border: '1px solid rgba(239, 68, 68, 0.2)',
+    color: '#ef4444',
+    borderRadius: '8px',
+    marginBottom: '16px',
+    fontSize: '0.85rem',
   },
   form: {
-    padding: '20px 24px 24px',
-  },
-  formGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
-    gap: '18px 20px',
+    display: 'flex',
+    flexDirection: 'column',
   },
   formGroup: {
     display: 'flex',
     flexDirection: 'column',
-    gap: '8px',
-  },
-  formGroupWide: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '8px',
-    gridColumn: '1 / -1',
+    gap: '6px',
+    marginBottom: '16px',
   },
   label: {
-    color: '#E2E8F0',
-    fontSize: '0.84rem',
+    fontSize: '0.82rem',
     fontWeight: 600,
+    color: 'var(--grey-blue)',
   },
   input: {
-    width: '100%',
-    borderRadius: '12px',
-    border: '1px solid rgba(255,255,255,0.08)',
-    background: 'rgba(255,255,255,0.03)',
-    color: '#fff',
-    padding: '12px 14px',
-    fontSize: '0.92rem',
+    backgroundColor: '#18181b',
+    border: '1px solid var(--border-color)',
+    borderRadius: '8px',
+    padding: '10px 14px',
+    color: '#ffffff',
+    fontSize: '0.9rem',
     outline: 'none',
+    width: '100%',
   },
   modalFooter: {
     display: 'flex',
     justifyContent: 'flex-end',
     gap: '12px',
-    paddingTop: '22px',
+    marginTop: '12px',
+    paddingTop: '16px',
+    borderTop: '1px solid var(--border-color)',
   },
   cancelBtn: {
-    minWidth: '120px',
-    borderRadius: '12px',
-    border: '1px solid rgba(255,255,255,0.1)',
-    background: 'rgba(255,255,255,0.03)',
-    color: '#E2E8F0',
-    padding: '12px 16px',
-    fontWeight: 600,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    border: '1px solid var(--border-color)',
+    color: 'var(--silver)',
+    padding: '9px 18px',
+    borderRadius: '8px',
     cursor: 'pointer',
+    fontWeight: 600,
+    fontSize: '0.85rem',
   },
   submitBtn: {
-    minWidth: '140px',
-    borderRadius: '12px',
+    backgroundColor: 'linear-gradient(135deg, var(--navy), var(--m-blue))',
+    background: 'linear-gradient(135deg, var(--navy), var(--m-blue))',
     border: 'none',
-    background: 'linear-gradient(135deg, #0B7BFF, #045BB5)',
-    color: '#fff',
-    padding: '12px 18px',
-    fontWeight: 700,
+    color: '#ffffff',
+    padding: '9px 20px',
+    borderRadius: '8px',
     cursor: 'pointer',
-    boxShadow: '0 8px 24px rgba(6, 113, 224, 0.25)',
+    fontWeight: 600,
+    fontSize: '0.85rem',
+    boxShadow: '0 4px 12px rgba(6, 113, 224, 0.3)',
   },
   dangerBtn: {
-    minWidth: '140px',
-    borderRadius: '12px',
-    border: 'none',
+    backgroundColor: 'linear-gradient(135deg, #EF4444, #DC2626)',
     background: 'linear-gradient(135deg, #EF4444, #DC2626)',
-    color: '#fff',
-    padding: '12px 18px',
-    fontWeight: 700,
+    border: 'none',
+    color: '#ffffff',
+    padding: '9px 20px',
+    borderRadius: '8px',
     cursor: 'pointer',
+    fontWeight: 600,
+    fontSize: '0.85rem',
+    boxShadow: '0 4px 12px rgba(239, 68, 68, 0.3)',
   },
   deleteWrap: {
     padding: '20px 24px 24px',

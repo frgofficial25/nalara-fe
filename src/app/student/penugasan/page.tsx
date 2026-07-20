@@ -385,13 +385,12 @@ export default function PenugasanPage() {
             <div style={s.centered}><Loader2 size={32} style={{ animation: 'spin 1s linear infinite' }} /><p>Memuat...</p></div>
           ) : scTab === 'pending' ? (
             tasks.length === 0 ? (
-              <div style={s.emptyState}><CheckCircle2 size={48} color="#00C853" /><h3>Semua Tugas Selesai! 🎉</h3><p>Tidak ada studi kasus yang perlu dikumpulkan.</p></div>
+              <div style={s.emptyState}><CheckCircle2 size={48} color="#00C853" /><h3>Semua Tugas Selesai</h3><p>Tidak ada studi kasus yang perlu dikumpulkan.</p></div>
             ) : (
               <div style={s.cardList}>
                 {tasks.map(task => {
                   const isGroupTask = task.is_group_project;
                   const isLeader = task.group_info?.is_leader === true;
-                  // If it's a group task and student is not assigned to a group or is not a leader → disable submit
                   const canSubmit = !isGroupTask || isLeader;
                   const noGroupAssigned = isGroupTask && !task.group_info;
 
@@ -475,7 +474,7 @@ export default function PenugasanPage() {
                     <div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
                         <span style={{ ...s.statusBadge, background: sub.is_released ? 'rgba(0,200,83,0.12)' : 'rgba(255,178,64,0.12)', color: sub.is_released ? '#00C853' : '#FFB240' }}>
-                          {sub.is_released ? '✓ Nilai Dirilis' : '⏳ Proses Verifikasi'}
+                          {sub.is_released ? 'Nilai Dirilis' : 'Proses Verifikasi'}
                         </span>
                         <span style={s.courseLabel}>{sub.tugas?.pembelajaran?.title || '-'}</span>
                       </div>
@@ -486,7 +485,7 @@ export default function PenugasanPage() {
                         <div style={s.scoreItem}>
                           <span style={s.scoreLabel}>Status Verifikasi</span>
                           <span style={{ fontSize: '0.78rem', color: (sub.lecture_status === 'Verified' || sub.mentor_status === 'Verified') ? '#00C853' : 'var(--grey-blue)' }}>
-                            {(sub.lecture_status === 'Verified' || sub.mentor_status === 'Verified') ? '✓ Diverifikasi' : '○ Pending'}
+                            {(sub.lecture_status === 'Verified' || sub.mentor_status === 'Verified') ? 'Diverifikasi' : 'Pending'}
                           </span>
                         </div>
                       </div>
@@ -521,7 +520,7 @@ export default function PenugasanPage() {
             <div style={s.centered}><Loader2 size={32} style={{ animation: 'spin 1s linear infinite' }} /><p>Memuat kuis...</p></div>
           ) : quizTab === 'pending' ? (
             quizzes.filter(quiz => !getAttempt(quiz.id)).length === 0 ? (
-              <div style={s.emptyState}><CheckCircle2 size={48} color="#00C853" /><h3>Semua Kuis Selesai! 🎉</h3><p>Tidak ada kuis yang belum dikerjakan.</p></div>
+              <div style={s.emptyState}><CheckCircle2 size={48} color="#00C853" /><h3>Semua Kuis Selesai</h3><p>Tidak ada kuis yang belum dikerjakan.</p></div>
             ) : (
               <div style={s.cardList}>
                 {quizzes.filter(quiz => !getAttempt(quiz.id)).map(quiz => {
@@ -620,11 +619,11 @@ export default function PenugasanPage() {
       {uploadTask && (
         <Portal>
           <div style={s.overlay}>
-            <div style={{ ...s.modal, padding: '24px' }} className="glass-panel">
-            <div style={s.modalHead}>
+            <div style={{ ...s.modal, maxWidth: 540, padding: '24px', borderRadius: '16px' }} className="glass-panel">
+            <div style={{ ...s.modalHead, paddingBottom: 16, borderBottom: '1px solid var(--border-color)', marginBottom: 20 }}>
               <div>
-                <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 700, color: '#fff' }}>Kumpulkan Tugas</h3>
-                <p style={{ margin: '4px 0 0', fontSize: '0.82rem', color: 'var(--grey-blue)' }}>{uploadTask.nama_tugas}</p>
+                <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 700, color: '#fff' }}>Kumpulkan Tugas Studi Kasus</h3>
+                <p style={{ margin: '4px 0 0', fontSize: '0.82rem', color: 'var(--azure)' }}>{uploadTask.nama_tugas}</p>
               </div>
               <button onClick={() => setUploadTask(null)} style={s.closeBtn}><X size={18} /></button>
             </div>
@@ -633,43 +632,43 @@ export default function PenugasanPage() {
               {!submitSuccess && uploadTask?.is_group_project && uploadTask.group_info?.is_leader && (
                 <div style={{
                   display: 'flex', alignItems: 'flex-start', gap: 10,
-                  padding: '10px 14px', borderRadius: 8, marginBottom: 4,
-                  background: 'rgba(255,193,7,0.08)', border: '1px solid rgba(255,193,7,0.2)'
+                  padding: '12px 16px', borderRadius: 10, marginBottom: 16,
+                  background: 'rgba(255,193,7,0.08)', border: '1px solid rgba(255,193,7,0.25)'
                 }}>
-                  <Crown size={16} color="#FFC107" style={{ flexShrink: 0, marginTop: 2 }} />
+                  <Crown size={18} color="#FFC107" style={{ flexShrink: 0, marginTop: 2 }} />
                   <div>
-                    <p style={{ margin: 0, fontSize: '0.82rem', fontWeight: 600, color: '#FFC107' }}>
-                      Kamu adalah Ketua {uploadTask.group_info.group_name}
+                    <p style={{ margin: 0, fontSize: '0.84rem', fontWeight: 700, color: '#FFC107' }}>
+                      Status: Ketua {uploadTask.group_info.group_name}
                     </p>
-                    <p style={{ margin: '2px 0 0', fontSize: '0.78rem', color: 'var(--grey-blue)' }}>
-                      Nilai yang kamu dapatkan akan otomatis diberikan kepada seluruh anggota kelompok.
+                    <p style={{ margin: '2px 0 0', fontSize: '0.78rem', color: 'var(--grey-blue)', lineHeight: 1.4 }}>
+                      File yang kamu kumpulkan akan diproses oleh AI dan nilainya otomatis didistribusikan ke seluruh anggota kelompok.
                     </p>
                   </div>
                 </div>
               )}
               {submitSuccess ? (
                 <div style={s.successBox}>
-                  <CheckCircle2 size={40} color="#00C853" />
-                  <strong style={{ color: '#fff', marginTop: 8 }}>Berhasil Dikumpulkan!</strong>
-                  <span style={{ fontSize: '0.82rem', color: 'var(--grey-blue)' }}>Sistem sedang menilai kode Anda dengan AI...</span>
+                  <CheckCircle2 size={44} color="#00C853" />
+                  <strong style={{ color: '#fff', marginTop: 12, fontSize: '1.05rem' }}>Berhasil Dikumpulkan!</strong>
+                  <span style={{ fontSize: '0.84rem', color: 'var(--grey-blue)', marginTop: 4 }}>Sistem sedang menganalisis & menilai kode notebook Anda dengan AI...</span>
                 </div>
               ) : (
-                <form onSubmit={handleSubmitSc} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                <form onSubmit={handleSubmitSc} style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
                   <div style={s.fg}>
-                    <label style={s.label}>1. Jupyter Notebook (.ipynb) <span style={{ color: '#FF5252' }}>*</span></label>
+                    <label style={s.label}>1. File Jupyter Notebook (.ipynb) <span style={{ color: '#FF5252' }}>*</span></label>
                     <div style={{
                       position: 'relative',
                       display: 'flex',
                       alignItems: 'center',
-                      gap: '10px',
-                      background: 'rgba(255, 255, 255, 0.02)',
-                      border: ipynbFile ? '1px solid var(--azure)' : '1px solid var(--border-color)',
-                      borderRadius: '8px',
-                      padding: '12px 16px',
+                      gap: '12px',
+                      background: ipynbFile ? 'rgba(6, 113, 224, 0.08)' : '#18181b',
+                      border: ipynbFile ? '1px solid var(--azure)' : '1px dashed var(--border-color)',
+                      borderRadius: '10px',
+                      padding: '14px 16px',
                       cursor: 'pointer',
                       transition: 'all 0.2s',
                     }}>
-                      <FileText size={16} color={ipynbFile ? 'var(--azure)' : 'var(--grey-blue)'} />
+                      <FileText size={20} color={ipynbFile ? 'var(--azure)' : 'var(--grey-blue)'} />
                       <input 
                         type="file" 
                         required 
@@ -684,26 +683,31 @@ export default function PenugasanPage() {
                           cursor: 'pointer'
                         }} 
                       />
-                      <span style={{ fontSize: '0.88rem', color: ipynbFile ? '#fff' : 'var(--grey-blue)' }}>
-                        {ipynbFile ? ipynbFile.name : 'Pilih file Jupyter Notebook...'}
-                      </span>
+                      <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
+                        <span style={{ fontSize: '0.88rem', fontWeight: 600, color: ipynbFile ? '#fff' : 'var(--grey-blue)' }}>
+                          {ipynbFile ? ipynbFile.name : 'Klik atau seret file .ipynb di sini'}
+                        </span>
+                        {ipynbFile && <span style={{ fontSize: '0.74rem', color: 'var(--azure)', marginTop: 2 }}>{Math.round(ipynbFile.size / 1024)} KB</span>}
+                      </div>
+                      <Upload size={16} color="var(--grey-blue)" />
                     </div>
                   </div>
+
                   <div style={s.fg}>
-                    <label style={s.label}>2. Laporan PDF <span style={{ color: '#FF5252' }}>*</span></label>
+                    <label style={s.label}>2. File Laporan (.pdf) <span style={{ color: '#FF5252' }}>*</span></label>
                     <div style={{
                       position: 'relative',
                       display: 'flex',
                       alignItems: 'center',
-                      gap: '10px',
-                      background: 'rgba(255, 255, 255, 0.02)',
-                      border: pdfFile ? '1px solid var(--azure)' : '1px solid var(--border-color)',
-                      borderRadius: '8px',
-                      padding: '12px 16px',
+                      gap: '12px',
+                      background: pdfFile ? 'rgba(6, 113, 224, 0.08)' : '#18181b',
+                      border: pdfFile ? '1px solid var(--azure)' : '1px dashed var(--border-color)',
+                      borderRadius: '10px',
+                      padding: '14px 16px',
                       cursor: 'pointer',
                       transition: 'all 0.2s',
                     }}>
-                      <FileText size={16} color={pdfFile ? 'var(--azure)' : 'var(--grey-blue)'} />
+                      <FileText size={20} color={pdfFile ? 'var(--azure)' : 'var(--grey-blue)'} />
                       <input 
                         type="file" 
                         required 
@@ -718,20 +722,25 @@ export default function PenugasanPage() {
                           cursor: 'pointer'
                         }} 
                       />
-                      <span style={{ fontSize: '0.88rem', color: pdfFile ? '#fff' : 'var(--grey)' }}>
-                        {pdfFile ? pdfFile.name : 'Pilih file Laporan PDF...'}
-                      </span>
+                      <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
+                        <span style={{ fontSize: '0.88rem', fontWeight: 600, color: pdfFile ? '#fff' : 'var(--grey-blue)' }}>
+                          {pdfFile ? pdfFile.name : 'Klik atau seret file .pdf di sini'}
+                        </span>
+                        {pdfFile && <span style={{ fontSize: '0.74rem', color: 'var(--azure)', marginTop: 2 }}>{Math.round(pdfFile.size / 1024)} KB</span>}
+                      </div>
+                      <Upload size={16} color="var(--grey-blue)" />
                     </div>
-                    {pdfFile && <span style={s.fileHint}>File terpilih: {pdfFile.name} ({Math.round(pdfFile.size / 1024)} KB)</span>}
                   </div>
+
                   <div style={s.fg}>
-                    <label style={s.label}>Catatan (Opsional)</label>
-                    <textarea rows={3} value={notes} onChange={e => setNotes(e.target.value)} placeholder="Catatan pengerjaan..." style={s.textarea} />
+                    <label style={s.label}>Catatan Tambahan (Opsional)</label>
+                    <textarea rows={3} value={notes} onChange={e => setNotes(e.target.value)} placeholder="Tuliskan catatan penjelasan pengerjaan..." style={s.textarea} />
                   </div>
-                  <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, borderTop: '1px solid rgba(255, 255, 255, 0.08)', paddingTop: 16 }}>
+
+                  <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12, borderTop: '1px solid var(--border-color)', paddingTop: 18, marginTop: 6 }}>
                     <button type="button" onClick={() => setUploadTask(null)} style={s.btnGhost}>Batal</button>
                     <button type="submit" disabled={submitting} style={s.btnPrimary}>
-                      {submitting ? <><Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} /><span>Mengirim...</span></> : <><Upload size={14} /><span>Kirim Sekarang</span></>}
+                      {submitting ? <><Loader2 size={15} style={{ animation: 'spin 1s linear infinite' }} /><span>Mengirim & Menilai AI...</span></> : <><Upload size={15} /><span>Kirim Sekarang</span></>}
                     </button>
                   </div>
                 </form>
