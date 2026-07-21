@@ -284,7 +284,7 @@ function UploadSection({ tugasId, onSuccess }: { tugasId: string; onSuccess: () 
           id="materi-file-input"
           type="file"
           onChange={(e) => { if (e.target.files?.[0]) setSelectedFile(e.target.files[0]); }}
-          accept=".pdf,.doc,.docx,.ppt,.pptx,.mp4,.webm,.mov,.avi"
+          accept=".pdf,.doc,.docx,.ppt,.pptx,.mp4,.webm,.mov,.avi,.ipynb"
           style={{ display: 'none' }}
         />
       </div>
