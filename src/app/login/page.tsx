@@ -229,18 +229,18 @@ export default function LoginPage() {
 
               {/* Login Form */}
               <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-                {/* Username Input */}
+                {/* Email Input */}
                 <div style={styles.inputGroup}>
-                  <label htmlFor="username" style={styles.label}>Username</label>
+                  <label htmlFor="email" style={styles.label}>Email</label>
                   <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
                     <svg style={styles.inputIcon} width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-                      <circle cx="12" cy="7" r="4" />
+                      <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
+                      <polyline points="22,6 12,13 2,6" />
                     </svg>
                     <input
-                      id="username"
-                      type="text"
-                      placeholder="Enter your username"
+                      id="email"
+                      type="email"
+                      placeholder="Enter your email"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       required

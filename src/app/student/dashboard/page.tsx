@@ -11,7 +11,7 @@ import { getStoredToken } from '@/services/auth';
 import { useRouter } from 'next/navigation';
 
 interface UpcomingTask {
-  id: number;
+  id: number | string;
   task_name: string;
   course_name: string;
   module_name: string;
@@ -35,8 +35,8 @@ interface StudentData {
 }
 
 interface StudentTaskRaw {
-  id_tugas?: number;
-  id?: number;
+  id_tugas?: number | string;
+  id?: number | string;
   nama_tugas?: string;
   task_name?: string;
   pembelajaran_asal?: string;
@@ -44,6 +44,7 @@ interface StudentTaskRaw {
   modul_asal?: string;
   module_name?: string;
   deadline?: string;
+  deadline_at?: string;
 }
 
 interface StudentDashboardResponse {
@@ -191,6 +192,7 @@ export default function StudentDashboard() {
         } catch { }
       }
 
+      // Fetch student dashboard main data
       const response = await apiGet<StudentDashboardApiResponse>(
         '/api/dashboard/student',
         {
@@ -204,14 +206,28 @@ export default function StudentDashboard() {
         throw new Error('Format response data tidak valid');
       }
 
+      // Fetch authentic task deadline times directly from the /api/tugas endpoint
+      let activeTugasList: any[] = [];
+      try {
+        const tugasRes = await apiGet<any>('/api/tugas', { token: token || undefined, headers });
+        activeTugasList = tugasRes && 'data' in tugasRes ? tugasRes.data : tugasRes;
+      } catch (tugasErr) {
+        console.warn('Failed to fetch authentic task list, falling back to dashboard items:', tugasErr);
+      }
+
       const rawTasks = rawData.tugas_mendesak || rawData.upcoming_tasks || [];
-      const upcoming_tasks = rawTasks.map((t: StudentTaskRaw, idx: number) => ({
-        id: t.id_tugas || t.id || idx + 1,
-        task_name: t.nama_tugas || t.task_name || 'Tugas Baru',
-        course_name: t.pembelajaran_asal || t.course_name || 'Kelas',
-        module_name: t.modul_asal || t.module_name || 'Modul',
-        deadline: t.deadline || 'Segera'
-      }));
+      const upcoming_tasks = rawTasks.map((t: StudentTaskRaw, idx: number) => {
+        // Match backend's task object to find corresponding task from /api/tugas endpoint
+        const matchedTugas = activeTugasList.find(at => at.uuid_tugas === t.id_tugas);
+        return {
+          id: t.id_tugas || t.id || idx + 1,
+          task_name: t.nama_tugas || t.task_name || 'Tugas Baru',
+          course_name: t.pembelajaran_asal || t.course_name || 'Kelas',
+          module_name: t.modul_asal || t.module_name || 'Modul',
+          deadline: matchedTugas?.deadline_at || t.deadline_at || t.deadline || 'Segera'
+        };
+      });
+
       setData({
         current_level: rawData.current_level || '',
         enrolled_courses: rawData.enrolled_courses || 0,

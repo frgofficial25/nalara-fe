@@ -208,33 +208,11 @@ export default function StudentProfilePage() {
             <div style={s.actionCard} className="glass-panel">
               <div style={s.actionCardHeader}>
                 <h3 style={s.actionCardTitle}>Informasi Pribadi</h3>
-                {!editing && (
-                  <button onClick={() => setEditing(true)} style={s.editBtn}>
-                    <Edit2 size={12} /><span>Edit Profil</span>
-                  </button>
-                )}
               </div>
 
-              {!editing ? (
-                <p style={s.actionCardDesc}>
-                  Nama lengkap dan username Anda digunakan di forum, pengumpulan tugas, dan leaderboard kuis.
-                </p>
-              ) : (
-                <form onSubmit={handleSave} style={s.form}>
-                  <div style={s.fg}>
-                    <label style={s.label}>Nama Lengkap</label>
-                    <input value={form.full_name} onChange={e => setForm({ ...form, full_name: e.target.value })} style={s.input} required />
-                  </div>
-                  <div style={s.fg}>
-                    <label style={s.label}>Username</label>
-                    <input value={form.username} onChange={e => setForm({ ...form, username: e.target.value })} style={s.input} required />
-                  </div>
-                  <div style={{ display: 'flex', gap: 10, marginTop: 8 }}>
-                    <button type="button" onClick={() => setEditing(false)} style={s.btnGhost}>Batal</button>
-                    <button type="submit" disabled={saving} style={s.btnPrimary}>{saving ? 'Menyimpan...' : 'Simpan'}</button>
-                  </div>
-                </form>
-              )}
+              <p style={s.actionCardDesc}>
+                Nama lengkap dan username Anda digunakan di forum, pengumpulan tugas, dan leaderboard kuis. Hubungi pihak administrasi jika terdapat kesalahan data.
+              </p>
             </div>
 
             {/* Keamanan Card */}

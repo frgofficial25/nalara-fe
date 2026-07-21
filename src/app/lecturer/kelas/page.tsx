@@ -74,6 +74,8 @@ export default function CourseManagement() {
   const [scheduleDatetime, setScheduleDatetime] = useState('');
 
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<{ id: string; title: string } | null>(null);
+  
   const showToast = (message: string, type: 'success' | 'error' = 'success') => {
     setToast({ message, type });
     setTimeout(() => setToast(null), 4000);
@@ -327,8 +329,6 @@ export default function CourseManagement() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Apakah Anda yakin ingin menghapus pembelajaran ini?')) return;
-
     try {
       setError(null);
       const auth = getAuthHeaders();
@@ -346,6 +346,7 @@ export default function CourseManagement() {
       if (!res.ok) throw new Error('Gagal menghapus pembelajaran.');
       fetchCourses();
       showToast('Kelas berhasil dihapus!');
+      setConfirmDelete(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Gagal menghapus pembelajaran.');
       showToast(err instanceof Error ? err.message : 'Gagal menghapus pembelajaran.', 'error');
@@ -634,7 +635,7 @@ export default function CourseManagement() {
                     <Edit2 size={13} color="var(--azure)" />
                   </button>
                   <button 
-                    onClick={(e) => { e.stopPropagation(); handleDelete(course.id); }} 
+                    onClick={(e) => { e.stopPropagation(); setConfirmDelete({ id: course.id, title: course.title }); }} 
                     className="action-btn-delete"
                     style={s.deleteActionBtn}
                   >
@@ -999,6 +1000,92 @@ export default function CourseManagement() {
               >
                 Tutup
               </button>
+            </div>
+          </div>
+        </Portal>
+      )}
+
+      {confirmDelete && (
+        <Portal>
+          <div style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(5, 7, 15, 0.85)',
+            backdropFilter: 'blur(12px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 99999,
+          }}>
+            <div style={{
+              background: 'rgba(20, 24, 38, 0.95)',
+              border: '1px solid rgba(239, 68, 68, 0.25)',
+              borderRadius: '24px',
+              padding: '32px 28px',
+              width: '100%',
+              maxWidth: '420px',
+              textAlign: 'center',
+              boxShadow: '0 30px 70px rgba(0,0,0,0.7)',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: 20,
+            }}>
+              <div style={{
+                width: '64px',
+                height: '64px',
+                borderRadius: '50%',
+                background: 'rgba(239, 68, 68, 0.12)',
+                border: '1px solid rgba(239, 68, 68, 0.25)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}>
+                <Trash2 size={30} color="#FF5252" />
+              </div>
+              <div>
+                <h3 style={{ margin: '0 0 8px 0', color: '#fff', fontSize: '1.25rem', fontWeight: 800 }}>
+                  Hapus Pembelajaran?
+                </h3>
+                <p style={{ margin: 0, color: '#94a3b8', fontSize: '0.88rem', lineHeight: 1.5 }}>
+                  Apakah Anda yakin ingin menghapus kelas <strong>{confirmDelete.title}</strong>? Tindakan ini tidak dapat dibatalkan.
+                </p>
+              </div>
+              <div style={{ display: 'flex', width: '100%', gap: 12 }}>
+                <button 
+                  onClick={() => setConfirmDelete(null)} 
+                  style={{
+                    flex: 1,
+                    padding: '12px 0',
+                    borderRadius: '10px',
+                    border: '1px solid rgba(255, 255, 255, 0.08)',
+                    background: 'rgba(255, 255, 255, 0.03)',
+                    color: '#cbd5e1',
+                    fontSize: '0.92rem',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                  }}
+                >
+                  Batal
+                </button>
+                <button 
+                  onClick={() => handleDelete(confirmDelete.id)} 
+                  style={{
+                    flex: 1,
+                    padding: '12px 0',
+                    borderRadius: '10px',
+                    border: 'none',
+                    background: 'linear-gradient(135deg, #FF5252, #D32F2F)',
+                    color: '#fff',
+                    fontSize: '0.92rem',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    boxShadow: '0 4px 14px rgba(255, 82, 82, 0.25)',
+                  }}
+                >
+                  Ya, Hapus
+                </button>
+              </div>
             </div>
           </div>
         </Portal>
