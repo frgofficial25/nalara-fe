@@ -273,16 +273,21 @@ function TaskQuestionCard({
 }
 
 function TaskFileViewerModal({
+  taskId,
   url,
   title,
   onClose
 }: {
+  taskId: string;
   url: string;
   title: string;
   onClose: () => void;
 }) {
   const [viewMode, setViewMode] = useState<'google' | 'direct'>('google');
 
+  // Use API proxy endpoint for file access
+  const apiProxyUrl = `/api/tugas/${taskId}/file-url`;
+  
   // Strip fl_attachment if present so preview works
   let cleanUrl = url.replace('/upload/fl_attachment/', '/upload/');
   const pathOnly = cleanUrl.split('?')[0].split('#')[0].toLowerCase();
@@ -300,8 +305,8 @@ function TaskFileViewerModal({
     normalizedPdfUrl = parts[1] ? `${base}?${parts[1]}` : base;
   }
 
-  const googleViewerUrl = `https://docs.google.com/viewer?url=${encodeURIComponent(normalizedPdfUrl)}&embedded=true`;
-  const officeUrl = `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(url)}`;
+  const googleViewerUrl = `https://docs.google.com/viewer?url=${encodeURIComponent(apiProxyUrl)}&embedded=true`;
+  const officeUrl = `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(apiProxyUrl)}`;
 
   return (
     <Portal>
@@ -355,7 +360,7 @@ function TaskFileViewerModal({
               )}
 
               <button
-                onClick={() => openInNewTab(normalizedPdfUrl, title, ext)}
+                onClick={() => openInNewTab(apiProxyUrl, title, ext)}
                 style={{
                   display: 'inline-flex', alignItems: 'center', gap: 5,
                   padding: '6px 14px', borderRadius: 8, fontSize: '0.78rem', fontWeight: 600,
@@ -367,7 +372,7 @@ function TaskFileViewerModal({
               </button>
 
               <button
-                onClick={() => downloadFile(normalizedPdfUrl, title)}
+                onClick={() => downloadFile(apiProxyUrl, title)}
                 style={{
                   display: 'inline-flex', alignItems: 'center', gap: 5,
                   padding: '6px 14px', borderRadius: 8, fontSize: '0.78rem', fontWeight: 600,
@@ -385,7 +390,7 @@ function TaskFileViewerModal({
           <div style={{ flex: 1, background: '#fff', position: 'relative' }}>
             {isPDF ? (
               <iframe
-                src={normalizedPdfUrl}
+                src={viewMode === 'google' ? googleViewerUrl : apiProxyUrl}
                 title={title}
                 style={{ width: '100%', height: '100%', border: 'none' }}
                 allow="fullscreen"
@@ -406,7 +411,7 @@ function TaskFileViewerModal({
                   </p>
                 </div>
                 <button
-                  onClick={() => downloadFile(url, `${title}.ipynb`)}
+                  onClick={() => downloadFile(apiProxyUrl, `${title}.ipynb`)}
                   style={{
                     display: 'inline-flex', alignItems: 'center', gap: 8,
                     padding: '10px 22px', borderRadius: 10, fontSize: '0.9rem', fontWeight: 600,
@@ -419,7 +424,7 @@ function TaskFileViewerModal({
               </div>
             ) : (
               <iframe
-                src={url}
+                src={apiProxyUrl}
                 title={title}
                 style={{ width: '100%', height: '100%', border: 'none' }}
               />
@@ -435,7 +440,7 @@ function TaskFileViewerModal({
 export default function PenugasanPage() {
   const router = useRouter();
   const [mainTab, setMainTab] = useState<'studycase' | 'quiz'>('studycase');
-  const [taskPreviewModal, setTaskPreviewModal] = useState<{ url: string; title: string } | null>(null);
+  const [taskPreviewModal, setTaskPreviewModal] = useState<{ taskId: string; url: string; title: string } | null>(null);
 
   // Toast state
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
@@ -771,7 +776,7 @@ export default function PenugasanPage() {
                       </div>
                       <h3 style={s.taskTitle}>{task.nama_tugas}</h3>
                       <p style={s.taskMeta}>Modul: {task.nama_modul}</p>
-                      <TaskQuestionCard task={task} onOpenPreview={(url, title) => setTaskPreviewModal({ url, title })} />
+                      <TaskQuestionCard task={task} onOpenPreview={(url, title) => setTaskPreviewModal({ taskId: task.id_tugas, url, title })} />
                       {isGroupTask && !task.group_info && (
                         <p style={{ fontSize: '0.78rem', color: '#FFB240', marginTop: 6, display: 'flex', alignItems: 'center', gap: 4 }}>
                           <AlertCircle size={12} /> Anda belum ditugaskan ke kelompok manapun untuk tugas ini.
@@ -984,7 +989,7 @@ export default function PenugasanPage() {
                 </div>
               )}
               {uploadTask && (
-                <TaskQuestionCard task={uploadTask} onOpenPreview={(url, title) => setTaskPreviewModal({ url, title })} />
+                <TaskQuestionCard task={uploadTask} onOpenPreview={(url, title) => setTaskPreviewModal({ taskId: uploadTask.id_tugas, url, title })} />
               )}
               {submitSuccess ? (
                 <div style={s.successBox}>
@@ -1230,7 +1235,7 @@ export default function PenugasanPage() {
                       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                         <button
                           type="button"
-                          onClick={() => setTaskPreviewModal({ url: selectedSub.pdf_url!, title: selectedSub.tugas?.title || 'Laporan Submission' })}
+                          onClick={() => setTaskPreviewModal({ taskId: selectedSub.uuid_tugas, url: selectedSub.pdf_url!, title: selectedSub.tugas?.title || 'Laporan Submission' })}
                           style={s.attachLink}
                         >
                           <Eye size={14} /><span>Pratinjau Laporan (.pdf)</span>
@@ -1327,6 +1332,7 @@ export default function PenugasanPage() {
 
       {taskPreviewModal && (
         <TaskFileViewerModal
+          taskId={taskPreviewModal.taskId}
           url={taskPreviewModal.url}
           title={taskPreviewModal.title}
           onClose={() => setTaskPreviewModal(null)}
