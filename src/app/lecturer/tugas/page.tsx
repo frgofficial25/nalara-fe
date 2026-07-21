@@ -3,7 +3,8 @@
 import React, { useState, useEffect } from 'react';
 import {
   FileText, Plus, Trash2, Edit2, X, Loader2, AlertCircle,
-  Video, BookOpenCheck, FlaskConical, PencilLine, Filter, Eye, CheckCircle2
+  Video, BookOpenCheck, FlaskConical, PencilLine, Filter, Eye, CheckCircle2,
+  Calendar, Clock
 } from 'lucide-react';
 import { apiGet, apiPost, apiPut, apiDelete } from '@/lib/api';
 import { getStoredToken } from '@/services/auth';
@@ -50,6 +51,8 @@ export default function TugasPage() {
     content_text: '', // Simplified content input for Reading
     uuid_pembelajaran: '',
     uuid_modul: '',
+    published_at: '',
+    deadline_at: '',
   });
   const [submitting, setSubmitting] = useState(false);
 
@@ -326,6 +329,8 @@ export default function TugasPage() {
         type: form.type,
         uuid_pembelajaran: form.uuid_pembelajaran,
         uuid_modul: form.uuid_modul || null,
+        published_at: form.published_at || null,
+        deadline_at: form.deadline_at || null,
       };
       if (form.type === 'Video' && form.youtube_link) {
         payload.youtube_link = form.youtube_link;
@@ -362,6 +367,8 @@ export default function TugasPage() {
       const payload: Record<string, unknown> = {
         title: form.title,
         type: form.type,
+        published_at: form.published_at || null,
+        deadline_at: form.deadline_at || null,
       };
       if (form.type === 'Video') {
         payload.youtube_link = form.youtube_link;
@@ -439,6 +446,8 @@ export default function TugasPage() {
       content_text: '',
       uuid_pembelajaran: '',
       uuid_modul: '',
+      published_at: '',
+      deadline_at: '',
     });
   };
 
@@ -459,6 +468,13 @@ export default function TugasPage() {
         initialText = typeof tugas.content === 'string' ? tugas.content : JSON.stringify(tugas.content);
       }
     }
+    // Format dates to datetime-local input format (YYYY-MM-DDTHH:mm)
+    const toDatetimeLocal = (iso: string | null | undefined) => {
+      if (!iso) return '';
+      const d = new Date(iso);
+      const pad = (n: number) => String(n).padStart(2, '0');
+      return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    };
     setForm({
       title: tugas.title,
       type: tugas.type,
@@ -466,6 +482,8 @@ export default function TugasPage() {
       content_text: initialText,
       uuid_pembelajaran: tugas.uuid_pembelajaran || '',
       uuid_modul: tugas.uuid_modul || '',
+      published_at: toDatetimeLocal((tugas as any).published_at),
+      deadline_at: toDatetimeLocal((tugas as any).deadline_at),
     });
     setShowEditModal(true);
   };
@@ -608,6 +626,33 @@ export default function TugasPage() {
                         <span style={s.metaBadge}>📦 {tugas.modul.title}</span>
                       )}
                       {tugas.slug && <span style={s.slugBadge}>/{tugas.slug}</span>}
+                      {/* Tanggal Publish & Deadline */}
+                      {((tugas as any).published_at || (tugas as any).deadline_at) && (
+                        <div style={{ display: 'flex', gap: 6, marginTop: 8, flexWrap: 'wrap' }}>
+                          {(tugas as any).published_at && (
+                            <span style={{
+                              display: 'inline-flex', alignItems: 'center', gap: 4,
+                              padding: '3px 8px', borderRadius: 6, fontSize: '0.7rem', fontWeight: 600,
+                              background: 'rgba(16, 185, 129, 0.08)', color: '#34d399',
+                              border: '1px solid rgba(16, 185, 129, 0.2)'
+                            }}>
+                              <Calendar size={10} />
+                              {new Date((tugas as any).published_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
+                            </span>
+                          )}
+                          {(tugas as any).deadline_at && (
+                            <span style={{
+                              display: 'inline-flex', alignItems: 'center', gap: 4,
+                              padding: '3px 8px', borderRadius: 6, fontSize: '0.7rem', fontWeight: 600,
+                              background: 'rgba(239, 68, 68, 0.08)', color: '#fca5a5',
+                              border: '1px solid rgba(239, 68, 68, 0.2)'
+                            }}>
+                              <Clock size={10} />
+                              {new Date((tugas as any).deadline_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
+                            </span>
+                          )}
+                        </div>
+                      )}
                     </div>
                     <div style={s.actionsRow}>
                       <button onClick={() => handleViewDetail(tugas)} style={s.viewBtn} title="View Detail">
@@ -812,6 +857,27 @@ export default function TugasPage() {
                     />
                   </div>
                 )}
+                {/* Tanggal Publish & Deadline */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                  <div style={s.formGroup}>
+                    <label style={s.label}>📅 Tanggal Mulai / Publish</label>
+                    <input
+                      type="datetime-local"
+                      value={form.published_at}
+                      onChange={(e) => setForm({ ...form, published_at: e.target.value })}
+                      style={s.input}
+                    />
+                  </div>
+                  <div style={s.formGroup}>
+                    <label style={{ ...s.label, color: '#fca5a5' }}>🔴 Tanggal Deadline</label>
+                    <input
+                      type="datetime-local"
+                      value={form.deadline_at}
+                      onChange={(e) => setForm({ ...form, deadline_at: e.target.value })}
+                      style={{ ...s.input, borderColor: form.deadline_at ? 'rgba(239,68,68,0.4)' : undefined }}
+                    />
+                  </div>
+                </div>
                 <div style={s.modalFooter}>
                   <button type="button" onClick={() => setShowCreateModal(false)} style={s.cancelBtn}>Cancel</button>
                   <button type="submit" disabled={submitting} style={{ ...s.submitBtn, opacity: submitting ? 0.6 : 1 }}>
@@ -867,6 +933,27 @@ export default function TugasPage() {
                     />
                   </div>
                 )}
+                {/* Tanggal Publish & Deadline */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                  <div style={s.formGroup}>
+                    <label style={s.label}>📅 Tanggal Mulai / Publish</label>
+                    <input
+                      type="datetime-local"
+                      value={form.published_at}
+                      onChange={(e) => setForm({ ...form, published_at: e.target.value })}
+                      style={s.input}
+                    />
+                  </div>
+                  <div style={s.formGroup}>
+                    <label style={{ ...s.label, color: '#fca5a5' }}>🔴 Tanggal Deadline</label>
+                    <input
+                      type="datetime-local"
+                      value={form.deadline_at}
+                      onChange={(e) => setForm({ ...form, deadline_at: e.target.value })}
+                      style={{ ...s.input, borderColor: form.deadline_at ? 'rgba(239,68,68,0.4)' : undefined }}
+                    />
+                  </div>
+                </div>
                 <div style={s.modalFooter}>
                   <button type="button" onClick={() => { setShowEditModal(false); setCurrentTugas(null); }} style={s.cancelBtn}>Cancel</button>
                   <button type="submit" disabled={submitting} style={{ ...s.submitBtn, opacity: submitting ? 0.6 : 1 }}>
@@ -949,6 +1036,27 @@ export default function TugasPage() {
                     >
                       <Eye size={14} /> Pratinjau Soal
                     </button>
+                  </div>
+                )}
+                {/* Tanggal Publish & Deadline */}
+                {((currentTugas as any).published_at || (currentTugas as any).deadline_at) && (
+                  <div style={{ display: 'flex', gap: 16, padding: '12px 16px', background: 'rgba(99,102,241,0.06)', borderRadius: 12, border: '1px solid rgba(99,102,241,0.15)' }}>
+                    {(currentTugas as any).published_at && (
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: '0.72rem', color: '#818cf8', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4 }}>📅 Mulai Pengerjaan</div>
+                        <div style={{ fontSize: '0.85rem', color: '#e2e8f0', fontWeight: 600 }}>
+                          {new Date((currentTugas as any).published_at).toLocaleString('id-ID', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                        </div>
+                      </div>
+                    )}
+                    {(currentTugas as any).deadline_at && (
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: '0.72rem', color: '#fca5a5', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4 }}>🔴 Deadline</div>
+                        <div style={{ fontSize: '0.85rem', color: '#fca5a5', fontWeight: 600 }}>
+                          {new Date((currentTugas as any).deadline_at).toLocaleString('id-ID', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>

@@ -4,7 +4,8 @@ import React, { useState, useEffect } from 'react';
 import {
   Brain, Plus, Sparkles, X, Loader2, AlertCircle,
   CheckCircle, Trash2, Edit2, PlusCircle,
-  FileText, BookOpenCheck, FlaskConical, Video, PencilLine, Filter, Eye
+  FileText, BookOpenCheck, FlaskConical, Video, PencilLine, Filter, Eye,
+  Calendar, Clock
 } from 'lucide-react';
 import { apiGet, apiPost, apiPut, apiDelete, apiUploadPost, apiUpload } from '@/lib/api';
 import { getStoredToken } from '@/services/auth';
@@ -67,6 +68,7 @@ export default function EvaluasiPage() {
     youtube_link: '', content_text: '',
     uuid_pembelajaran: '', uuid_modul: '',
     file: null as File | null, is_group_project: false, group_count: '' as number | '',
+    published_at: '', deadline_at: '',
   });
   const [submitting, setSubmitting] = useState(false);
 
@@ -199,7 +201,7 @@ export default function EvaluasiPage() {
   useEffect(() => { if (selectedCourse) fetchModulesForCourse(selectedCourse); }, [selectedCourse]);
 
   // ── Study Case CRUD ──────────────────────────────────────────────────────
-  const resetForm = () => setForm({ title: '', type: 'CaseStudy', youtube_link: '', content_text: '', uuid_pembelajaran: '', uuid_modul: '', file: null, is_group_project: false, group_count: '' });
+  const resetForm = () => setForm({ title: '', type: 'CaseStudy', youtube_link: '', content_text: '', uuid_pembelajaran: '', uuid_modul: '', file: null, is_group_project: false, group_count: '', published_at: '', deadline_at: '' });
   const getFormModules = () => form.uuid_pembelajaran ? modules.filter(m => m.uuid_pembelajaran === form.uuid_pembelajaran) : modules;
 
   const handleCreate = async (e: React.FormEvent) => {
@@ -212,6 +214,8 @@ export default function EvaluasiPage() {
       payloadForm.append('type', form.type);
       payloadForm.append('uuid_pembelajaran', form.uuid_pembelajaran);
       if (form.uuid_modul) payloadForm.append('uuid_modul', form.uuid_modul);
+      if (form.published_at) payloadForm.append('published_at', form.published_at);
+      if (form.deadline_at) payloadForm.append('deadline_at', form.deadline_at);
       
       if (form.type === 'Video' && form.youtube_link) {
         payloadForm.append('youtube_link', form.youtube_link);
@@ -245,6 +249,8 @@ export default function EvaluasiPage() {
       payloadForm.append('type', form.type);
       if (form.uuid_pembelajaran) payloadForm.append('uuid_pembelajaran', form.uuid_pembelajaran);
       if (form.uuid_modul) payloadForm.append('uuid_modul', form.uuid_modul);
+      if (form.published_at) payloadForm.append('published_at', form.published_at);
+      if (form.deadline_at) payloadForm.append('deadline_at', form.deadline_at);
       
       if (form.type === 'Video' && form.youtube_link) {
         payloadForm.append('youtube_link', form.youtube_link);
@@ -292,6 +298,12 @@ export default function EvaluasiPage() {
         initialText = typeof tugas.content === 'string' ? tugas.content : JSON.stringify(tugas.content);
       }
     }
+    const toDatetimeLocal = (iso: string | null | undefined) => {
+      if (!iso) return '';
+      const d = new Date(iso);
+      const pad = (n: number) => String(n).padStart(2, '0');
+      return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    };
     setForm({
       title: tugas.title,
       type: tugas.type,
@@ -302,6 +314,8 @@ export default function EvaluasiPage() {
       file: null,
       is_group_project: (tugas as any).is_group_project || false,
       group_count: (tugas as any).group_count || '',
+      published_at: toDatetimeLocal((tugas as any).published_at),
+      deadline_at: toDatetimeLocal((tugas as any).deadline_at),
     });
     setShowEditModal(true);
   };
@@ -551,6 +565,33 @@ export default function EvaluasiPage() {
                       {tugas.pembelajaran?.title && <span>📚 {tugas.pembelajaran.title}</span>}
                       {tugas.modul?.title && <span>📦 {tugas.modul.title}</span>}
                     </div>
+                    {/* Tanggal Publish & Deadline */}
+                    {((tugas as any).published_at || (tugas as any).deadline_at) && (
+                      <div style={{ display: 'flex', gap: 6, marginTop: 8, flexWrap: 'wrap' }}>
+                        {(tugas as any).published_at && (
+                          <span style={{
+                            display: 'inline-flex', alignItems: 'center', gap: 4,
+                            padding: '3px 8px', borderRadius: 6, fontSize: '0.7rem', fontWeight: 600,
+                            background: 'rgba(16, 185, 129, 0.08)', color: '#34d399',
+                            border: '1px solid rgba(16, 185, 129, 0.2)'
+                          }}>
+                            <Calendar size={10} />
+                            {new Date((tugas as any).published_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
+                          </span>
+                        )}
+                        {(tugas as any).deadline_at && (
+                          <span style={{
+                            display: 'inline-flex', alignItems: 'center', gap: 4,
+                            padding: '3px 8px', borderRadius: 6, fontSize: '0.7rem', fontWeight: 600,
+                            background: 'rgba(239, 68, 68, 0.08)', color: '#fca5a5',
+                            border: '1px solid rgba(239, 68, 68, 0.2)'
+                          }}>
+                            <Clock size={10} />
+                            {new Date((tugas as any).deadline_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
+                          </span>
+                        )}
+                      </div>
+                    )}
                   </div>
                 );
               })}
@@ -680,6 +721,26 @@ export default function EvaluasiPage() {
                       )}
                     </>
                   )}
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginTop: 12 }}>
+                    <div style={s.fg}>
+                      <label style={s.label}>📅 Tanggal Mulai / Publish</label>
+                      <input
+                        type="datetime-local"
+                        value={form.published_at}
+                        onChange={(e) => setForm({ ...form, published_at: e.target.value })}
+                        style={s.input}
+                      />
+                    </div>
+                    <div style={s.fg}>
+                      <label style={{ ...s.label, color: '#fca5a5' }}>🔴 Tanggal Deadline</label>
+                      <input
+                        type="datetime-local"
+                        value={form.deadline_at}
+                        onChange={(e) => setForm({ ...form, deadline_at: e.target.value })}
+                        style={{ ...s.input, borderColor: form.deadline_at ? 'rgba(239,68,68,0.4)' : undefined }}
+                      />
+                    </div>
+                  </div>
                 </div>
                 <div style={s.modalFoot}>
                   <button type="button" onClick={() => { setShowCreateModal(false); setShowEditModal(false); }} style={s.btnGhost}>Batal</button>
@@ -714,6 +775,27 @@ export default function EvaluasiPage() {
                     <span style={{ fontSize: '0.88rem', color: '#fff' }}>{v}</span>
                   </div>
                 ))}
+                {/* Tanggal Publish & Deadline */}
+                {((currentTugas as any).published_at || (currentTugas as any).deadline_at) && (
+                  <div style={{ display: 'flex', gap: 16, padding: '12px 16px', background: 'rgba(99,102,241,0.06)', borderRadius: 12, border: '1px solid rgba(99,102,241,0.15)' }}>
+                    {(currentTugas as any).published_at && (
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: '0.72rem', color: '#818cf8', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4 }}>📅 Mulai Pengerjaan</div>
+                        <div style={{ fontSize: '0.85rem', color: '#e2e8f0', fontWeight: 600 }}>
+                          {new Date((currentTugas as any).published_at).toLocaleString('id-ID', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                        </div>
+                      </div>
+                    )}
+                    {(currentTugas as any).deadline_at && (
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: '0.72rem', color: '#fca5a5', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4 }}>🔴 Deadline</div>
+                        <div style={{ fontSize: '0.85rem', color: '#fca5a5', fontWeight: 600 }}>
+                          {new Date((currentTugas as any).deadline_at).toLocaleString('id-ID', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           </div>

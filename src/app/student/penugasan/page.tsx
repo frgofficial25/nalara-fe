@@ -24,6 +24,8 @@ interface UrgentTask {
   file_url?: string | null;
   content?: any;
   youtube_link?: string | null;
+  published_at?: string | null;
+  deadline_at?: string | null;
   group_info?: {
     group_name: string;
     is_leader: boolean;
@@ -401,7 +403,7 @@ function TaskFileViewerModal({
                   </p>
                 </div>
                 <button
-                  onClick={() => downloadFile(apiProxyUrl, `${title}.ipynb`)}
+                  onClick={() => downloadFile(finalUrl, `${title}.ipynb`)}
                   style={{
                     display: 'inline-flex', alignItems: 'center', gap: 8,
                     padding: '10px 22px', borderRadius: 10, fontSize: '0.9rem', fontWeight: 600,
@@ -414,7 +416,7 @@ function TaskFileViewerModal({
               </div>
             ) : (
               <iframe
-                src={apiProxyUrl}
+                src={finalUrl}
                 title={title}
                 style={{ width: '100%', height: '100%', border: 'none' }}
               />
@@ -766,6 +768,45 @@ export default function PenugasanPage() {
                       </div>
                       <h3 style={s.taskTitle}>{task.nama_tugas}</h3>
                       <p style={s.taskMeta}>Modul: {task.nama_modul}</p>
+                      {/* Tanggal Publish & Deadline */}
+                      {(task.published_at || task.deadline_at) && (
+                        <div style={{ display: 'flex', gap: 12, marginTop: 8, flexWrap: 'wrap' }}>
+                          {task.published_at && (
+                            <div style={{
+                              display: 'inline-flex', alignItems: 'center', gap: 6,
+                              padding: '5px 12px', borderRadius: 10, fontSize: '0.75rem', fontWeight: 600,
+                              background: 'rgba(16, 185, 129, 0.1)', color: '#34d399',
+                              border: '1px solid rgba(16, 185, 129, 0.25)'
+                            }}>
+                              <Calendar size={11} />
+                              <span>Mulai: {new Date(task.published_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
+                            </div>
+                          )}
+                          {task.deadline_at && (() => {
+                            const now = new Date();
+                            const dl = new Date(task.deadline_at!);
+                            const diffMs = dl.getTime() - now.getTime();
+                            const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+                            const isExpired = diffMs < 0;
+                            const isUrgent = !isExpired && diffDays <= 3;
+                            return (
+                              <div style={{
+                                display: 'inline-flex', alignItems: 'center', gap: 6,
+                                padding: '5px 12px', borderRadius: 10, fontSize: '0.75rem', fontWeight: 600,
+                                background: isExpired ? 'rgba(239, 68, 68, 0.08)' : isUrgent ? 'rgba(245, 158, 11, 0.1)' : 'rgba(239, 68, 68, 0.1)',
+                                color: isExpired ? '#f87171' : isUrgent ? '#fbbf24' : '#fca5a5',
+                                border: `1px solid ${isExpired ? 'rgba(239,68,68,0.2)' : isUrgent ? 'rgba(245,158,11,0.25)' : 'rgba(239,68,68,0.2)'}`,
+                              }}>
+                                <Clock size={11} />
+                                <span>
+                                  Deadline: {dl.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
+                                  {isExpired ? ' (Kedaluwarsa)' : isUrgent ? ` (${diffDays} hari lagi)` : ''}
+                                </span>
+                              </div>
+                            );
+                          })()}
+                        </div>
+                      )}
                       <TaskQuestionCard task={task} onOpenPreview={(url, title) => setTaskPreviewModal({ taskId: task.id_tugas, url, title })} />
                       {isGroupTask && !task.group_info && (
                         <p style={{ fontSize: '0.78rem', color: '#FFB240', marginTop: 6, display: 'flex', alignItems: 'center', gap: 4 }}>

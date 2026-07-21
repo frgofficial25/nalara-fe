@@ -89,6 +89,9 @@ export interface Tugas {
   type: TugasType;
   content?: Record<string, unknown>; // TipTap JSON for Reading type
   youtube_link?: string;
+  file_url?: string;
+  published_at?: string | null;
+  deadline_at?: string | null;
   uuid_pembelajaran: string;
   uuid_modul: string;
   uuid_user?: string;
@@ -111,6 +114,8 @@ export interface CreateTugasPayload {
   youtube_link?: string;
   uuid_pembelajaran: string;
   uuid_modul: string;
+  published_at?: string | null;
+  deadline_at?: string | null;
 }
 
 export interface UpdateTugasPayload {
@@ -120,6 +125,8 @@ export interface UpdateTugasPayload {
   youtube_link?: string;
   uuid_pembelajaran?: string;
   uuid_modul?: string;
+  published_at?: string | null;
+  deadline_at?: string | null;
 }
 
 // ─── Quiz ────────────────────────────────────────────────────────────────────
