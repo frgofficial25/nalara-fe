@@ -41,6 +41,7 @@ export default function TugasPage() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDetailModal, setShowDetailModal] = useState(false);
+  const [showPreviewModal, setShowPreviewModal] = useState(false);
   const [currentTugas, setCurrentTugas] = useState<Tugas | null>(null);
   const [form, setForm] = useState({
     title: '',
@@ -939,6 +940,70 @@ export default function TugasPage() {
                     </div>
                   </div>
                 )}
+                {currentTugas.file_url && (
+                  <div style={s.detailRow}>
+                    <span style={s.detailLabel}>File Soal</span>
+                    <button 
+                      onClick={() => setShowPreviewModal(true)}
+                      style={s.createBtn}
+                    >
+                      <Eye size={14} /> Pratinjau Soal
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </Portal>
+      )}
+
+      {showPreviewModal && currentTugas?.file_url && (
+        <Portal>
+          <div style={{
+            position: 'fixed', inset: 0, background: 'rgba(5, 7, 15, 0.88)',
+            backdropFilter: 'blur(16px)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+            zIndex: 99999, padding: '20px'
+          }} onClick={() => setShowPreviewModal(false)}>
+            <div style={{
+              width: '100%', maxWidth: '980px', height: '88vh',
+              background: '#0f172a', border: '1px solid rgba(99, 102, 241, 0.3)',
+              borderRadius: '20px', display: 'flex', flexDirection: 'column',
+              boxShadow: '0 25px 60px rgba(0,0,0,0.7)', overflow: 'hidden'
+            }} onClick={e => e.stopPropagation()}>
+              <div style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                padding: '16px 24px', background: 'rgba(15, 23, 42, 0.95)',
+                borderBottom: '1px solid rgba(99, 102, 241, 0.2)'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <div style={{
+                    width: 38, height: 38, borderRadius: 10,
+                    background: 'rgba(99, 102, 241, 0.15)', border: '1px solid rgba(99, 102, 241, 0.3)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center'
+                  }}>
+                    <FileText size={20} color="#a5b4fc" />
+                  </div>
+                  <div>
+                    <h3 style={{ margin: 0, fontSize: '0.98rem', color: '#f8fafc', fontWeight: 700 }}>
+                      Pratinjau Soal: {currentTugas.title}
+                    </h3>
+                  </div>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <button onClick={() => setShowPreviewModal(false)} style={s.closeBtn}><X size={20} /></button>
+                </div>
+              </div>
+              <div style={{ flex: 1, background: '#fff', position: 'relative' }}>
+                <iframe
+                  src={
+                    currentTugas.file_url.includes('.pdf') || !currentTugas.file_url.match(/\.[a-z0-9]+$/i)
+                      ? `https://docs.google.com/viewer?url=${encodeURIComponent(currentTugas.file_url)}&embedded=true`
+                      : currentTugas.file_url
+                  }
+                  title={currentTugas.title}
+                  style={{ width: '100%', height: '100%', border: 'none' }}
+                  allow="fullscreen"
+                />
               </div>
             </div>
           </div>

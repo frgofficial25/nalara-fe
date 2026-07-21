@@ -285,10 +285,6 @@ function TaskFileViewerModal({
 }) {
   const [viewMode, setViewMode] = useState<'google' | 'direct'>('google');
 
-  // Use API proxy endpoint for file access
-  const apiProxyUrl = `/api/tugas/${taskId}/file-url`;
-  
-  // Strip fl_attachment if present so preview works
   let cleanUrl = url.replace('/upload/fl_attachment/', '/upload/');
   const pathOnly = cleanUrl.split('?')[0].split('#')[0].toLowerCase();
   const extMatch = pathOnly.match(/\.([a-z0-9]+)$/i);
@@ -298,15 +294,9 @@ function TaskFileViewerModal({
   const isDoc = ['docx', 'doc', 'ppt', 'pptx'].includes(ext);
   const isIpynb = ext === 'ipynb' || cleanUrl.endsWith('.ipynb');
 
-  let normalizedPdfUrl = cleanUrl;
-  if (isPDF && !pathOnly.endsWith('.pdf')) {
-    const parts = cleanUrl.split('?');
-    const base = parts[0] + '.pdf';
-    normalizedPdfUrl = parts[1] ? `${base}?${parts[1]}` : base;
-  }
-
-  const googleViewerUrl = `https://docs.google.com/viewer?url=${encodeURIComponent(apiProxyUrl)}&embedded=true`;
-  const officeUrl = `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(apiProxyUrl)}`;
+  const finalUrl = cleanUrl;
+  const googleViewerUrl = `https://docs.google.com/viewer?url=${encodeURIComponent(finalUrl)}&embedded=true`;
+  const officeUrl = `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(finalUrl)}`;
 
   return (
     <Portal>
@@ -360,7 +350,7 @@ function TaskFileViewerModal({
               )}
 
               <button
-                onClick={() => openInNewTab(apiProxyUrl, title, ext)}
+                onClick={() => openInNewTab(finalUrl, title, ext)}
                 style={{
                   display: 'inline-flex', alignItems: 'center', gap: 5,
                   padding: '6px 14px', borderRadius: 8, fontSize: '0.78rem', fontWeight: 600,
@@ -372,7 +362,7 @@ function TaskFileViewerModal({
               </button>
 
               <button
-                onClick={() => downloadFile(apiProxyUrl, title)}
+                onClick={() => downloadFile(finalUrl, title)}
                 style={{
                   display: 'inline-flex', alignItems: 'center', gap: 5,
                   padding: '6px 14px', borderRadius: 8, fontSize: '0.78rem', fontWeight: 600,
@@ -390,7 +380,7 @@ function TaskFileViewerModal({
           <div style={{ flex: 1, background: '#fff', position: 'relative' }}>
             {isPDF ? (
               <iframe
-                src={viewMode === 'google' ? googleViewerUrl : apiProxyUrl}
+                src={viewMode === 'google' ? googleViewerUrl : finalUrl}
                 title={title}
                 style={{ width: '100%', height: '100%', border: 'none' }}
                 allow="fullscreen"
