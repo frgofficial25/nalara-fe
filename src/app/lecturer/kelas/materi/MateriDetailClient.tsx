@@ -9,6 +9,7 @@ import {
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { apiGet, apiUploadPost, apiDelete, apiPut } from '@/lib/api';
 import { getStoredToken } from '@/services/auth';
+import { downloadFile, openInNewTab } from '@/lib/download';
 import Portal from '@/components/common/Portal';
 import { CheckCircle2 } from 'lucide-react';
 
@@ -124,10 +125,6 @@ function FilePreviewSection({ file, tipe }: { file: MateriFile; tipe?: string })
             {file.ukuran_file && <span style={fileSizeBadge}>{formatFileSize(file.ukuran_file)}</span>}
             <span style={{ ...fileSizeBadge, background: 'rgba(239,68,68,0.1)', color: '#fca5a5', borderColor: 'rgba(239,68,68,0.2)' }}>PDF</span>
           </div>
-          <div style={{ display: 'flex', gap: 8 }}>
-            <a href={pdfUrl} target="_blank" rel="noopener noreferrer" style={toolbarBtn}><ExternalLink size={13} /></a>
-            <a href={pdfUrl} download style={toolbarBtn}><Download size={13} /></a>
-          </div>
         </div>
         {/* Google Docs Viewer iframe */}
         <div style={{ width: '100%', height: '680px', background: '#fff', position: 'relative' }}>
@@ -178,10 +175,6 @@ function FilePreviewSection({ file, tipe }: { file: MateriFile; tipe?: string })
               {ext.toUpperCase()}
             </span>
           </div>
-          <div style={{ display: 'flex', gap: 8 }}>
-            <a href={url} target="_blank" rel="noopener noreferrer" style={toolbarBtn}><ExternalLink size={13} /></a>
-            <a href={url} download style={toolbarBtn}><Download size={13} /></a>
-          </div>
         </div>
         {/* Office Online viewer — scroll handled internally */}
         <div style={{ width: '100%', height: '700px', borderRadius: '0 0 14px 14px', background: '#fff', position: 'relative' }}>
@@ -208,7 +201,6 @@ function FilePreviewSection({ file, tipe }: { file: MateriFile; tipe?: string })
             {file.ukuran_file && <span style={fileSizeBadge}>{formatFileSize(file.ukuran_file)}</span>}
             <span style={{ ...fileSizeBadge, background: 'rgba(139,92,246,0.1)', color: '#c4b5fd', borderColor: 'rgba(139,92,246,0.2)' }}>VIDEO</span>
           </div>
-          <a href={url} download style={toolbarBtn}><Download size={13} /></a>
         </div>
         <div style={{ width: '100%', borderRadius: '0 0 14px 14px', overflow: 'hidden', background: '#000' }}>
           <video
@@ -238,7 +230,7 @@ function FilePreviewSection({ file, tipe }: { file: MateriFile; tipe?: string })
           {file.ukuran_file && <span style={fileSizeBadge}>{formatFileSize(file.ukuran_file)}</span>}
         </div>
       </div>
-      <a href={url} download style={downloadBigBtn}><Download size={14} /> Download</a>
+      <button onClick={() => downloadFile(url, file.nama_file || 'materi')} style={{ ...downloadBigBtn, cursor: 'pointer' }}><Download size={14} /> Download</button>
     </div>
   );
 }
@@ -569,9 +561,14 @@ export default function MateriDetailClient() {
                     }
                     Hapus File
                   </button>
-                  <a href={fileUrl} download style={{ ...primaryBtn, textDecoration: 'none' }}>
+                  {hasFile && fileUrl && (
+                    <button onClick={() => openInNewTab(fileUrl, file?.nama_file || materi.nama_materi, file?.format_file)} style={{ ...secondaryBtn, cursor: 'pointer' }}>
+                      <ExternalLink size={14} /> Buka di Tab Baru
+                    </button>
+                  )}
+                  <button onClick={() => downloadFile(fileUrl, file?.nama_file || materi.nama_materi)} style={{ ...primaryBtn, cursor: 'pointer' }}>
                     <Download size={14} /> Download
-                  </a>
+                  </button>
                 </>
               )}
               {materi.tipe !== 'Video' && !hasFile && !showUpload && (

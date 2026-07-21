@@ -97,9 +97,31 @@ export default function Pricing() {
                 Akses Dashboard Student untuk mengikuti jadwal dan pengerjaan tugas.
               </div>
             </div>
-            <span style={styles.referralNote}>
-              * Jika membutuhkan bantuan kendala login, silakan hubungi tim panitia Nalara Academy.
-            </span>
+            <div style={{ marginTop: '0.75rem', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+              <span style={styles.referralNote}>
+                * Jika membutuhkan bantuan kendala login, silakan hubungi tim panitia Nalara Academy:
+              </span>
+              <a
+                href="https://wa.me/6285190946554"
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '4px 12px',
+                  borderRadius: '20px',
+                  background: 'rgba(37, 211, 102, 0.12)',
+                  border: '1px solid rgba(37, 211, 102, 0.3)',
+                  color: '#25D366',
+                  fontSize: '0.82rem',
+                  fontWeight: 600,
+                  textDecoration: 'none',
+                }}
+              >
+                +62 851-9094-6554 (Nalara Academy)
+              </a>
+            </div>
           </div>
         </div>
       </div>

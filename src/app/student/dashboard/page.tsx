@@ -8,6 +8,7 @@ import {
 import AgendaSection from '@/components/dashboard/AgendaSection';
 import { apiGet } from '@/lib/api';
 import { getStoredToken } from '@/services/auth';
+import { useRouter } from 'next/navigation';
 
 interface UpcomingTask {
   id: number;
@@ -78,7 +79,88 @@ function formatNumber(num: number): string {
   return num.toLocaleString('id-ID');
 }
 
+function formatDeadlineDate(dateStr?: string): string {
+  if (!dateStr || dateStr === 'Segera') return 'Tenggat Segera';
+  try {
+    const date = new Date(dateStr);
+    if (isNaN(date.getTime())) return dateStr;
+    return date.toLocaleDateString('id-ID', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    }) + ' WIB';
+  } catch {
+    return dateStr;
+  }
+}
+
+function DeadlineCountdown({ deadline }: { deadline: string }) {
+  const [timeLeft, setTimeLeft] = useState<{
+    days: number;
+    hours: number;
+    minutes: number;
+    seconds: number;
+    isExpired: boolean;
+  }>({ days: 0, hours: 0, minutes: 0, seconds: 0, isExpired: false });
+
+  useEffect(() => {
+    const calculateTimeLeft = () => {
+      const targetDate = new Date(deadline).getTime();
+      const now = new Date().getTime();
+      const difference = targetDate - now;
+
+      if (isNaN(targetDate) || difference <= 0) {
+        setTimeLeft({ days: 0, hours: 0, minutes: 0, seconds: 0, isExpired: true });
+        return;
+      }
+
+      const days = Math.floor(difference / (1000 * 60 * 60 * 24));
+      const hours = Math.floor((difference % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+      const minutes = Math.floor((difference % (1000 * 60 * 60)) / (1000 * 60));
+      const seconds = Math.floor((difference % (1000 * 60)) / 1000);
+
+      setTimeLeft({ days, hours, minutes, seconds, isExpired: false });
+    };
+
+    calculateTimeLeft();
+    const interval = setInterval(calculateTimeLeft, 1000);
+    return () => clearInterval(interval);
+  }, [deadline]);
+
+  if (timeLeft.isExpired) {
+    return (
+      <span style={{
+        fontSize: '0.75rem', fontWeight: 700, color: '#fca5a5',
+        background: 'rgba(239, 68, 68, 0.18)', padding: '2px 8px',
+        borderRadius: 6, border: '1px solid rgba(239, 68, 68, 0.3)'
+      }}>
+        ⏰ Waktu Pengerjaan Berakhir
+      </span>
+    );
+  }
+
+  const isUrgent = timeLeft.days < 2;
+
+  return (
+    <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: 4,
+        background: isUrgent ? 'rgba(239, 68, 68, 0.2)' : 'rgba(99, 102, 241, 0.18)',
+        border: `1px solid ${isUrgent ? 'rgba(239, 68, 68, 0.35)' : 'rgba(99, 102, 241, 0.35)'}`,
+        borderRadius: 6, padding: '3px 8px'
+      }}>
+        <span style={{ fontSize: '0.78rem', fontWeight: 800, color: isUrgent ? '#fca5a5' : '#c7d2fe' }}>
+          ⏳ Sisa Waktu: {String(timeLeft.days).padStart(2, '0')}h : {String(timeLeft.hours).padStart(2, '0')}j : {String(timeLeft.minutes).padStart(2, '0')}m : {String(timeLeft.seconds).padStart(2, '0')}s
+        </span>
+      </div>
+    </div>
+  );
+}
+
 export default function StudentDashboard() {
+  const router = useRouter();
   const [data, setData] = useState<StudentData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -266,15 +348,21 @@ export default function StudentDashboard() {
             <p style={{ ...s.bannerSubtitle, color: '#fca5a5' }}>
               Kelas Asal: <strong>{urgentTask.course_name}</strong> • Modul Asal: <strong>{urgentTask.module_name}</strong>
             </p>
-            <p style={{ fontSize: '0.85rem', color: '#f87171', margin: '-10px 0 20px 0' }}>
-              Deadline: <strong style={{ color: '#fff', background: 'rgba(239, 82, 82, 0.3)', padding: '2px 6px', borderRadius: 4 }}>{urgentTask.deadline}</strong>
-            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, margin: '6px 0 20px 0' }}>
+              <div style={{ fontSize: '0.85rem', color: '#f87171', display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                <span>Tanggal Tenggat:</span>
+                <strong style={{ color: '#fff', background: 'rgba(239, 82, 82, 0.3)', padding: '2px 8px', borderRadius: 4 }}>
+                  {formatDeadlineDate(urgentTask.deadline)}
+                </strong>
+              </div>
+              <DeadlineCountdown deadline={urgentTask.deadline} />
+            </div>
             <div style={s.bannerBtnRow}>
-              <button style={{ ...s.bannerBtnPrimary, background: '#FF5252' }}>
+              <button onClick={() => router.push('/student/penugasan')} style={{ ...s.bannerBtnPrimary, background: '#FF5252', cursor: 'pointer' }}>
                 <Play size={14} fill="#fff" color="#fff" style={{ marginRight: 6 }} />
                 Kerjakan Tugas
               </button>
-              <button style={s.bannerBtnSecondary}>
+              <button onClick={() => router.push('/student/kelas')} style={{ ...s.bannerBtnSecondary, cursor: 'pointer' }}>
                 Lanjutkan Pembelajaran
               </button>
             </div>
@@ -288,7 +376,7 @@ export default function StudentDashboard() {
               Kerja bagus, {userName}! Tidak ada tugas mendesak saat ini. Tetap pertahankan progres belajarmu.
             </p>
             <div style={s.bannerBtnRow}>
-              <button style={s.bannerBtnSecondary}>
+              <button onClick={() => router.push('/student/kelas')} style={{ ...s.bannerBtnSecondary, cursor: 'pointer' }}>
                 Lanjutkan Pembelajaran
               </button>
             </div>
@@ -359,10 +447,13 @@ export default function StudentDashboard() {
                   </span>
                 </div>
                 <div style={s.taskDeadlineCol}>
-                  <span style={s.deadlineLabel}>Deadline</span>
-                  <span style={s.deadlineVal}>{task.deadline}</span>
+                  <span style={s.deadlineLabel}>Tanggal Tenggat</span>
+                  <span style={s.deadlineVal}>{formatDeadlineDate(task.deadline)}</span>
+                  <div style={{ marginTop: 4 }}>
+                    <DeadlineCountdown deadline={task.deadline} />
+                  </div>
                 </div>
-                <button style={s.startTaskBtn}>
+                <button onClick={() => router.push('/student/penugasan')} style={{ ...s.startTaskBtn, cursor: 'pointer' }}>
                   <span>Start</span>
                   <ChevronRight size={14} />
                 </button>

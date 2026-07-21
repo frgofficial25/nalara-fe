@@ -9,6 +9,7 @@ import {
 import { useRouter, useSearchParams } from 'next/navigation';
 import { apiGet } from '@/lib/api';
 import { getStoredToken } from '@/services/auth';
+import { downloadFile, openInNewTab } from '@/lib/download';
 
 interface MateriFile {
   nama_file?: string;
@@ -143,10 +144,6 @@ function FilePreviewSection({
             {fileSize && <span style={fileSizeBadge}>{formatFileSize(fileSize)}</span>}
             <span style={{ ...fileSizeBadge, background: 'rgba(239,68,68,0.1)', color: '#fca5a5', borderColor: 'rgba(239,68,68,0.2)' }}>PDF</span>
           </div>
-          <div style={{ display: 'flex', gap: 8 }}>
-            <a href={pdfUrl} target="_blank" rel="noopener noreferrer" style={toolbarBtn}><ExternalLink size={13} /></a>
-            <a href={pdfUrl} download style={toolbarBtn}><Download size={13} /></a>
-          </div>
         </div>
         <div style={{ width: '100%', height: '680px', background: '#fff' }}>
           <iframe
@@ -177,10 +174,6 @@ function FilePreviewSection({
               {ext.toUpperCase()}
             </span>
           </div>
-          <div style={{ display: 'flex', gap: 8 }}>
-            <a href={url} target="_blank" rel="noopener noreferrer" style={toolbarBtn}><ExternalLink size={13} /></a>
-            <a href={url} download style={toolbarBtn}><Download size={13} /></a>
-          </div>
         </div>
         <div style={{ width: '100%', height: '700px', borderRadius: '0 0 14px 14px', background: '#fff', position: 'relative' }}>
           <iframe
@@ -206,7 +199,6 @@ function FilePreviewSection({
             {fileSize && <span style={fileSizeBadge}>{formatFileSize(fileSize)}</span>}
             <span style={{ ...fileSizeBadge, background: 'rgba(139,92,246,0.1)', color: '#c4b5fd', borderColor: 'rgba(139,92,246,0.2)' }}>VIDEO</span>
           </div>
-          <a href={url} download style={toolbarBtn}><Download size={13} /></a>
         </div>
         <div style={{ width: '100%', borderRadius: '0 0 14px 14px', overflow: 'hidden', background: '#000' }}>
           <video
@@ -237,9 +229,9 @@ function FilePreviewSection({
       <a href={url} target="_blank" rel="noopener noreferrer" style={downloadBigBtn}>
         <ExternalLink size={14} /> Buka File
       </a>
-      <a href={url} download style={{ ...downloadBigBtn, background: 'rgba(99,102,241,0.15)', border: '1px solid rgba(99,102,241,0.3)' }}>
+      <button onClick={() => downloadFile(url, fileName || 'materi')} style={{ ...downloadBigBtn, background: 'rgba(99,102,241,0.15)', border: '1px solid rgba(99,102,241,0.3)', cursor: 'pointer' }}>
         <Download size={14} /> Download
-      </a>
+      </button>
     </div>
   );
 }
@@ -419,8 +411,8 @@ export default function MateriDetailClient() {
                   )}
                 </div>
                 <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
-                  {tugas.pembelajaran?.title && <span style={metaItem}>📚 {tugas.pembelajaran.title}</span>}
-                  {tugas.modul?.title && <span style={metaItem}>📦 {tugas.modul.title}</span>}
+                  {tugas.pembelajaran?.title && <span style={metaItem}>{tugas.pembelajaran.title}</span>}
+                  {tugas.modul?.title && <span style={metaItem}>{tugas.modul.title}</span>}
                 </div>
               </div>
             </div>
@@ -431,14 +423,17 @@ export default function MateriDetailClient() {
                 <ArrowLeft size={14} /> Kembali ke Kelas
               </button>
               {hasFile && fileUrl && (
-                <a href={fileUrl} target="_blank" rel="noopener noreferrer" style={{ ...secondaryBtn, textDecoration: 'none' }}>
+                <button
+                  onClick={() => openInNewTab(fileUrl, tugas.file?.nama_file || tugas.title, tugas.file_format)}
+                  style={{ ...secondaryBtn, cursor: 'pointer' }}
+                >
                   <ExternalLink size={14} /> Buka di Tab Baru
-                </a>
+                </button>
               )}
               {hasFile && fileUrl && (
-                <a href={fileUrl} download style={{ ...primaryBtn, textDecoration: 'none' }}>
+                <button onClick={() => downloadFile(fileUrl, tugas.file?.nama_file || tugas.title)} style={{ ...primaryBtn, cursor: 'pointer' }}>
                   <Download size={14} /> Download
-                </a>
+                </button>
               )}
             </div>
           </div>

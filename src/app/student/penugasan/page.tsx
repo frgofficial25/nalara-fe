@@ -4,12 +4,13 @@ import React, { useState, useEffect, useRef } from 'react';
 import {
   ClipboardList, Upload, CheckCircle2, AlertCircle, Loader2,
   FileText, Brain, X, Info, Calendar, ChevronRight,
-  ExternalLink, Clock, Play, Check, Users, Lock, Crown
+  ExternalLink, Clock, Play, Check, Users, Lock, Crown, Eye, Download
 } from 'lucide-react';
 import { apiGet, apiPost } from '@/lib/api';
 import { getStoredToken } from '@/services/auth';
 import { useRouter } from 'next/navigation';
 import Portal from '@/components/common/Portal';
+import { downloadFile, openInNewTab } from '@/lib/download';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface UrgentTask {
@@ -21,6 +22,8 @@ interface UrgentTask {
   is_group_project?: boolean;
   group_count?: number;
   file_url?: string | null;
+  content?: any;
+  youtube_link?: string | null;
   group_info?: {
     group_name: string;
     is_leader: boolean;
@@ -96,10 +99,343 @@ function getUserId(): string {
   try { const p = JSON.parse(raw); return p.id || p.uuid_user || ''; } catch { return ''; }
 }
 
+function renderContent(content: any): React.ReactNode {
+  if (!content) return null;
+  if (typeof content === 'string') return <span>{content}</span>;
+  if (content.type === 'doc' && Array.isArray(content.content)) {
+    return content.content.map((block: any, idx: number) => {
+      if (block.type === 'paragraph' && Array.isArray(block.content)) {
+        return (
+          <p key={idx} style={{ margin: '0 0 8px 0', lineHeight: 1.6, color: '#e2e8f0' }}>
+            {block.content.map((span: any, sIdx: number) => span.text || '')}
+          </p>
+        );
+      }
+      if (block.type === 'heading') {
+        const level = block.attrs?.level || 2;
+        const text = block.content?.map((s: any) => s.text || '').join('');
+        return <p key={idx} style={{ fontWeight: 700, fontSize: level <= 2 ? '1rem' : '0.9rem', margin: '10px 0 4px', color: '#f8fafc' }}>{text}</p>;
+      }
+      if (block.type === 'bulletList' && Array.isArray(block.content)) {
+        return (
+          <ul key={idx} style={{ paddingLeft: 18, margin: '0 0 8px' }}>
+            {block.content.map((item: any, iIdx: number) => (
+              <li key={iIdx} style={{ color: '#cbd5e1', lineHeight: 1.6, marginBottom: 4 }}>
+                {item.content?.map((p: any) => p.content?.map((s: any) => s.text || '').join('')).join('')}
+              </li>
+            ))}
+          </ul>
+        );
+      }
+      return null;
+    });
+  }
+  return <span style={{ whiteSpace: 'pre-wrap', fontSize: '0.85rem' }}>{JSON.stringify(content, null, 2)}</span>;
+}
+
+function TaskQuestionCard({
+  task,
+  onOpenPreview
+}: {
+  task: { file_url?: string | null; content?: any; nama_tugas?: string; tipe?: string };
+  onOpenPreview: (url: string, title: string) => void;
+}) {
+  const fileUrl = task.file_url;
+  const content = task.content;
+
+  if (!fileUrl && !content) return null;
+
+  const cleanUrl = fileUrl ? fileUrl.split('?')[0].split('#')[0].toLowerCase() : '';
+  const urlExt = cleanUrl.match(/\.([a-z0-9]+)$/i)?.[1]?.toUpperCase() || 'PDF';
+  const isPDF = urlExt === 'PDF' || cleanUrl.endsWith('.pdf');
+
+  return (
+    <div style={{
+      marginTop: 16,
+      marginBottom: 8,
+      padding: '18px 20px',
+      borderRadius: 16,
+      background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.7), rgba(15, 23, 42, 0.8))',
+      border: '1px solid rgba(99, 102, 241, 0.22)',
+      boxShadow: '0 8px 24px rgba(0, 0, 0, 0.25)',
+      display: 'flex',
+      flexDirection: 'column',
+      gap: 16
+    }}>
+      {content && (
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+            <div style={{ width: 26, height: 26, borderRadius: 8, background: 'rgba(99, 102, 241, 0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <FileText size={14} color="#818cf8" />
+            </div>
+            <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#a5b4fc', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              Instruksi & Detail Soal
+            </span>
+          </div>
+          <div style={{ fontSize: '0.88rem', color: '#e2e8f0', lineHeight: 1.6, background: 'rgba(15, 23, 42, 0.6)', padding: '12px 16px', borderRadius: 10, border: '1px solid rgba(255,255,255,0.06)' }}>
+            {renderContent(content)}
+          </div>
+        </div>
+      )}
+
+      {fileUrl && (
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+            <div style={{ width: 26, height: 26, borderRadius: 8, background: 'rgba(99, 102, 241, 0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <FileText size={14} color="#818cf8" />
+            </div>
+            <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#a5b4fc', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              Berkas Soal Terlampir
+            </span>
+          </div>
+
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: '14px 18px',
+            borderRadius: 12,
+            background: 'rgba(15, 23, 42, 0.9)',
+            border: '1px solid rgba(99, 102, 241, 0.3)',
+            gap: 16,
+            flexWrap: 'wrap'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 14, flex: 1, minWidth: 220 }}>
+              <div style={{
+                width: 44, height: 44, borderRadius: 12,
+                background: isPDF ? 'rgba(239, 68, 68, 0.15)' : 'rgba(99, 102, 241, 0.15)',
+                border: `1px solid ${isPDF ? 'rgba(239, 68, 68, 0.3)' : 'rgba(99, 102, 241, 0.3)'}`,
+                display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0
+              }}>
+                <FileText size={22} color={isPDF ? '#fca5a5' : '#a5b4fc'} />
+              </div>
+              <div style={{ overflow: 'hidden' }}>
+                <p style={{ margin: 0, fontSize: '0.9rem', fontWeight: 700, color: '#f8fafc', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  {task.nama_tugas ? `${task.nama_tugas}_Soal.${urlExt.toLowerCase() || 'pdf'}` : 'File_Soal.pdf'}
+                </p>
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 4 }}>
+                  <span style={{ fontSize: '0.68rem', color: isPDF ? '#fca5a5' : '#93c5fd', background: isPDF ? 'rgba(239,68,68,0.12)' : 'rgba(59,130,246,0.12)', padding: '2px 8px', borderRadius: 4, fontWeight: 700, border: `1px solid ${isPDF ? 'rgba(239,68,68,0.2)' : 'rgba(59,130,246,0.2)'}` }}>
+                    {urlExt}
+                  </span>
+                  <span style={{ fontSize: '0.74rem', color: '#94a3b8' }}>
+                    Dokumen Berkas Soal
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+              <button
+                type="button"
+                onClick={() => onOpenPreview(fileUrl, task.nama_tugas || 'Soal Penugasan')}
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 6,
+                  padding: '8px 16px', borderRadius: 10, fontSize: '0.8rem', fontWeight: 600,
+                  background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.25), rgba(79, 70, 229, 0.25))',
+                  color: '#c7d2fe', border: '1px solid rgba(99, 102, 241, 0.4)',
+                  cursor: 'pointer', boxShadow: '0 2px 8px rgba(99, 102, 241, 0.15)'
+                }}
+              >
+                <Eye size={14} /> Pratinjau Soal
+              </button>
+
+              <button
+                type="button"
+                onClick={() => openInNewTab(fileUrl, task.nama_tugas || 'Soal', urlExt)}
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 6,
+                  padding: '8px 16px', borderRadius: 10, fontSize: '0.8rem', fontWeight: 600,
+                  background: 'rgba(6, 113, 224, 0.15)', color: '#60a5fa',
+                  border: '1px solid rgba(6, 113, 224, 0.3)', cursor: 'pointer'
+                }}
+              >
+                <ExternalLink size={14} /> Tab Baru
+              </button>
+
+              <button
+                type="button"
+                onClick={() => downloadFile(fileUrl, task.nama_tugas || 'Soal')}
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 6,
+                  padding: '8px 16px', borderRadius: 10, fontSize: '0.8rem', fontWeight: 600,
+                  background: 'rgba(16, 185, 129, 0.15)', color: '#34d399',
+                  border: '1px solid rgba(16, 185, 129, 0.3)', cursor: 'pointer'
+                }}
+              >
+                <Download size={14} /> Unduh
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function TaskFileViewerModal({
+  url,
+  title,
+  onClose
+}: {
+  url: string;
+  title: string;
+  onClose: () => void;
+}) {
+  const [viewMode, setViewMode] = useState<'google' | 'direct'>('google');
+
+  // Strip fl_attachment if present so preview works
+  let cleanUrl = url.replace('/upload/fl_attachment/', '/upload/');
+  const pathOnly = cleanUrl.split('?')[0].split('#')[0].toLowerCase();
+  const extMatch = pathOnly.match(/\.([a-z0-9]+)$/i);
+  const ext = extMatch ? extMatch[1] : '';
+
+  const isPDF = ext === 'pdf' || cleanUrl.endsWith('.pdf') || !ext;
+  const isDoc = ['docx', 'doc', 'ppt', 'pptx'].includes(ext);
+  const isIpynb = ext === 'ipynb' || cleanUrl.endsWith('.ipynb');
+
+  let normalizedPdfUrl = cleanUrl;
+  if (isPDF && !pathOnly.endsWith('.pdf')) {
+    const parts = cleanUrl.split('?');
+    const base = parts[0] + '.pdf';
+    normalizedPdfUrl = parts[1] ? `${base}?${parts[1]}` : base;
+  }
+
+  const googleViewerUrl = `https://docs.google.com/viewer?url=${encodeURIComponent(normalizedPdfUrl)}&embedded=true`;
+  const officeUrl = `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(url)}`;
+
+  return (
+    <Portal>
+      <div style={{
+        position: 'fixed', inset: 0, background: 'rgba(5, 7, 15, 0.88)',
+        backdropFilter: 'blur(16px)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+        zIndex: 9999, padding: '20px'
+      }} onClick={onClose}>
+        <div style={{
+          width: '100%', maxWidth: '980px', height: '88vh',
+          background: '#0f172a', border: '1px solid rgba(99, 102, 241, 0.3)',
+          borderRadius: '20px', display: 'flex', flexDirection: 'column',
+          boxShadow: '0 25px 60px rgba(0,0,0,0.7)', overflow: 'hidden'
+        }} className="glass-panel" onClick={e => e.stopPropagation()}>
+          
+          <div style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            padding: '16px 24px', background: 'rgba(15, 23, 42, 0.95)',
+            borderBottom: '1px solid rgba(99, 102, 241, 0.2)'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <div style={{
+                width: 38, height: 38, borderRadius: 10,
+                background: 'rgba(99, 102, 241, 0.15)', border: '1px solid rgba(99, 102, 241, 0.3)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center'
+              }}>
+                <FileText size={20} color="#a5b4fc" />
+              </div>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '0.98rem', color: '#f8fafc', fontWeight: 700 }}>
+                  Pratinjau Soal: {title}
+                </h3>
+                <span style={{ fontSize: '0.74rem', color: '#94a3b8' }}>
+                  Dokumen Berkas Penugasan
+                </span>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              {isPDF && (
+                <button
+                  onClick={() => setViewMode(v => v === 'google' ? 'direct' : 'google')}
+                  style={{
+                    padding: '6px 12px', borderRadius: 8, fontSize: '0.75rem', fontWeight: 600,
+                    background: 'rgba(255,255,255,0.06)', color: '#cbd5e1', border: '1px solid rgba(255,255,255,0.12)',
+                    cursor: 'pointer'
+                  }}
+                >
+                  Mode Viewer: {viewMode === 'google' ? 'Google' : 'Direct Embed'}
+                </button>
+              )}
+
+              <button
+                onClick={() => openInNewTab(normalizedPdfUrl, title, ext)}
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 5,
+                  padding: '6px 14px', borderRadius: 8, fontSize: '0.78rem', fontWeight: 600,
+                  background: 'rgba(99, 102, 241, 0.18)', color: '#a5b4fc',
+                  border: '1px solid rgba(99, 102, 241, 0.35)', cursor: 'pointer'
+                }}
+              >
+                <ExternalLink size={13} /> Tab Baru
+              </button>
+
+              <button
+                onClick={() => downloadFile(normalizedPdfUrl, title)}
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 5,
+                  padding: '6px 14px', borderRadius: 8, fontSize: '0.78rem', fontWeight: 600,
+                  background: 'rgba(16, 185, 129, 0.15)', color: '#34d399',
+                  border: '1px solid rgba(16, 185, 129, 0.3)', cursor: 'pointer'
+                }}
+              >
+                <Download size={13} /> Unduh
+              </button>
+
+              <button onClick={onClose} style={s.closeBtn}><X size={20} /></button>
+            </div>
+          </div>
+
+          <div style={{ flex: 1, background: '#fff', position: 'relative' }}>
+            {isPDF ? (
+              <iframe
+                src={normalizedPdfUrl}
+                title={title}
+                style={{ width: '100%', height: '100%', border: 'none' }}
+                allow="fullscreen"
+              />
+            ) : isDoc ? (
+              <iframe
+                src={officeUrl}
+                title={title}
+                style={{ width: '100%', height: '100%', border: 'none' }}
+              />
+            ) : isIpynb ? (
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', background: '#0f172a', color: '#f8fafc', padding: 24, textAlign: 'center', gap: 16 }}>
+                <FileText size={56} color="#818cf8" />
+                <div>
+                  <h4 style={{ margin: '0 0 6px', fontSize: '1.1rem' }}>File Jupyter Notebook (.ipynb)</h4>
+                  <p style={{ margin: 0, color: '#94a3b8', fontSize: '0.88rem', maxWidth: 460 }}>
+                    File `.ipynb` adalah format notebook kode. Unduh file ini untuk membukanya di Jupyter Notebook atau Google Colab.
+                  </p>
+                </div>
+                <button
+                  onClick={() => downloadFile(url, `${title}.ipynb`)}
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', gap: 8,
+                    padding: '10px 22px', borderRadius: 10, fontSize: '0.9rem', fontWeight: 600,
+                    background: 'linear-gradient(135deg, #4f46e5, #6366f1)', color: '#fff',
+                    border: 'none', cursor: 'pointer', boxShadow: '0 4px 14px rgba(99,102,241,0.4)'
+                  }}
+                >
+                  <Download size={16} /> Unduh Notebook (.ipynb)
+                </button>
+              </div>
+            ) : (
+              <iframe
+                src={url}
+                title={title}
+                style={{ width: '100%', height: '100%', border: 'none' }}
+              />
+            )}
+          </div>
+        </div>
+      </div>
+    </Portal>
+  );
+}
+
 // ═════════════════════════════════════════════════════════════════════════════
 export default function PenugasanPage() {
   const router = useRouter();
   const [mainTab, setMainTab] = useState<'studycase' | 'quiz'>('studycase');
+  const [taskPreviewModal, setTaskPreviewModal] = useState<{ url: string; title: string } | null>(null);
 
   // Toast state
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
@@ -435,16 +771,7 @@ export default function PenugasanPage() {
                       </div>
                       <h3 style={s.taskTitle}>{task.nama_tugas}</h3>
                       <p style={s.taskMeta}>Modul: {task.nama_modul}</p>
-                      {task.file_url && (
-                        <a
-                          href={task.file_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: '0.78rem', color: 'var(--azure)', marginTop: 6, textDecoration: 'none' }}
-                        >
-                          <FileText size={12} /> Lihat File Soal
-                        </a>
-                      )}
+                      <TaskQuestionCard task={task} onOpenPreview={(url, title) => setTaskPreviewModal({ url, title })} />
                       {isGroupTask && !task.group_info && (
                         <p style={{ fontSize: '0.78rem', color: '#FFB240', marginTop: 6, display: 'flex', alignItems: 'center', gap: 4 }}>
                           <AlertCircle size={12} /> Anda belum ditugaskan ke kelompok manapun untuk tugas ini.
@@ -655,6 +982,9 @@ export default function PenugasanPage() {
                     </p>
                   </div>
                 </div>
+              )}
+              {uploadTask && (
+                <TaskQuestionCard task={uploadTask} onOpenPreview={(url, title) => setTaskPreviewModal({ url, title })} />
               )}
               {submitSuccess ? (
                 <div style={s.successBox}>
@@ -888,14 +1218,31 @@ export default function PenugasanPage() {
                   </span>
                   <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
                     {selectedSub.ipynb_url && (
-                      <a href={selectedSub.ipynb_url} target="_blank" rel="noopener noreferrer" style={s.attachLink}>
-                        <FileText size={14} /><span>Download Jupyter Notebook (.ipynb)</span>
-                      </a>
+                      <button
+                        type="button"
+                        onClick={() => downloadFile(selectedSub.ipynb_url!, 'Pengerjaan_Notebook.ipynb')}
+                        style={s.attachLink}
+                      >
+                        <Download size={14} /><span>Unduh Notebook (.ipynb)</span>
+                      </button>
                     )}
                     {selectedSub.pdf_url && (
-                      <a href={selectedSub.pdf_url} target="_blank" rel="noopener noreferrer" style={s.attachLink}>
-                        <FileText size={14} /><span>Download Laporan (.pdf)</span>
-                      </a>
+                      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                        <button
+                          type="button"
+                          onClick={() => setTaskPreviewModal({ url: selectedSub.pdf_url!, title: selectedSub.tugas?.title || 'Laporan Submission' })}
+                          style={s.attachLink}
+                        >
+                          <Eye size={14} /><span>Pratinjau Laporan (.pdf)</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => downloadFile(selectedSub.pdf_url!, 'Laporan_Penugasan.pdf')}
+                          style={s.attachLink}
+                        >
+                          <Download size={14} /><span>Unduh Laporan (.pdf)</span>
+                        </button>
+                      </div>
                     )}
                   </div>
                 </div>
@@ -976,6 +1323,14 @@ export default function PenugasanPage() {
           </div>
         </div>
         </Portal>
+      )}
+
+      {taskPreviewModal && (
+        <TaskFileViewerModal
+          url={taskPreviewModal.url}
+          title={taskPreviewModal.title}
+          onClose={() => setTaskPreviewModal(null)}
+        />
       )}
 
       {/* Toast Alert */}
