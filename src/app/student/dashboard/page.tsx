@@ -362,7 +362,7 @@ export default function StudentDashboard() {
             </div>
             <h2 style={s.bannerGreeting}>{urgentTask.task_name}</h2>
             <p style={{ ...s.bannerSubtitle, color: '#fca5a5' }}>
-              Kelas Asal: <strong>{urgentTask.course_name}</strong> • Modul Asal: <strong>{urgentTask.module_name}</strong>
+              Kelas Asal: <strong>{urgentTask.course_name}</strong>
             </p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8, margin: '6px 0 20px 0' }}>
               <div style={{ fontSize: '0.85rem', color: '#f87171', display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
@@ -459,7 +459,7 @@ export default function StudentDashboard() {
                 <div style={s.taskInfo}>
                   <strong style={s.taskName}>{task.task_name}</strong>
                   <span style={s.taskMeta}>
-                    {task.course_name} • {task.module_name}
+                    {task.course_name}
                   </span>
                 </div>
                 <div style={s.taskDeadlineCol}>

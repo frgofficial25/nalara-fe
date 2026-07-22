@@ -395,10 +395,16 @@ export default function AgendaSection({ allowManage = false }: AgendaSectionProp
                             <Clock size={12} />
                             <span>{formatDateLabel(item.waktu_mulai, today)}</span>
                           </span>
-                          {item.link_meet ? (
-                            <a href={item.link_meet} target="_blank" rel="noopener noreferrer" style={s.meetBadge}>
+                           {item.link_meet ? (
+                            <a 
+                              href={item.link_meet} 
+                              target="_blank" 
+                              rel="noopener noreferrer" 
+                              className="clickable-meet-badge meet-live-pulse" 
+                              style={s.meetBadge}
+                            >
                               <Video size={12} />
-                              <span>Live</span>
+                              <span>Klik untuk Gabung Sesi Live</span>
                             </a>
                           ) : (
                             <span style={s.offlineText}>Offline Session</span>
@@ -429,6 +435,22 @@ export default function AgendaSection({ allowManage = false }: AgendaSectionProp
         @keyframes spin {
           from { transform: rotate(0deg); }
           to { transform: rotate(360deg); }
+        }
+        @keyframes pulseGlowMeet {
+          0%, 100% { box-shadow: 0 0 0 0 rgba(52, 211, 153, 0.4); }
+          50% { box-shadow: 0 0 8px 2px rgba(52, 211, 153, 0.2); }
+        }
+        .clickable-meet-badge {
+          transition: all 0.2s ease-in-out;
+          cursor: pointer;
+        }
+        .clickable-meet-badge:hover {
+          background-color: rgba(52, 211, 153, 0.2) !important;
+          border-color: rgba(52, 211, 153, 0.45) !important;
+          transform: translateY(-1px);
+        }
+        .meet-live-pulse {
+          animation: pulseGlowMeet 2s infinite ease-in-out;
         }
       ` }} />
 

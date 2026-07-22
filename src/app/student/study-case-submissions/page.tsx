@@ -241,9 +241,6 @@ export default function StudyCaseSubmissionsPage() {
                     <span style={s.courseLabel}>{task.nama_pembelajaran}</span>
                   </div>
                   <h3 style={s.taskTitle}>{task.nama_tugas}</h3>
-                  <div style={s.metaRow}>
-                    <span style={{ color: 'var(--grey-blue)' }}>Modul: {task.nama_modul}</span>
-                  </div>
                 </div>
                 <button onClick={() => openSubmitModal(task)} style={s.submitBtn}>
                   <Upload size={14} />
@@ -719,6 +716,8 @@ const s: Record<string, React.CSSProperties> = {
   modal: {
     maxWidth: 540,
     width: '100%',
+    maxHeight: '90vh',
+    overflowY: 'auto',
     borderRadius: 16,
     padding: 24,
     background: 'rgba(20, 20, 20, 0.85)',

@@ -257,7 +257,6 @@ export default function TentorDashboard() {
                 <h3 style={s.urgentTitle}>{urgentTask.task_name}</h3>
                 <div style={s.urgentTags}>
                   <span style={s.tagItem}><Layers size={12} style={{ marginRight: 4 }} /> {urgentTask.course_name}</span>
-                  <span style={s.tagItem}><BookOpen size={12} style={{ marginRight: 4 }} /> {urgentTask.module_name}</span>
                 </div>
               </div>
 

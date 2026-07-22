@@ -100,7 +100,7 @@ function AddMateriModal({
   onClose: () => void;
 }) {
   const [title, setTitle] = useState('');
-  const [type, setType] = useState<'Reading' | 'Video' | 'CaseStudy' | 'Practice'>('Reading');
+  const [type, setType] = useState<'Reading' | 'Video'>('Reading');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -156,8 +156,6 @@ function AddMateriModal({
               <select value={type} onChange={(e) => setType(e.target.value as typeof type)} style={input}>
                 <option value="Reading">Reading</option>
                 <option value="Video">Video</option>
-                <option value="CaseStudy">Case Study</option>
-                <option value="Practice">Practice</option>
               </select>
             </div>
             <div style={{ display: 'flex', gap: 10, marginTop: 4 }}>

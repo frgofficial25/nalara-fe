@@ -1,7 +1,7 @@
 "use client";
 
 import React from 'react';
-import { ChevronDown, Menu } from 'lucide-react';
+import { Menu } from 'lucide-react';
 
 interface HeaderProps {
   userName?: string;
@@ -36,7 +36,6 @@ export default function Header({
           <span style={s.userName}>{userName}</span>
           <span style={s.userRoleText}>{userRole}</span>
         </div>
-        <ChevronDown size={14} color="var(--grey)" />
       </div>
     </header>
   );
@@ -60,7 +59,6 @@ const s: Record<string, React.CSSProperties> = {
     display: 'flex',
     alignItems: 'center',
     gap: '10px',
-    cursor: 'pointer',
     padding: '4px 6px',
     borderRadius: '8px',
   },

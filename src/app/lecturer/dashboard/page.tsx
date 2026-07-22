@@ -281,7 +281,6 @@ export default function LecturerDashboard() {
                   <h3 style={s.urgentTaskTitle}>{urgentTask.task_name}</h3>
                   <div style={s.urgentTaskTags}>
                     <span style={s.taskTag}><Layers size={12} /> {urgentTask.course_name}</span>
-                    <span style={s.taskTag}><BookOpen size={12} /> {urgentTask.module_name}</span>
                   </div>
                 </div>
 
