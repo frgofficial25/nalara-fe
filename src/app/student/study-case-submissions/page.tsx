@@ -356,7 +356,8 @@ export default function StudyCaseSubmissionsPage() {
                         width: '100%',
                         height: '100%',
                         opacity: 0,
-                        cursor: 'pointer'
+                        cursor: 'pointer',
+                        zIndex: 10
                       }} 
                     />
                     <span style={{ fontSize: '0.88rem', color: ipynbFile ? '#fff' : 'var(--grey)' }}>
@@ -389,7 +390,8 @@ export default function StudyCaseSubmissionsPage() {
                         width: '100%',
                         height: '100%',
                         opacity: 0,
-                        cursor: 'pointer'
+                        cursor: 'pointer',
+                        zIndex: 10
                       }} 
                     />
                     <span style={{ fontSize: '0.88rem', color: pdfFile ? '#fff' : 'var(--grey)' }}>

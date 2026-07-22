@@ -992,7 +992,7 @@ export default function PenugasanPage() {
       {uploadTask && (
         <Portal>
           <div style={s.overlay}>
-            <div style={{ ...s.modal, maxWidth: 540, padding: '24px', borderRadius: '16px' }} className="glass-panel">
+            <div style={{ ...s.modal, maxWidth: 540, padding: '24px', borderRadius: '16px', overflowY: 'auto' }} className="glass-panel">
             <div style={{ ...s.modalHead, paddingBottom: 16, borderBottom: '1px solid var(--border-color)', marginBottom: 20 }}>
               <div>
                 <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 700, color: '#fff' }}>Kumpulkan Tugas Studi Kasus</h3>
@@ -1056,7 +1056,8 @@ export default function PenugasanPage() {
                           width: '100%',
                           height: '100%',
                           opacity: 0,
-                          cursor: 'pointer'
+                          cursor: 'pointer',
+                          zIndex: 10
                         }} 
                       />
                       <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
@@ -1095,7 +1096,8 @@ export default function PenugasanPage() {
                           width: '100%',
                           height: '100%',
                           opacity: 0,
-                          cursor: 'pointer'
+                          cursor: 'pointer',
+                          zIndex: 10
                         }} 
                       />
                       <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>

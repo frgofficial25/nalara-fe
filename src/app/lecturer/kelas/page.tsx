@@ -490,8 +490,23 @@ export default function CourseManagement() {
       });
 
       if (!response.ok) throw new Error('Gagal menggunakan layanan AI.');
-      const text = await response.text();
-      setGeneratedHtml(text);
+      
+      const reader = response.body?.getReader();
+      const decoder = new TextDecoder('utf-8');
+      if (!reader) {
+        throw new Error('ReadableStream not supported.');
+      }
+
+      let done = false;
+      let accumulatedText = '';
+      while (!done) {
+        const { value, done: doneReading } = await reader.read();
+        done = doneReading;
+        if (value) {
+          accumulatedText += decoder.decode(value, { stream: !done });
+          setGeneratedHtml(accumulatedText);
+        }
+      }
     } catch (err) {
       alert(err instanceof Error ? err.message : 'Error generating content');
     } finally {

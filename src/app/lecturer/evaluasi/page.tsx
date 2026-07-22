@@ -397,13 +397,30 @@ export default function EvaluasiPage() {
     } else { (updated[i] as any)[field] = val; }
     return updated;
   });
-  const changeOptText = (qi: number, oi: number, text: string) => setManualQuestions(prev => { const u = [...prev]; u[qi].options[oi].text = text; return u; });
-  const changeOptCorrect = (qi: number, oi: number) => setManualQuestions(prev => {
-    const u = [...prev];
-    if (u[qi].type === 'Checkbox') u[qi].options[oi].is_correct = !u[qi].options[oi].is_correct;
-    else u[qi].options = u[qi].options.map((o, j) => ({ ...o, is_correct: j === oi }));
-    return u;
-  });
+  const changeOptText = (qi: number, oi: number, text: string) => setManualQuestions(prev => 
+    prev.map((q, idx) => {
+      if (idx !== qi) return q;
+      return {
+        ...q,
+        options: q.options.map((opt, oKey) => oKey === oi ? { ...opt, text } : opt)
+      };
+    })
+  );
+  const changeOptCorrect = (qi: number, oi: number) => setManualQuestions(prev =>
+    prev.map((q, idx) => {
+      if (idx !== qi) return q;
+      return {
+        ...q,
+        options: q.options.map((opt, oKey) => {
+          if (q.type === 'Checkbox') {
+            return oKey === oi ? { ...opt, is_correct: !opt.is_correct } : opt;
+          } else {
+            return { ...opt, is_correct: oKey === oi };
+          }
+        })
+      };
+    })
+  );
 
   // AI Generate
   const handleGenerateAI = async () => {

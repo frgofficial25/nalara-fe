@@ -559,46 +559,58 @@ export default function QuizzesPage() {
   };
 
   const handleQuestionChange = (index: number, field: keyof QuizQuestionInput, value: any) => {
-    const updated = [...manualQuestions];
-    if (field === 'type') {
-      const type = value as 'MultipleChoice' | 'TrueFalse' | 'Checkbox';
-      updated[index].type = type;
-      if (type === 'TrueFalse') {
-        updated[index].options = [
-          { id: 'A', text: 'True', is_correct: true },
-          { id: 'B', text: 'False', is_correct: false }
-        ];
+    setManualQuestions(prev => prev.map((q, idx) => {
+      if (idx !== index) return q;
+      if (field === 'type') {
+        const type = value as 'MultipleChoice' | 'TrueFalse' | 'Checkbox';
+        return {
+          ...q,
+          type,
+          options: type === 'TrueFalse'
+            ? [
+                { id: 'A', text: 'True', is_correct: true },
+                { id: 'B', text: 'False', is_correct: false }
+              ]
+            : [
+                { id: 'A', text: '', is_correct: false },
+                { id: 'B', text: '', is_correct: false },
+                { id: 'C', text: '', is_correct: false },
+                { id: 'D', text: '', is_correct: false }
+              ]
+        };
       } else {
-        updated[index].options = [
-          { id: 'A', text: '', is_correct: false },
-          { id: 'B', text: '', is_correct: false },
-          { id: 'C', text: '', is_correct: false },
-          { id: 'D', text: '', is_correct: false }
-        ];
+        return {
+          ...q,
+          [field]: value
+        };
       }
-    } else {
-      (updated[index] as any)[field] = value;
-    }
-    setManualQuestions(updated);
+    }));
   };
 
   const handleOptionTextChange = (qIdx: number, oIdx: number, text: string) => {
-    const updated = [...manualQuestions];
-    updated[qIdx].options[oIdx].text = text;
-    setManualQuestions(updated);
+    setManualQuestions(prev => prev.map((q, idx) => {
+      if (idx !== qIdx) return q;
+      return {
+        ...q,
+        options: q.options.map((opt, oKey) => oKey === oIdx ? { ...opt, text } : opt)
+      };
+    }));
   };
 
   const handleOptionCorrectChange = (qIdx: number, oIdx: number) => {
-    const updated = [...manualQuestions];
-    if (updated[qIdx].type === 'Checkbox') {
-      updated[qIdx].options[oIdx].is_correct = !updated[qIdx].options[oIdx].is_correct;
-    } else {
-      updated[qIdx].options = updated[qIdx].options.map((opt, idx) => ({
-        ...opt,
-        is_correct: idx === oIdx
-      }));
-    }
-    setManualQuestions(updated);
+    setManualQuestions(prev => prev.map((q, idx) => {
+      if (idx !== qIdx) return q;
+      return {
+        ...q,
+        options: q.options.map((opt, oKey) => {
+          if (q.type === 'Checkbox') {
+            return oKey === oIdx ? { ...opt, is_correct: !opt.is_correct } : opt;
+          } else {
+            return { ...opt, is_correct: oKey === oIdx };
+          }
+        })
+      };
+    }));
   };
 
   const handleSaveManualQuizSubmit = async (e: React.FormEvent) => {
