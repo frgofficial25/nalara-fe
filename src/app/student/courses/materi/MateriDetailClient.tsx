@@ -320,6 +320,22 @@ export default function MateriDetailClient() {
       };
 
       setTugas(mappedData);
+
+      // Record completed material locally in browser
+      if (typeof window !== 'undefined' && tugasId) {
+        try {
+          const localUser = localStorage.getItem('nalara_user_info') || sessionStorage.getItem('nalara_user_info');
+          const userId = localUser ? JSON.parse(localUser).uuid_user || JSON.parse(localUser).id || 'default' : 'default';
+          const storageKey = `nalara_completed_materi_${userId}`;
+          const currentList = JSON.parse(localStorage.getItem(storageKey) || '[]');
+          if (!currentList.includes(tugasId)) {
+            currentList.push(tugasId);
+            localStorage.setItem(storageKey, JSON.stringify(currentList));
+          }
+        } catch (e) {
+          console.warn('Failed to save progress locally:', e);
+        }
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Gagal memuat detail materi.');
     } finally {

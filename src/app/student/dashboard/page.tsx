@@ -228,11 +228,25 @@ export default function StudentDashboard() {
         };
       });
 
+      // Get completed materials count from localStorage
+      let localCompletedCount = 0;
+      if (typeof window !== 'undefined') {
+        try {
+          const localUser = localStorage.getItem('nalara_user_info') || sessionStorage.getItem('nalara_user_info');
+          const userId = localUser ? JSON.parse(localUser).uuid_user || JSON.parse(localUser).id || 'default' : 'default';
+          const storageKey = `nalara_completed_materi_${userId}`;
+          const currentList = JSON.parse(localStorage.getItem(storageKey) || '[]');
+          localCompletedCount = Array.isArray(currentList) ? currentList.length : 0;
+        } catch (e) {
+          console.warn('Failed to parse completed materials:', e);
+        }
+      }
+
       setData({
         current_level: rawData.current_level || '',
         enrolled_courses: rawData.enrolled_courses || 0,
         total_materials: rawData.total_materials || 0,
-        completed_materials: rawData.completed_materials || 0,
+        completed_materials: localCompletedCount || rawData.completed_materials || 0,
         pending_exams: rawData.pending_exams || 0,
         pending_assignments: rawData.pending_assignments || { done: 0, ongoing: 0, overdue: 0 },
         learning_streak: rawData.learning_streak || 0,

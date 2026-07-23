@@ -215,7 +215,7 @@ function DetailQuizView({
               <ul style={{ color: 'var(--grey-blue)', fontSize: '0.9rem', lineHeight: 1.8, margin: 0, paddingLeft: '1.2rem' }}>
                 <li>Terdiri dari <strong style={{ color: '#fff' }}>{detail.questions.length} soal</strong>, waktu <strong style={{ color: '#fff' }}>{detail.waktu_pengerjaan} menit</strong>.</li>
                 <li>Timer berjalan meski tab ditutup. Jawaban tersimpan otomatis.</li>
-                <li>Hanya bisa dikerjakan <strong style={{ color: '#fff' }}>1 kali</strong>. Syarat lulus skor <strong style={{ color: '#fff' }}>75</strong>.</li>
+                <li>Hanya bisa dikerjakan <strong style={{ color: '#fff' }}>1 kali</strong>. Batas KKM (Kriteria Ketuntasan Minimal) adalah skor <strong style={{ color: '#fff' }}>75</strong>.</li>
               </ul>
             </div>
           </div>
@@ -630,7 +630,7 @@ function ResultView({ result, quizTitle, onBack }: { result: SubmitResult; quizT
       </div>
       
       <h2 style={{ fontSize: '2.2rem', fontWeight: 800, color: '#fff', margin: '0 0 0.75rem 0', letterSpacing: '-0.02em' }}>
-        {passed ? 'Selamat, Anda Lulus!' : 'Tetap Semangat!'}
+        {passed ? 'Selamat, Nilai Anda Di Atas KKM!' : 'Tetap Semangat!'}
       </h2>
       <p style={{ color: 'var(--grey)', fontSize: '1rem', margin: '0 auto 2.5rem 0', maxWidth: '400px', lineHeight: 1.6 }}>
         Anda telah menyelesaikan kuis <strong>{quizTitle}</strong>.
@@ -648,7 +648,7 @@ function ResultView({ result, quizTitle, onBack }: { result: SubmitResult; quizT
             color: passed ? '#00E676' : '#FF5252', border: `1px solid ${passed ? 'rgba(0,200,83,0.3)' : 'rgba(255,82,82,0.3)'}`,
             marginTop: '1rem', letterSpacing: '0.05em'
           }}>
-            {passed ? 'STATUS: LULUS' : 'STATUS: TIDAK LULUS'}
+            {passed ? 'STATUS: DI ATAS KKM' : 'STATUS: DI BAWAH KKM'}
           </div>
         </div>
       </div>
@@ -760,7 +760,7 @@ function QuizPageInner() {
               skor: match.score ?? match.skor,
               benar: match.benar,
               salah: match.salah,
-              status: match.is_passed ? 'Selesai' : 'Tidak Lulus',
+              status: match.is_passed ? 'Di Atas KKM' : 'Di Bawah KKM',
             });
           }
         } catch { /* silently ignore */ }
