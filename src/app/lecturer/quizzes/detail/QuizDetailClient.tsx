@@ -19,6 +19,9 @@ interface QuizOption {
 interface QuizQuestion {
   uuid_question: string;
   question_text: string;
+  description?: string;
+  image_url?: string;
+  explanation?: string;
   type: 'MultipleChoice' | 'TrueFalse' | 'Checkbox';
   options: QuizOption[];
 }
@@ -102,6 +105,9 @@ export default function QuizDetailClient() {
           questions: (d.daftar_soal || d.questions || []).map((q: any) => ({
             uuid_question: q.uuid_question || q.id,
             question_text: q.detail_soal || q.question_text || '',
+            description: q.description || undefined,
+            image_url: q.image_url || undefined,
+            explanation: q.explanation || undefined,
             type: q.tipe_soal || q.type || 'MultipleChoice',
             options: (q.opsi_jawaban || q.options || []).map((o: any) => ({
               id: o.id || '',
@@ -281,6 +287,31 @@ export default function QuizDetailClient() {
                           </span>
                         </div>
                         <p style={s.questionText}>{q.question_text}</p>
+
+                        {/* Question Description */}
+                        {q.description && (
+                          <div style={{
+                            background: 'rgba(255, 255, 255, 0.03)',
+                            border: '1px solid rgba(255, 255, 255, 0.07)',
+                            borderRadius: 8,
+                            padding: '12px 14px',
+                            marginTop: 10,
+                            fontSize: '0.85rem',
+                            lineHeight: 1.55,
+                            color: '#CBD5E1',
+                            whiteSpace: 'pre-wrap',
+                            fontFamily: q.description.includes('const') || q.description.includes('let') || q.description.includes('function') || q.description.includes('{') ? 'Consolas, Monaco, monospace' : 'inherit'
+                          }}>
+                            {q.description}
+                          </div>
+                        )}
+
+                        {/* Question Image */}
+                        {q.image_url && (
+                          <div style={{ marginTop: 10, borderRadius: 8, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.08)', display: 'inline-block' }}>
+                            <img src={q.image_url} alt="Question Graphic" style={{ maxHeight: 150, maxWidth: '100%', display: 'block' }} />
+                          </div>
+                        )}
                       </div>
                     </div>
                     {isExpanded
@@ -310,7 +341,7 @@ export default function QuizDetailClient() {
                               }}>
                                 {opt.id}
                               </div>
-                              <span style={{ flex: 1, color: showAllAnswers && isCorrect ? '#fff' : 'var(--grey-blue)', fontSize: '0.88rem' }}>
+                              <span style={{ flex: 1, color: showAllAnswers && isCorrect ? '#fff' : 'var(--grey-blue)', fontSize: '0.88rem', whiteSpace: 'pre-wrap', fontFamily: opt.text.includes('const') || opt.text.includes('let') || opt.text.includes('function') || opt.text.includes('{') ? 'Consolas, Monaco, monospace' : 'inherit' }}>
                                 {opt.text}
                               </span>
                               {showAllAnswers && isCorrect && <CheckCircle size={15} color="#00C853" style={{ flexShrink: 0 }} />}
@@ -319,6 +350,26 @@ export default function QuizDetailClient() {
                           );
                         })}
                       </div>
+
+                      {/* Question Explanation */}
+                      {q.explanation && (
+                        <div style={{
+                          marginTop: 16,
+                          marginLeft: 20,
+                          marginRight: 20,
+                          padding: '12px 16px',
+                          borderRadius: 8,
+                          background: 'rgba(6, 113, 224, 0.06)',
+                          border: '1px solid rgba(6, 113, 224, 0.15)',
+                        }}>
+                          <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--azure)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4 }}>
+                            Pembahasan Jawaban:
+                          </div>
+                          <div style={{ fontSize: '0.85rem', color: '#E2E8F0', whiteSpace: 'pre-wrap', lineHeight: 1.5 }}>
+                            {q.explanation}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
@@ -382,7 +433,7 @@ const s: Record<string, React.CSSProperties> = {
     color: 'var(--azure)', fontSize: '0.8rem', fontWeight: 800,
     display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, marginTop: 2,
   },
-  questionText: { color: '#fff', fontSize: '0.92rem', fontWeight: 500, lineHeight: 1.55, margin: 0 },
+  questionText: { color: '#fff', fontSize: '0.92rem', fontWeight: 500, lineHeight: 1.55, margin: 0, whiteSpace: 'pre-wrap' },
   optionsWrapper: { paddingBottom: 16 },
   optionsDivider: { height: 1, background: 'rgba(255,255,255,0.06)', margin: '0 20px 16px' },
   optionsList: { display: 'flex', flexDirection: 'column', gap: 8, padding: '0 20px' },

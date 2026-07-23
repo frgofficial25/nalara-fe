@@ -19,6 +19,9 @@ import {
 interface MappedQuestion {
   uuid_question: string;
   question_text: string;
+  description?: string;
+  image_url?: string;
+  explanation?: string;
   type: 'MultipleChoice' | 'TrueFalse' | 'Checkbox';
   options: { id: string; text: string; is_correct: boolean }[];
 }
@@ -419,7 +422,7 @@ function QuizWorkView({
           box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
         }
 
-        .qwv-q-text { font-size: 1.45rem; font-weight: 700; color: #fff; line-height: 1.45; margin: 0 0 1.75rem; letter-spacing: -0.01em; }
+        .qwv-q-text { font-size: 1.45rem; font-weight: 700; color: #fff; line-height: 1.45; margin: 0 0 1.75rem; letter-spacing: -0.01em; white-space: pre-wrap; }
 
         .qwv-options { display: flex; flex-direction: column; gap: 0.85rem; }
         .qwv-opt {
@@ -486,20 +489,72 @@ function QuizWorkView({
               {/* Question Text */}
               <h2 className="qwv-q-text">{q.question_text}</h2>
 
+              {/* Question Description (Deskripsi Soal) */}
+              {q.description && (
+                <div style={{
+                  background: 'rgba(255, 255, 255, 0.04)',
+                  border: '1px solid rgba(255, 255, 255, 0.10)',
+                  borderLeft: '3px solid rgba(65, 150, 240, 0.6)',
+                  borderRadius: '10px',
+                  padding: '16px 18px',
+                  marginBottom: '24px',
+                  fontSize: '0.95rem',
+                  lineHeight: 1.65,
+                  color: '#E2E8F0',
+                  whiteSpace: 'pre-wrap',
+                  fontFamily: /[{};()=>]/.test(q.description) ? 'Consolas, Monaco, "Courier New", monospace' : 'inherit'
+                }}>
+                  {q.description}
+                </div>
+              )}
+
+              {/* Question Image */}
+              {q.image_url && (
+                <div style={{
+                  marginBottom: '24px',
+                  borderRadius: '12px',
+                  overflow: 'hidden',
+                  border: '1px solid rgba(255,255,255,0.12)',
+                  background: 'rgba(0,0,0,0.2)',
+                  display: 'flex',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                }}>
+                  <img
+                    src={q.image_url}
+                    alt="Gambar Soal"
+                    style={{ maxWidth: '100%', maxHeight: '400px', display: 'block', objectFit: 'contain' }}
+                    onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                  />
+                </div>
+              )}
+
               {/* Options */}
               <div className="qwv-options">
                 {q.options.map((opt) => {
                   const isSel = q.type === 'Checkbox'
                     ? Array.isArray(currentAnswer) && currentAnswer.includes(opt.id)
                     : currentAnswer === opt.id;
-                  
+
+                  const isCode = /[{};()=>]/.test(opt.text);
+
                   return (
                     <button key={opt.id} onClick={() => onSelect(q.uuid_question, opt.id)}
-                      className={`qwv-opt${isSel ? ' sel' : ''}`}>
-                      <span className="qwv-radio-circle" style={{ borderRadius: q.type === 'Checkbox' ? '4px' : '50%' }}>
+                      className={`qwv-opt${isSel ? ' sel' : ''}`}
+                      style={{ alignItems: 'flex-start' }}
+                    >
+                      <span className="qwv-radio-circle" style={{ borderRadius: q.type === 'Checkbox' ? '4px' : '50%', marginTop: '2px', flexShrink: 0 }}>
                         {isSel && <Check size={11} color="#fff" strokeWidth={3} />}
                       </span>
-                      <span className="qwv-opt-txt">{opt.text}</span>
+                      <span style={{
+                        whiteSpace: 'pre-wrap',
+                        textAlign: 'left',
+                        fontFamily: isCode ? 'Consolas, Monaco, "Courier New", monospace' : 'inherit',
+                        fontSize: isCode ? '0.88rem' : '0.94rem',
+                        lineHeight: 1.6,
+                        flex: 1,
+                        minWidth: 0,
+                      }}>{opt.text}</span>
                     </button>
                   );
                 })}
@@ -683,6 +738,9 @@ function QuizPageInner() {
           questions: (d.daftar_soal || d.questions || []).map((q: any) => ({
             uuid_question: q.uuid_question || q.id,
             question_text: q.detail_soal || q.question_text || q.question || '',
+            description: q.description || undefined,
+            image_url: q.image_url || undefined,
+            explanation: q.explanation || undefined,
             type: q.tipe_soal || q.type || 'MultipleChoice',
             options: normalizeQuestionOptions(q.opsi_jawaban || q.options || [])
           })),

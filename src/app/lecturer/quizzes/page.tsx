@@ -26,6 +26,9 @@ interface Module {
 
 interface QuizQuestionInput {
   question_text: string;
+  description?: string;
+  image_url?: string;
+  explanation?: string;
   type: 'MultipleChoice' | 'TrueFalse' | 'Checkbox';
   options: { id: string; text: string; is_correct: boolean }[];
 }
@@ -388,6 +391,9 @@ export default function QuizzesPage() {
         const formattedQ: any = {
           question_text: q.question_text,
           type: q.type,
+          description: q.description || undefined,
+          image_url: q.image_url || undefined,
+          explanation: q.explanation || undefined,
         };
         formattedQ.options = (q.options || []).map((opt) => ({
           id: opt.id,
@@ -518,6 +524,9 @@ export default function QuizzesPage() {
 
         return {
           question_text: q.question_text || '',
+          description: q.description || '',
+          image_url: q.image_url || '',
+          explanation: q.explanation || '',
           type: qType,
           options: optionsList
         };
@@ -542,6 +551,9 @@ export default function QuizzesPage() {
   const handleAddManualQuestion = () => {
     const newQ: QuizQuestionInput = {
       question_text: '',
+      description: '',
+      image_url: '',
+      explanation: '',
       type: 'MultipleChoice',
       options: [
         { id: 'A', text: '', is_correct: false },
@@ -633,6 +645,9 @@ export default function QuizzesPage() {
         const formattedQ: any = {
           question_text: q.question_text,
           type: q.type,
+          description: q.description || undefined,
+          image_url: q.image_url || undefined,
+          explanation: q.explanation || undefined
         };
 
         formattedQ.options = q.options.map((opt) => ({
@@ -1252,6 +1267,40 @@ export default function QuizzesPage() {
                                 value={q.question_text}
                                 onChange={(e) => handleQuestionChange(qIdx, 'question_text', e.target.value)}
                                 placeholder="Tuliskan pertanyaan di sini..."
+                                style={s.input}
+                              />
+                            </div>
+
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '12px' }}>
+                              <div style={s.formGroup}>
+                                <label style={s.label}>Deskripsi Tambahan Soal (Optional)</label>
+                                <input
+                                  type="text"
+                                  value={q.description || ''}
+                                  onChange={(e) => handleQuestionChange(qIdx, 'description', e.target.value)}
+                                  placeholder="e.g., Perhatikan cuplikan kode di bawah ini..."
+                                  style={s.input}
+                                />
+                              </div>
+                              <div style={s.formGroup}>
+                                <label style={s.label}>URL Gambar Soal (Optional)</label>
+                                <input
+                                  type="text"
+                                  value={q.image_url || ''}
+                                  onChange={(e) => handleQuestionChange(qIdx, 'image_url', e.target.value)}
+                                  placeholder="e.g., https://example.com/assets/img1.png"
+                                  style={s.input}
+                                />
+                              </div>
+                            </div>
+
+                            <div style={{ ...s.formGroup, marginBottom: '12px' }}>
+                              <label style={s.label}>Pembahasan Jawaban / Eksplanasi (Optional)</label>
+                              <textarea
+                                rows={2}
+                                value={q.explanation || ''}
+                                onChange={(e) => handleQuestionChange(qIdx, 'explanation', e.target.value)}
+                                placeholder="Tuliskan penjelasan atau pembahasan jawaban kuis di sini..."
                                 style={s.input}
                               />
                             </div>

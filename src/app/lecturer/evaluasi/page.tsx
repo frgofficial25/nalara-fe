@@ -16,6 +16,9 @@ import Portal from '@/components/common/Portal';
 // ─── Quiz types ─────────────────────────────────────────────────────────────
 interface QuizQuestionInput {
   question_text: string;
+  description?: string;
+  image_url?: string;
+  explanation?: string;
   type: 'MultipleChoice' | 'TrueFalse' | 'Checkbox';
   options: { id: string; text: string; is_correct: boolean }[];
 }
@@ -346,6 +349,9 @@ export default function EvaluasiPage() {
       setManualIsPublished(d.is_published ?? true);
       setManualQuestions((d.questions || []).map((q: any) => ({
         question_text: q.question_text || '',
+        description: q.description || '',
+        image_url: q.image_url || '',
+        explanation: q.explanation || '',
         type: q.type || 'MultipleChoice',
         options: (q.options || []).map((o: any) => ({ id: o.id || '', text: o.text || '', is_correct: !!o.is_correct })),
       })));
@@ -367,7 +373,14 @@ export default function EvaluasiPage() {
         is_published: manualIsPublished,
         uuid_pembelajaran: manualCourse,
         uuid_modul: manualModule || undefined,
-        questions: manualQuestions.map(q => ({ question_text: q.question_text, type: q.type, options: q.options.map(o => ({ id: o.id, text: o.text, is_correct: o.is_correct })) })),
+        questions: manualQuestions.map(q => ({
+          question_text: q.question_text,
+          description: q.description || undefined,
+          image_url: q.image_url || undefined,
+          explanation: q.explanation || undefined,
+          type: q.type,
+          options: q.options.map(o => ({ id: o.id, text: o.text, is_correct: o.is_correct }))
+        })),
       };
       if (manualQuizId) await apiPut(`/api/quiz/${manualQuizId}`, payload, { token: auth.token, headers: auth.headers });
       else await apiPost('/api/quiz', payload, { token: auth.token, headers: auth.headers });
@@ -388,12 +401,30 @@ export default function EvaluasiPage() {
   };
 
   // Question helpers
-  const addQuestion = () => setManualQuestions(prev => [...prev, { question_text: '', type: 'MultipleChoice', options: [{ id: 'A', text: '', is_correct: false }, { id: 'B', text: '', is_correct: false }, { id: 'C', text: '', is_correct: false }, { id: 'D', text: '', is_correct: false }] }]);
+  const addQuestion = () => setManualQuestions(prev => [...prev, {
+    question_text: '',
+    description: '',
+    image_url: '',
+    explanation: '',
+    type: 'MultipleChoice',
+    options: [
+      { id: 'A', text: '', is_correct: false },
+      { id: 'B', text: '', is_correct: false },
+      { id: 'C', text: '', is_correct: false },
+      { id: 'D', text: '', is_correct: false }
+    ]
+  }]);
   const removeQuestion = (i: number) => setManualQuestions(prev => prev.filter((_, idx) => idx !== i));
   const changeQField = (i: number, field: string, val: any) => setManualQuestions(prev => {
     const updated = [...prev];
     if (field === 'type') {
-      updated[i] = { ...updated[i], type: val, options: val === 'TrueFalse' ? [{ id: 'A', text: 'True', is_correct: true }, { id: 'B', text: 'False', is_correct: false }] : [{ id: 'A', text: '', is_correct: false }, { id: 'B', text: '', is_correct: false }, { id: 'C', text: '', is_correct: false }, { id: 'D', text: '', is_correct: false }] };
+      updated[i] = {
+        ...updated[i],
+        type: val,
+        options: val === 'TrueFalse'
+          ? [{ id: 'A', text: 'True', is_correct: true }, { id: 'B', text: 'False', is_correct: false }]
+          : [{ id: 'A', text: '', is_correct: false }, { id: 'B', text: '', is_correct: false }, { id: 'C', text: '', is_correct: false }, { id: 'D', text: '', is_correct: false }]
+      };
     } else { (updated[i] as any)[field] = val; }
     return updated;
   });
@@ -421,6 +452,26 @@ export default function EvaluasiPage() {
       };
     })
   );
+
+  const handleUploadQuestionImage = async (qi: number, file: File) => {
+    if (!file) return;
+    try {
+      const auth = getAuthHeaders();
+      const formData = new FormData();
+      formData.append('file', file);
+      const res = await apiUploadPost<any>('/api/upload/lesson-image', formData, {
+        token: auth.token,
+        headers: auth.headers
+      });
+      if (res && res.url) {
+        setManualQuestions(prev => prev.map((q, idx) => idx === qi ? { ...q, image_url: res.url } : q));
+      } else {
+        alert('Gagal mengupload gambar: URL response kosong');
+      }
+    } catch (err: any) {
+      alert(err.message || 'Gagal mengupload gambar.');
+    }
+  };
 
   // AI Generate
   const handleGenerateAI = async () => {
@@ -470,7 +521,14 @@ export default function EvaluasiPage() {
         is_published: aiIsPublished,
         uuid_pembelajaran: selectedCourse,
         uuid_modul: selectedModule || undefined,
-        questions: generatedQuestions.map(q => ({ question_text: q.question_text, type: q.type, options: q.options.map(o => ({ id: o.id, text: o.text, is_correct: o.is_correct })) })),
+        questions: generatedQuestions.map(q => ({
+          question_text: q.question_text,
+          description: q.description || undefined,
+          image_url: q.image_url || undefined,
+          explanation: q.explanation || undefined,
+          type: q.type,
+          options: q.options.map(o => ({ id: o.id, text: o.text, is_correct: o.is_correct }))
+        })),
       }, { token: auth.token, headers: auth.headers });
       setShowAiModal(false); setGeneratedQuestions([]); setAiTitle(''); setSelectedCourse(''); setSelectedModule(''); setReadingMaterial(''); setPromptText('');
       fetchQuizzes();
@@ -874,7 +932,45 @@ export default function EvaluasiPage() {
                             <span style={{ fontWeight: 700, color: 'var(--azure)', fontSize: '0.85rem' }}>Soal #{qi + 1}</span>
                             <button type="button" onClick={() => removeQuestion(qi)} style={{ background: 'none', border: 'none', cursor: 'pointer' }}><Trash2 size={13} color="#FF5252" /></button>
                           </div>
-                          <input required value={q.question_text} onChange={e => changeQField(qi, 'question_text', e.target.value)} placeholder="Pertanyaan..." style={{ ...s.input, marginBottom: 8 }} />
+
+                          {/* Teks Pertanyaan — textarea untuk mendukung multiline/kode */}
+                          <textarea
+                            required
+                            rows={3}
+                            value={q.question_text}
+                            onChange={e => changeQField(qi, 'question_text', e.target.value)}
+                            placeholder="Pertanyaan... (tekan Enter untuk baris baru)"
+                            style={{ ...s.textarea, marginBottom: 8, fontFamily: 'inherit', resize: 'vertical', minHeight: '72px' }}
+                          />
+
+                          {/* Deskripsi Tambahan Soal */}
+                          <textarea rows={3} value={q.description || ''} onChange={e => changeQField(qi, 'description', e.target.value)} placeholder="Deskripsi / Contoh Kode Soal (Opsional — Enter untuk baris baru)..." style={{ ...s.textarea, marginBottom: 8, fontFamily: 'Consolas, Monaco, monospace', fontSize: '0.85rem', resize: 'vertical', minHeight: '60px' }} />
+
+                          {/* Image Upload / URL */}
+                          <div style={{ display: 'flex', gap: 8, marginBottom: 8, alignItems: 'center' }}>
+                            <input value={q.image_url || ''} onChange={e => changeQField(qi, 'image_url', e.target.value)} placeholder="URL Gambar Soal (Opsional)..." style={{ ...s.input, flex: 1 }} />
+                            <label style={{ ...s.btnGhost, padding: '8px 12px', fontSize: '0.75rem', cursor: 'pointer', margin: 0, whiteSpace: 'nowrap' }}>
+                              Upload Gambar
+                              <input
+                                type="file"
+                                accept="image/*"
+                                style={{ display: 'none' }}
+                                onChange={(e) => {
+                                  const file = e.target.files?.[0];
+                                  if (file) handleUploadQuestionImage(qi, file);
+                                }}
+                              />
+                            </label>
+                          </div>
+                          {q.image_url && (
+                            <div style={{ marginBottom: 8 }}>
+                              <img src={q.image_url} alt={`Soal ${qi + 1}`} style={{ maxHeight: 100, borderRadius: 6, display: 'block' }} />
+                            </div>
+                          )}
+
+                          {/* Pembahasan Jawaban */}
+                          <textarea rows={3} value={q.explanation || ''} onChange={e => changeQField(qi, 'explanation', e.target.value)} placeholder="Pembahasan Jawaban / Eksplanasi (Opsional — Enter untuk baris baru)..." style={{ ...s.textarea, marginBottom: 8, resize: 'vertical', minHeight: '60px' }} />
+
                           <select value={q.type} onChange={e => changeQField(qi, 'type', e.target.value)} style={{ ...s.select, marginBottom: 10 }}>
                             <option value="MultipleChoice">Pilihan Ganda</option>
                             <option value="TrueFalse">Benar / Salah</option>
@@ -882,10 +978,18 @@ export default function EvaluasiPage() {
                           </select>
                           <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 6 }}>
                             {q.options.map((opt, oi) => (
-                              <div key={opt.id} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                                <input type={q.type === 'Checkbox' ? 'checkbox' : 'radio'} name={`q-${qi}`} checked={opt.is_correct} onChange={() => changeOptCorrect(qi, oi)} />
-                                <span style={{ fontSize: '0.78rem', color: 'var(--grey-blue)', minWidth: 16 }}>{opt.id}</span>
-                                <input required={q.type !== 'TrueFalse'} disabled={q.type === 'TrueFalse'} value={opt.text} onChange={e => changeOptText(qi, oi, e.target.value)} placeholder={`Opsi ${opt.id}...`} style={{ ...s.input, padding: '6px 10px', flex: 1 }} />
+                              <div key={opt.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+                                <input type={q.type === 'Checkbox' ? 'checkbox' : 'radio'} name={`q-${qi}`} checked={opt.is_correct} onChange={() => changeOptCorrect(qi, oi)} style={{ marginTop: 10 }} />
+                                <span style={{ fontSize: '0.78rem', color: 'var(--grey-blue)', minWidth: 16, marginTop: 10 }}>{opt.id}</span>
+                                <textarea
+                                  required={q.type !== 'TrueFalse'}
+                                  disabled={q.type === 'TrueFalse'}
+                                  value={opt.text}
+                                  onChange={e => changeOptText(qi, oi, e.target.value)}
+                                  placeholder={`Opsi ${opt.id}... (Enter untuk baris baru)`}
+                                  rows={2}
+                                  style={{ ...s.textarea, padding: '6px 10px', flex: 1, resize: 'vertical', minHeight: '44px', fontFamily: 'Consolas, Monaco, monospace', fontSize: '0.85rem' }}
+                                />
                               </div>
                             ))}
                           </div>
@@ -1022,8 +1126,8 @@ const s: Record<string, React.CSSProperties> = {
   quizIcon: { width: 38, height: 38, borderRadius: 10, background: 'rgba(6,113,224,0.1)', border: '1px solid rgba(6,113,224,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
   quizTitle: { margin: 0, fontSize: '0.95rem', fontWeight: 700, color: '#fff' },
   quizMeta: { fontSize: '0.78rem', color: 'var(--grey-blue)' },
-  overlay: { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.65)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100, padding: 20 },
-  modal: { width: '100%', maxWidth: 600, maxHeight: '90vh', display: 'flex', flexDirection: 'column', borderRadius: 16 },
+  overlay: { position: 'fixed', inset: 0, background: 'rgba(0, 0, 0, 0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100, padding: 20, backdropFilter: 'blur(5px)' },
+  modal: { width: '100%', maxWidth: 600, maxHeight: '90vh', display: 'flex', flexDirection: 'column', borderRadius: 16, background: '#141414', border: '1px solid rgba(255, 255, 255, 0.1)', boxShadow: '0 20px 40px rgba(0, 0, 0, 0.6)' },
   modalHead: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '18px 24px', borderBottom: '1px solid rgba(255,255,255,0.07)' },
   modalBody: { padding: '20px 24px', overflowY: 'auto', flex: 1, display: 'flex', flexDirection: 'column', gap: 16 },
   modalFoot: { padding: '14px 24px', borderTop: '1px solid rgba(255,255,255,0.07)', display: 'flex', justifyContent: 'flex-end', gap: 10 },
