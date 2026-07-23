@@ -68,6 +68,9 @@ interface QuizQuestion {
   uuid_question: string;
   question_text: string;
   type: 'MultipleChoice' | 'TrueFalse' | 'Checkbox';
+  description?: string;
+  image_url?: string;
+  explanation?: string;
   options: { id: string; text: string }[];
 }
 
@@ -976,6 +979,18 @@ export default function PenugasanPage() {
                         }}>
                           <Lock size={12} /> Terkunci (1x)
                         </div>
+                        <button 
+                          onClick={() => openQuiz(quiz)} 
+                          style={{
+                            display: 'inline-flex', alignItems: 'center', gap: 6,
+                            padding: '6px 14px', borderRadius: 10, fontSize: '0.78rem', fontWeight: 700,
+                            background: 'rgba(6,113,224,0.1)', color: 'var(--azure)',
+                            border: '1px solid rgba(6,113,224,0.3)', cursor: 'pointer',
+                            transition: 'all 0.2s'
+                          }}
+                        >
+                          <Info size={12} /> Lihat Pembahasan
+                        </button>
                       </div>
                     </div>
                   );

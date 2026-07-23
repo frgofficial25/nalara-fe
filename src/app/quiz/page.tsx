@@ -39,18 +39,32 @@ interface QuizDetail {
   uuid_pembelajaran?: string;
 }
 
+interface AnswerDetail {
+  uuid_question: string;
+  question_text: string;
+  description?: string;
+  image_url?: string;
+  type: string;
+  submitted_answer: string;
+  is_correct: boolean;
+  correct_answer?: any;
+  explanation?: string;
+}
+
 interface RekapResult {
   uuid_quiz: string;
   skor?: number;
   benar?: number;
   salah?: number;
   status?: string;
+  detail_jawaban?: AnswerDetail[];
 }
 
 interface SubmitResult {
   benar: number;
   salah: number;
   skor: number;
+  detail_jawaban?: AnswerDetail[];
 }
 
 function normalizeOptionId(raw: any, index: number): string {
@@ -664,6 +678,69 @@ function ResultView({ result, quizTitle, onBack }: { result: SubmitResult; quizT
         </div>
       </div>
 
+      {result.detail_jawaban && result.detail_jawaban.length > 0 && (
+        <div style={{ marginTop: '3rem', marginBottom: '3rem', textAlign: 'left' }}>
+          <h3 style={{ fontSize: '1.5rem', fontWeight: 800, marginBottom: '1.5rem', color: '#fff' }}>Pembahasan Kuis</h3>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+            {result.detail_jawaban.map((ans, idx) => (
+              <div key={ans.uuid_question || idx} style={{
+                background: 'rgba(255,255,255,0.02)',
+                border: `1px solid ${ans.is_correct ? 'rgba(0,200,83,0.3)' : 'rgba(255,82,82,0.3)'}`,
+                borderRadius: '16px', padding: '1.5rem'
+              }}>
+                <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start', marginBottom: '12px' }}>
+                  <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: ans.is_correct ? 'rgba(0,200,83,0.2)' : 'rgba(255,82,82,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: ans.is_correct ? '#00E676' : '#FF5252', flexShrink: 0 }}>
+                    {ans.is_correct ? <Check size={18} /> : <XCircle size={18} />}
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <h4 style={{ margin: 0, fontSize: '1.1rem', color: '#fff', lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>
+                      {ans.question_text}
+                    </h4>
+                  </div>
+                </div>
+
+                {ans.description && (
+                  <div style={{ background: 'rgba(255,255,255,0.05)', padding: '12px', borderRadius: '8px', marginBottom: '12px', fontSize: '0.9rem', color: '#E2E8F0', whiteSpace: 'pre-wrap', fontFamily: /[{};()=>]/.test(ans.description) ? 'monospace' : 'inherit' }}>
+                    {ans.description}
+                  </div>
+                )}
+                {ans.image_url && (
+                  <div style={{ marginBottom: '12px', display: 'flex' }}>
+                    <img src={ans.image_url} alt="Gambar Soal" style={{ maxWidth: '100%', maxHeight: '200px', borderRadius: '8px', objectFit: 'contain' }} />
+                  </div>
+                )}
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginTop: '1rem' }}>
+                   <div style={{ background: 'rgba(255,255,255,0.03)', padding: '12px', borderRadius: '10px' }}>
+                     <div style={{ fontSize: '0.75rem', color: 'var(--grey)', marginBottom: '4px' }}>Jawaban Anda:</div>
+                     <strong style={{ color: ans.is_correct ? '#00E676' : '#FF5252' }}>
+                       {ans.submitted_answer || '-'}
+                     </strong>
+                   </div>
+                   <div style={{ background: 'rgba(0,200,83,0.05)', padding: '12px', borderRadius: '10px' }}>
+                     <div style={{ fontSize: '0.75rem', color: 'var(--grey)', marginBottom: '4px' }}>Jawaban Benar:</div>
+                     <strong style={{ color: '#00E676', whiteSpace: 'pre-wrap', fontFamily: Array.isArray(ans.correct_answer) && ans.correct_answer.some((c:any)=>/[{};()=>]/.test(c.text)) ? 'monospace' : 'inherit' }}>
+                       {Array.isArray(ans.correct_answer) 
+                         ? ans.correct_answer.map((c: any) => c.text || c.id).join(', ') 
+                         : '-'}
+                     </strong>
+                   </div>
+                </div>
+
+                {ans.explanation && (
+                  <div style={{ marginTop: '16px', background: 'rgba(65, 150, 240, 0.08)', borderLeft: '4px solid var(--azure)', padding: '14px', borderRadius: '8px' }}>
+                    <div style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--azure)', marginBottom: '6px' }}>PEMBAHASAN</div>
+                    <div style={{ fontSize: '0.95rem', color: '#E2E8F0', whiteSpace: 'pre-wrap', fontFamily: /[{};()=>]/.test(ans.explanation) ? 'monospace' : 'inherit' }}>
+                      {ans.explanation}
+                    </div>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       <Button id="btn-back-result" onClick={onBack} variant="secondary" style={{ padding: '16px 40px', fontSize: '1.05rem', fontWeight: 700, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)' }}>
         Kembali ke Detail Kelas
       </Button>
@@ -761,6 +838,7 @@ function QuizPageInner() {
               benar: match.benar,
               salah: match.salah,
               status: match.is_passed ? 'Di Atas KKM' : 'Di Bawah KKM',
+              detail_jawaban: match.answers || match.detail_jawaban
             });
           }
         } catch { /* silently ignore */ }
@@ -880,13 +958,15 @@ function QuizPageInner() {
       setResult({
         benar: d.benar ?? 0,
         salah: d.salah ?? 0,
-        skor: d.skor ?? 0
+        skor: d.skor ?? 0,
+        detail_jawaban: d.detail_jawaban
       });
       setRekap({
         uuid_quiz: quizId,
         benar: d.benar ?? 0,
         salah: d.salah ?? 0,
-        skor: d.skor ?? 0
+        skor: d.skor ?? 0,
+        detail_jawaban: d.detail_jawaban
       });
     } catch (err) {
       console.warn('Server submit failed, computing locally:', err);
