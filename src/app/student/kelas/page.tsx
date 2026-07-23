@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import {
   BookOpen, Layers, ChevronRight, Loader2, AlertCircle,
   FileText, Video, FlaskConical, PencilLine, BookOpenCheck,
@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 import { apiGet } from '@/lib/api';
 import { getStoredToken } from '@/services/auth';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface Course {
@@ -62,11 +62,18 @@ const typeColor: Record<string, { bg: string; text: string }> = {
 };
 
 // ═════════════════════════════════════════════════════════════════════════════
-export default function StudentKelasPage() {
+function StudentKelasPageInner() {
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   // Nav state: null=course list, id=module list, {course,module}=materi list
-  const [view, setView] = useState<'courses' | 'modules' | 'materi'>('courses');
+  const [view, setView] = useState<'courses' | 'modules' | 'materi'>(() => {
+    const courseId = searchParams.get('courseId');
+    const modulId = searchParams.get('modulId');
+    if (courseId && modulId) return 'materi';
+    if (courseId) return 'modules';
+    return 'courses';
+  });
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
   const [selectedModule, setSelectedModule] = useState<Module | null>(null);
 
@@ -151,7 +158,90 @@ export default function StudentKelasPage() {
     finally { setLoading(false); }
   };
 
-  useEffect(() => { fetchCourses(); }, []);
+  useEffect(() => {
+    const initPage = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const auth = getAuthHeaders();
+
+        // 1. Fetch courses list
+        const coursesRes = await apiGet<any>('/api/pembelajaran', { token: auth.token, headers: auth.headers });
+        const coursesList = Array.isArray(coursesRes) ? coursesRes : (coursesRes?.data || []);
+        const mappedCourses = coursesList.map((c: any) => ({
+          id: c.uuid_pembelajaran || c.id,
+          title: c.nama_pembelajaran || c.title || 'Untitled',
+          description: c.deskripsi || c.description || '',
+          slug: c.slug,
+          modulesCount: c.modulesCount || 0,
+        }));
+        setCourses(mappedCourses);
+
+        const paramCourseId = searchParams.get('courseId');
+        const paramModulId = searchParams.get('modulId');
+
+        if (paramCourseId) {
+          const course = mappedCourses.find((c: any) => c.id === paramCourseId);
+          if (course) {
+            setSelectedCourse(course);
+
+            // 2. Fetch modules list
+            const modulesRes = await apiGet<any>(`/api/modul?uuid_pembelajaran=${course.id}`, { token: auth.token, headers: auth.headers });
+            const modulesRaw = Array.isArray(modulesRes) ? modulesRes : (modulesRes?.data || []);
+            const modulesList = modulesRaw.filter((m: any) => !m.uuid_pembelajaran || m.uuid_pembelajaran === course.id).map((m: any) => ({
+              id: m.uuid_modul || m.id,
+              uuid_modul: m.uuid_modul || m.id,
+              title: m.title || m.nama_modul || 'Modul',
+              description: m.description || m.deskripsi || '',
+              difficulty: m.difficulty || '',
+              uuid_pembelajaran: m.uuid_pembelajaran || course.id,
+            }));
+            setModules(modulesList);
+
+            if (paramModulId) {
+              const mod = modulesList.find((m: any) => m.id === paramModulId);
+              if (mod) {
+                setSelectedModule(mod);
+                // 3. Fetch materials list
+                const materiRes = await apiGet<any>(`/api/materi?uuid_modul=${mod.uuid_modul}`, { token: auth.token, headers: auth.headers });
+                let list: any[] = [];
+                if (materiRes?.data?.materi && Array.isArray(materiRes.data.materi)) {
+                  list = materiRes.data.materi;
+                } else if (Array.isArray(materiRes?.data)) {
+                  list = materiRes.data;
+                } else if (Array.isArray(materiRes)) {
+                  list = materiRes;
+                }
+                setMateriList(list.map((m: any) => ({
+                  id: m.id || m.uuid_materi,
+                  uuid_materi: m.id || m.uuid_materi,
+                  title: m.nama_materi || m.title || 'Materi',
+                  type: m.tipe || m.type || 'Reading',
+                  youtube_link: m.video_url || m.youtube_link || '',
+                  file_url: m.file?.url || m.file?.preview_url || m.file_url || '',
+                  file_format: m.file?.format_file || m.file_format || '',
+                  content: m.content,
+                  slug: m.slug,
+                })));
+              } else {
+                setView('modules');
+              }
+            }
+          } else {
+            setView('courses');
+          }
+        } else {
+          setView('courses');
+        }
+      } catch (e: any) {
+        setError(e.message || 'Gagal memuat data kelas.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    initPage();
+  }, [searchParams]);
 
   // ── Navigation ─────────────────────────────────────────────────────────────
   const openCourse = (course: Course) => {
@@ -168,8 +258,9 @@ export default function StudentKelasPage() {
 
   const openMateri = (materi: Materi) => {
     const courseId = selectedCourse?.id || '';
+    const modulId = selectedModule?.uuid_modul || selectedModule?.id || '';
     // Semua tipe materi (termasuk Video YouTube) → navigasi ke halaman detail
-    router.push(`/student/kelas/materi?courseId=${courseId}&tugasId=${materi.id}`);
+    router.push(`/student/kelas/materi?courseId=${courseId}&tugasId=${materi.id}&modulId=${modulId}`);
   };
 
   const goBack = () => {
@@ -373,3 +464,15 @@ const s: Record<string, React.CSSProperties> = {
   modalHead: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 22px', borderBottom: '1px solid rgba(255,255,255,0.07)' },
   closeBtn: { background: 'none', border: 'none', color: 'var(--grey-blue)', cursor: 'pointer' },
 };
+
+export default function StudentKelasPage() {
+  return (
+    <Suspense fallback={
+      <div style={{ padding: '80px 20px', textAlign: 'center', color: 'var(--grey-blue)', fontFamily: 'sans-serif' }}>
+        Memuat Halaman Kelas...
+      </div>
+    }>
+      <StudentKelasPageInner />
+    </Suspense>
+  );
+}

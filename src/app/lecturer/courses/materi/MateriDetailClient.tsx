@@ -78,7 +78,7 @@ function FilePreviewSection({ file, tipe }: { file: MateriFile; tipe?: string })
   const isVideo = ['mp4', 'webm', 'mov', 'avi'].includes(ext) || tipe === 'Video' || (file.nama_file && /\.(mp4|webm|mov|avi)$/i.test(file.nama_file));
 
   // Normalize URL to ensure it ends with the format extension (critical for Cloudinary raw uploads & Google Viewer)
-  let url = rawUrl;
+  let url = (rawUrl || '').replace('/upload/fl_attachment/', '/upload/');
   const canonicalExt = isPDF ? 'pdf' : (isDoc ? ext : (isVideo ? ext : ''));
   if (canonicalExt && !url.split('?')[0].split('#')[0].toLowerCase().endsWith(`.${canonicalExt}`)) {
     const parts = url.split('?');

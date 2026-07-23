@@ -30,7 +30,7 @@ interface TugasDetail {
   file_format?: string;
   file?: MateriFile | null;
   pembelajaran?: { title: string };
-  modul?: { title: string };
+  modul?: { id: string; title: string };
   nomor_urut?: number;
 }
 
@@ -100,7 +100,7 @@ function FilePreviewSection({
   const isVideo = ['mp4', 'webm', 'mov', 'avi'].includes(ext) || tipe === 'Video' || (fileName && /\.(mp4|webm|mov|avi)$/i.test(fileName));
 
   // Normalize URL to ensure it ends with the format extension (critical for Cloudinary raw uploads & Google Viewer)
-  let url = fileUrl;
+  let url = fileUrl.replace('/upload/fl_attachment/', '/upload/');
   const canonicalExt = isPDF ? 'pdf' : (isDoc ? ext : (isVideo ? ext : ''));
   if (canonicalExt && !url.split('?')[0].split('#')[0].toLowerCase().endsWith(`.${canonicalExt}`)) {
     const parts = url.split('?');
@@ -279,6 +279,7 @@ export default function MateriDetailClient() {
   const tugasId = searchParams.get('tugasId') || '';
 
   const [tugas, setTugas] = useState<TugasDetail | null>(null);
+  const modulId = searchParams.get('modulId') || tugas?.modul?.id || '';
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -315,7 +316,10 @@ export default function MateriDetailClient() {
         file_format: rawData.file?.format_file || rawData.file_format,
         file: rawData.file ?? null,
         pembelajaran: { title: rawData.nama_pembelajaran || rawData.pembelajaran?.title || 'Detail Kelas' },
-        modul: { title: rawData.nama_modul || rawData.modul?.title || 'Modul' },
+        modul: {
+          id: rawData.uuid_modul || rawData.modul?.uuid_modul || '',
+          title: rawData.nama_modul || rawData.modul?.title || 'Modul'
+        },
         content: rawData.content,
       };
 
@@ -377,12 +381,12 @@ export default function MateriDetailClient() {
 
       {/* Breadcrumb */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 28, flexWrap: 'wrap' }}>
-        <button onClick={() => router.push('/student/kelas')} style={backBtn}>
+        <button onClick={() => router.push(`/student/kelas?courseId=${courseId}&modulId=${modulId}`)} style={backBtn}>
           <ArrowLeft size={15} />
         </button>
         <span style={crumb} onClick={() => router.push('/student/kelas')}>Kelas</span>
         <ChevronRight size={13} color="#475569" />
-        <span style={crumb} onClick={() => router.push(`/student/kelas/detail?id=${courseId}`)}>
+        <span style={crumb} onClick={() => router.push(`/student/kelas?courseId=${courseId}&modulId=${modulId}`)}>
           {tugas?.pembelajaran?.title ?? 'Detail Kelas'}
         </span>
         <ChevronRight size={13} color="#475569" />
@@ -435,8 +439,8 @@ export default function MateriDetailClient() {
 
             {/* Actions */}
             <div style={{ display: 'flex', gap: 10, marginTop: 20, flexWrap: 'wrap' }}>
-              <button onClick={() => router.push(`/student/kelas/detail?id=${courseId}`)} style={secondaryBtn}>
-                <ArrowLeft size={14} /> Kembali ke Kelas
+              <button onClick={() => router.push(`/student/kelas?courseId=${courseId}&modulId=${modulId}`)} style={secondaryBtn}>
+                <ArrowLeft size={14} /> Kembali ke Modul
               </button>
               {hasFile && fileUrl && (
                 <button onClick={() => downloadFile(fileUrl, tugas.file?.nama_file || tugas.title)} style={{ ...primaryBtn, cursor: 'pointer' }}>
