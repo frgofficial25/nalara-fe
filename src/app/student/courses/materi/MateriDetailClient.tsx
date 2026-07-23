@@ -439,14 +439,6 @@ export default function MateriDetailClient() {
                 <ArrowLeft size={14} /> Kembali ke Kelas
               </button>
               {hasFile && fileUrl && (
-                <button
-                  onClick={() => openInNewTab(fileUrl, tugas.file?.nama_file || tugas.title, tugas.file_format)}
-                  style={{ ...secondaryBtn, cursor: 'pointer' }}
-                >
-                  <ExternalLink size={14} /> Buka di Tab Baru
-                </button>
-              )}
-              {hasFile && fileUrl && (
                 <button onClick={() => downloadFile(fileUrl, tugas.file?.nama_file || tugas.title)} style={{ ...primaryBtn, cursor: 'pointer' }}>
                   <Download size={14} /> Download
                 </button>
