@@ -406,9 +406,7 @@ export default function AgendaSection({ allowManage = false }: AgendaSectionProp
                               <Video size={12} />
                               <span>Klik untuk Gabung Sesi Live</span>
                             </a>
-                          ) : (
-                            <span style={s.offlineText}>Offline Session</span>
-                          )}
+                          ) : null}
                         </div>
                       </div>
 
