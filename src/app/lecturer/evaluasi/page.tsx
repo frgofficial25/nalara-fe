@@ -35,16 +35,16 @@ function getAuthHeaders() {
 }
 
 const typeIcons: Record<TugasType, React.ReactNode> = {
-  Reading:   <BookOpenCheck size={16} color="#4196F0" />,
-  Video:     <Video size={16} color="#E040FB" />,
+  Reading: <BookOpenCheck size={16} color="#4196F0" />,
+  Video: <Video size={16} color="#E040FB" />,
   CaseStudy: <FlaskConical size={16} color="#FF9100" />,
-  Practice:  <PencilLine size={16} color="#00C853" />,
+  Practice: <PencilLine size={16} color="#00C853" />,
 };
 const typeColors: Record<TugasType, { bg: string; text: string; border: string }> = {
-  Reading:   { bg: 'rgba(65,150,240,0.1)',   text: '#4196F0', border: 'rgba(65,150,240,0.2)' },
-  Video:     { bg: 'rgba(224,64,251,0.1)',   text: '#E040FB', border: 'rgba(224,64,251,0.2)' },
-  CaseStudy: { bg: 'rgba(255,145,0,0.1)',    text: '#FF9100', border: 'rgba(255,145,0,0.2)' },
-  Practice:  { bg: 'rgba(0,200,83,0.1)',     text: '#00C853', border: 'rgba(0,200,83,0.2)' },
+  Reading: { bg: 'rgba(65,150,240,0.1)', text: '#4196F0', border: 'rgba(65,150,240,0.2)' },
+  Video: { bg: 'rgba(224,64,251,0.1)', text: '#E040FB', border: 'rgba(224,64,251,0.2)' },
+  CaseStudy: { bg: 'rgba(255,145,0,0.1)', text: '#FF9100', border: 'rgba(255,145,0,0.2)' },
+  Practice: { bg: 'rgba(0,200,83,0.1)', text: '#00C853', border: 'rgba(0,200,83,0.2)' },
 };
 
 // ============================================================================
@@ -53,19 +53,19 @@ export default function EvaluasiPage() {
   const [mainTab, setMainTab] = useState<'studycase' | 'quiz'>('studycase');
 
   // ── Shared data ──────────────────────────────────────────────────────────
-  const [courses, setCourses]   = useState<any[]>([]);
-  const [modules, setModules]   = useState<any[]>([]);
-  const [loading, setLoading]   = useState(true);
-  const [error, setError]       = useState<string | null>(null);
+  const [courses, setCourses] = useState<any[]>([]);
+  const [modules, setModules] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   // ── Study Case state ─────────────────────────────────────────────────────
-  const [tugasList, setTugasList]         = useState<Tugas[]>([]);
+  const [tugasList, setTugasList] = useState<Tugas[]>([]);
   const [filterCourseId, setFilterCourseId] = useState('');
   const [filterModuleId, setFilterModuleId] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [showEditModal, setShowEditModal]     = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
   const [showDetailModal, setShowDetailModal] = useState(false);
-  const [currentTugas, setCurrentTugas]       = useState<Tugas | null>(null);
+  const [currentTugas, setCurrentTugas] = useState<Tugas | null>(null);
   const [form, setForm] = useState({
     title: '', type: 'CaseStudy' as TugasType,
     youtube_link: '', content_text: '',
@@ -76,39 +76,39 @@ export default function EvaluasiPage() {
   const [submitting, setSubmitting] = useState(false);
 
   // ── Quiz state ───────────────────────────────────────────────────────────
-  const [quizzes, setQuizzes]               = useState<QuizListItem[]>([]);
-  const [quizLoading, setQuizLoading]       = useState(false);
-  const [hasLocalDraft, setHasLocalDraft]   = useState(false);
+  const [quizzes, setQuizzes] = useState<QuizListItem[]>([]);
+  const [quizLoading, setQuizLoading] = useState(false);
+  const [hasLocalDraft, setHasLocalDraft] = useState(false);
 
   // AI modal
-  const [showAiModal, setShowAiModal]           = useState(false);
-  const [selectedCourse, setSelectedCourse]     = useState('');
-  const [selectedModule, setSelectedModule]     = useState('');
-  const [promptText, setPromptText]             = useState('');
-  const [readingMaterial, setReadingMaterial]   = useState('');
+  const [showAiModal, setShowAiModal] = useState(false);
+  const [selectedCourse, setSelectedCourse] = useState('');
+  const [selectedModule, setSelectedModule] = useState('');
+  const [promptText, setPromptText] = useState('');
+  const [readingMaterial, setReadingMaterial] = useState('');
   const [counts, setCounts] = useState({ MultipleChoice: 5, TrueFalse: 3, Checkbox: 2 });
-  const [aiGenerating, setAiGenerating]         = useState(false);
+  const [aiGenerating, setAiGenerating] = useState(false);
   const [generatedQuestions, setGeneratedQuestions] = useState<QuizQuestionInput[]>([]);
-  const [aiTitle, setAiTitle]       = useState('');
+  const [aiTitle, setAiTitle] = useState('');
   const [aiDescription, setAiDescription] = useState('');
-  const [aiTimeLimit, setAiTimeLimit]   = useState(30);
-  const [aiDeadline, setAiDeadline]     = useState('');
+  const [aiTimeLimit, setAiTimeLimit] = useState(30);
+  const [aiDeadline, setAiDeadline] = useState('');
   const [aiIsPublished, setAiIsPublished] = useState(true);
   const [savingAiQuiz, setSavingAiQuiz] = useState(false);
 
   // Manual quiz modal
-  const [showManualModal, setShowManualModal]   = useState(false);
-  const [manualQuizId, setManualQuizId]         = useState<string | null>(null);
-  const [manualTitle, setManualTitle]           = useState('');
-  const [manualCourse, setManualCourse]         = useState('');
-  const [manualModule, setManualModule]         = useState('');
-  const [manualTimeLimit, setManualTimeLimit]   = useState(30);
-  const [manualDeadline, setManualDeadline]     = useState('');
+  const [showManualModal, setShowManualModal] = useState(false);
+  const [manualQuizId, setManualQuizId] = useState<string | null>(null);
+  const [manualTitle, setManualTitle] = useState('');
+  const [manualCourse, setManualCourse] = useState('');
+  const [manualModule, setManualModule] = useState('');
+  const [manualTimeLimit, setManualTimeLimit] = useState(30);
+  const [manualDeadline, setManualDeadline] = useState('');
   const [manualDescription, setManualDescription] = useState('');
   const [manualIsPublished, setManualIsPublished] = useState(true);
-  const [manualQuestions, setManualQuestions]   = useState<QuizQuestionInput[]>([]);
+  const [manualQuestions, setManualQuestions] = useState<QuizQuestionInput[]>([]);
   const [savingManualQuiz, setSavingManualQuiz] = useState(false);
-  const [modalStep, setModalStep]               = useState<1 | 2>(1);
+  const [modalStep, setModalStep] = useState<1 | 2>(1);
 
   // ── Fetch helpers ────────────────────────────────────────────────────────
   const fetchSharedData = async () => {
@@ -116,7 +116,7 @@ export default function EvaluasiPage() {
       const auth = getAuthHeaders();
       const [cRes, mRes] = await Promise.all([
         apiGet<any>('/api/pembelajaran', { token: auth.token, headers: auth.headers }),
-        apiGet<any>('/api/modul',        { token: auth.token, headers: auth.headers }),
+        apiGet<any>('/api/modul', { token: auth.token, headers: auth.headers }),
       ]);
       const cList = Array.isArray(cRes) ? cRes : (cRes?.data || []);
       const mList = Array.isArray(mRes) ? mRes : (mRes?.data || []);
@@ -219,7 +219,7 @@ export default function EvaluasiPage() {
       if (form.uuid_modul) payloadForm.append('uuid_modul', form.uuid_modul);
       if (form.published_at) payloadForm.append('published_at', form.published_at);
       if (form.deadline_at) payloadForm.append('deadline_at', form.deadline_at);
-      
+
       if (form.type === 'Video' && form.youtube_link) {
         payloadForm.append('youtube_link', form.youtube_link);
       }
@@ -254,7 +254,7 @@ export default function EvaluasiPage() {
       if (form.uuid_modul) payloadForm.append('uuid_modul', form.uuid_modul);
       if (form.published_at) payloadForm.append('published_at', form.published_at);
       if (form.deadline_at) payloadForm.append('deadline_at', form.deadline_at);
-      
+
       if (form.type === 'Video' && form.youtube_link) {
         payloadForm.append('youtube_link', form.youtube_link);
       }
@@ -264,7 +264,7 @@ export default function EvaluasiPage() {
       if (form.type === 'CaseStudy' && form.file) {
         payloadForm.append('file', form.file);
       }
-      
+
       await apiUpload(`/api/tugas/${currentTugas.id}`, payloadForm, { token: auth.token, headers: auth.headers });
       setShowEditModal(false); setCurrentTugas(null); resetForm(); fetchTugas();
     } catch (e: any) { alert(e.message || 'Gagal memperbarui tugas.'); }
@@ -305,7 +305,7 @@ export default function EvaluasiPage() {
       if (!iso) return '';
       const d = new Date(iso);
       const pad = (n: number) => String(n).padStart(2, '0');
-      return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+      return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
     };
     setForm({
       title: tugas.title,
@@ -343,7 +343,7 @@ export default function EvaluasiPage() {
       if (d.deadline) {
         const dt = new Date(d.deadline);
         const pad = (n: number) => String(n).padStart(2, '0');
-        setManualDeadline(`${dt.getFullYear()}-${pad(dt.getMonth()+1)}-${pad(dt.getDate())}T${pad(dt.getHours())}:${pad(dt.getMinutes())}`);
+        setManualDeadline(`${dt.getFullYear()}-${pad(dt.getMonth() + 1)}-${pad(dt.getDate())}T${pad(dt.getHours())}:${pad(dt.getMinutes())}`);
       } else setManualDeadline('');
       setManualDescription(d.description || '');
       setManualIsPublished(d.is_published ?? true);
@@ -428,7 +428,7 @@ export default function EvaluasiPage() {
     } else { (updated[i] as any)[field] = val; }
     return updated;
   });
-  const changeOptText = (qi: number, oi: number, text: string) => setManualQuestions(prev => 
+  const changeOptText = (qi: number, oi: number, text: string) => setManualQuestions(prev =>
     prev.map((q, idx) => {
       if (idx !== qi) return q;
       return {
@@ -547,7 +547,7 @@ export default function EvaluasiPage() {
       setManualQuestions(d.questions || []); setModalStep(d.step || 1);
       if (d.course) await fetchModulesForCourse(d.course);
       setShowManualModal(true);
-    } catch {}
+    } catch { }
   };
 
   // Auto-save draft
@@ -1061,7 +1061,7 @@ export default function EvaluasiPage() {
                     {aiGenerating ? <><Loader2 size={15} style={{ animation: 'spin 1s linear infinite' }} /><span>Generating...</span></> : <><Sparkles size={15} /><span>Generate Questions</span></>}
                   </button>
                 </div>
-  
+
                 {/* Right: preview & save settings */}
                 <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 14 }}>
                   <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--azure)', textTransform: 'uppercase' as const, letterSpacing: '0.08em' }}>② Simpan ke Bank Soal</div>
@@ -1078,7 +1078,7 @@ export default function EvaluasiPage() {
                       <p style={{ fontSize: '0.8rem', color: 'var(--grey)' }}>Belum ada soal. Klik "Generate Questions" terlebih dahulu.</p>
                     ) : generatedQuestions.map((q, i) => (
                       <div key={i} style={{ marginBottom: 12, paddingBottom: 10, borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                        <p style={{ margin: '0 0 4px', fontSize: '0.82rem', color: '#E2E8F0' }}>{i+1}. {q.question_text} <span style={{ color: 'var(--azure)', fontSize: '0.72rem' }}>({q.type})</span></p>
+                        <p style={{ margin: '0 0 4px', fontSize: '0.82rem', color: '#E2E8F0' }}>{i + 1}. {q.question_text} <span style={{ color: 'var(--azure)', fontSize: '0.72rem' }}>({q.type})</span></p>
                         {q.options.map(o => <div key={o.id} style={{ fontSize: '0.74rem', color: o.is_correct ? '#00C853' : 'var(--grey-blue)', paddingLeft: 10 }}>{o.id}: {o.text} {o.is_correct && '✓'}</div>)}
                       </div>
                     ))}

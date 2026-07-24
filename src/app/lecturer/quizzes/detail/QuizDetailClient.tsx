@@ -24,6 +24,7 @@ interface QuizQuestion {
   explanation?: string;
   type: 'MultipleChoice' | 'TrueFalse' | 'Checkbox';
   options: QuizOption[];
+  stats?: { benar: number; salah: number; tidak_menjawab: number };
 }
 
 interface QuizDetail {
@@ -114,6 +115,7 @@ export default function QuizDetailClient() {
               text: o.text || o.option_text || '',
               is_correct: !!o.is_correct,
             })),
+            stats: q.stats || undefined,
           })),
         };
         setQuiz(mapped);
@@ -282,11 +284,44 @@ export default function QuizDetailClient() {
                           }}>
                             {typeLabel(q.type)}
                           </span>
-                          <span style={{ fontSize: '0.72rem', color: 'var(--grey)' }}>
-                            {correctCount} jawaban benar
-                          </span>
                         </div>
                         <p style={s.questionText}>{q.question_text}</p>
+
+                        {/* Stats Analytics */}
+                        {q.stats ? (
+                          <div style={{ display: 'flex', gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
+                            <span style={{
+                              fontSize: '0.71rem', fontWeight: 700, color: '#00C853',
+                              background: 'rgba(0,200,83,0.1)', padding: '3px 10px', borderRadius: 20,
+                              border: '1px solid rgba(0,200,83,0.25)', display: 'inline-flex', alignItems: 'center', gap: 5
+                            }}>
+                              <CheckCircle size={10} /> Benar: {q.stats.benar}
+                            </span>
+                            <span style={{
+                              fontSize: '0.71rem', fontWeight: 700, color: '#FF5252',
+                              background: 'rgba(255,82,82,0.1)', padding: '3px 10px', borderRadius: 20,
+                              border: '1px solid rgba(255,82,82,0.25)', display: 'inline-flex', alignItems: 'center', gap: 5
+                            }}>
+                              <XCircle size={10} /> Salah: {q.stats.salah}
+                            </span>
+                            <span style={{
+                              fontSize: '0.71rem', fontWeight: 700, color: 'var(--grey-blue)',
+                              background: 'rgba(255,255,255,0.05)', padding: '3px 10px', borderRadius: 20,
+                              border: '1px solid rgba(255,255,255,0.1)'
+                            }}>
+                              Tidak Menjawab: {q.stats.tidak_menjawab}
+                            </span>
+                            <span style={{
+                              fontSize: '0.71rem', fontWeight: 600, color: 'rgba(255,255,255,0.3)',
+                              background: 'rgba(255,255,255,0.03)', padding: '3px 10px', borderRadius: 20,
+                              border: '1px solid rgba(255,255,255,0.07)'
+                            }}>
+                              Total: {q.stats.benar + q.stats.salah + q.stats.tidak_menjawab} peserta
+                            </span>
+                          </div>
+                        ) : (
+                          <p style={{ margin: '8px 0 0', fontSize: '0.71rem', color: 'rgba(255,255,255,0.2)', fontStyle: 'italic' }}>Belum ada peserta yang mengerjakan</p>
+                        )}
 
                         {/* Question Description */}
                         {q.description && (
