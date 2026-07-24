@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   TrendingUp, Award, Search, BookOpen, Brain,
   CheckCircle2, Loader2, X, RefreshCw,
@@ -22,6 +23,7 @@ interface GradeAttempt {
 }
 
 interface GradeRow {
+  studentId: string;
   studentName: string;
   studentEmail: string;
   completedCount: number;
@@ -68,6 +70,7 @@ function getAuth() {
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 export default function PenilaianPage() {
+  const router = useRouter();
   // ── Tab state ────────────────────────────────────────────────────────────
   const [tab, setTab] = useState<'quiz' | 'studycase' | 'recap'>('quiz');
 
@@ -116,19 +119,126 @@ export default function PenilaianPage() {
   const [selectedRecapCourse, setSelectedRecapCourse] = useState<any | null>(null);
   const [quizStatusFilter, setQuizStatusFilter] = useState('all');
   const [selectedStudent, setSelectedStudent] = useState<GradeRow | null>(null);
+  const [studentDetails, setStudentDetails] = useState<any | null>(null);
+  const [detailsLoading, setDetailsLoading] = useState(false);
+  const [selectedAttemptId, setSelectedAttemptId] = useState<string>('all');
   const [refreshing, setRefreshing] = useState(false);
+
+  useEffect(() => {
+    if (!selectedStudent) {
+      setStudentDetails(null);
+      setSelectedAttemptId('all');
+      return;
+    }
+
+    const loadStudentDetails = async () => {
+      setDetailsLoading(true);
+      try {
+        const auth = getAuth();
+
+        // Priority: selectedRecapCourse (Recap tab) > selectedCourse > first attempt courseId
+        let courseId = 'all';
+        if (selectedRecapCourse?.id && selectedRecapCourse.id !== 'all') {
+          courseId = selectedRecapCourse.id;
+        } else if (selectedCourse && selectedCourse !== 'all') {
+          courseId = selectedCourse;
+        } else {
+          const firstAttempt = selectedStudent.attempts?.find((a: any) => a.courseId);
+          courseId = firstAttempt?.courseId || 'all';
+        }
+
+        if (courseId && courseId !== 'all') {
+          // Fetch details for specific course
+          const res = await apiGet<any>(
+            `/api/grade/assessment/${courseId}/${selectedStudent.studentId}`,
+            { token: auth.token, headers: auth.headers }
+          );
+          if (res?.success && res?.data) {
+            setStudentDetails(res.data);
+          } else {
+            setStudentDetails({ quizzes: [], studyCases: [], additionalScores: [], finalGrade: null });
+          }
+        } else if (courses.length > 0) {
+          // If course is 'all', fetch from every course and merge results
+          const results = await Promise.allSettled(
+            courses.map((c: any) => {
+              const cId = c.uuid_pembelajaran || c.id;
+              if (!cId) return Promise.resolve(null);
+              return apiGet<any>(
+                `/api/grade/assessment/${cId}/${selectedStudent.studentId}`,
+                { token: auth.token, headers: auth.headers }
+              );
+            })
+          );
+
+          const merged = { quizzes: [] as any[], studyCases: [] as any[], additionalScores: [] as any[], finalGrade: null as any };
+          results.forEach(r => {
+            if (r.status === 'fulfilled' && r.value?.success && r.value?.data) {
+              const d = r.value.data;
+              merged.quizzes.push(...(d.quizzes || []));
+              merged.studyCases.push(...(d.studyCases || []));
+              merged.additionalScores.push(...(d.additionalScores || []));
+              if (d.finalGrade && !merged.finalGrade) merged.finalGrade = d.finalGrade;
+            }
+          });
+          setStudentDetails(merged);
+        } else {
+          setStudentDetails({ quizzes: [], studyCases: [], additionalScores: [], finalGrade: null });
+        }
+      } catch (err) {
+        console.error("Error loading student details:", err);
+        setStudentDetails({ quizzes: [], studyCases: [], additionalScores: [], finalGrade: null });
+      } finally {
+        setDetailsLoading(false);
+      }
+    };
+
+    loadStudentDetails();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedStudent, selectedCourse, selectedRecapCourse, courses.length]);
+
 
   const fetchQuiz = async () => {
     setQuizLoading(true);
     setQuizError(null);
     try {
       const auth = getAuth();
-      const [cRes, gRes] = await Promise.all([
-        apiGet<any>('/api/pembelajaran', { token: auth.token, headers: auth.headers }),
-        apiGet<any>('/api/grade-center/students', { token: auth.token, headers: auth.headers }),
-      ]);
-      const fetchedCourses = Array.isArray(cRes) ? cRes : (cRes?.data ?? []);
+      // First fetch courses list
+      const cRes = await apiGet<any>('/api/pembelajaran', { token: auth.token, headers: auth.headers });
+      const fetchedCourses: any[] = Array.isArray(cRes) ? cRes : (cRes?.data ?? []);
       setCourses(fetchedCourses);
+
+      // Fetch grade-center/students per course so that uuid_pembelajaran is known
+      // (global endpoint doesn't include uuid_pembelajaran in quiz select)
+      const perCourseResults = await Promise.allSettled(
+        fetchedCourses.map((c: any) => {
+          const cId = c.uuid_pembelajaran || c.id;
+          if (!cId) return Promise.resolve(null);
+          return apiGet<any>(
+            `/api/grade-center/students?uuid_pembelajaran=${cId}`,
+            { token: auth.token, headers: auth.headers }
+          ).then(res => ({ courseId: cId, data: res }));
+        })
+      );
+
+      // Collect all attempts enriched with courseId
+      const allAttempts: any[] = [];
+      perCourseResults.forEach(r => {
+        if (r.status === 'fulfilled' && r.value) {
+          const { courseId: cId, data } = r.value as any;
+          const raw: any[] = Array.isArray(data) ? data : (data?.data ?? []);
+          raw.forEach(attempt => {
+            allAttempts.push({ ...attempt, _courseId: cId });
+          });
+        }
+      });
+
+      // Fallback: if per-course fetch returns nothing, try global
+      if (allAttempts.length === 0) {
+        const gRes = await apiGet<any>('/api/grade-center/students', { token: auth.token, headers: auth.headers });
+        const raw: any[] = Array.isArray(gRes) ? gRes : (gRes?.data ?? []);
+        raw.forEach(attempt => allAttempts.push(attempt));
+      }
 
       // Create lookup map for course title by ID
       const courseMap = new Map<string, string>();
@@ -137,10 +247,9 @@ export default function PenilaianPage() {
         if (id) courseMap.set(id, c.title || c.nama_pembelajaran || '');
       });
 
-      // Backend returns flat array of QuizAttempt records — group by student
-      const rawAttempts: any[] = Array.isArray(gRes) ? gRes : (gRes?.data ?? []);
+      // Group by student
       const byUser = new Map<string, any>();
-      rawAttempts.forEach(attempt => {
+      allAttempts.forEach(attempt => {
         const userId = attempt.user?.uuid_user || attempt.uuid_user || attempt.user?.email || '';
         if (!byUser.has(userId)) {
           byUser.set(userId, {
@@ -152,20 +261,22 @@ export default function PenilaianPage() {
         byUser.get(userId).attempts.push(attempt);
       });
 
-      const grouped: GradeRow[] = Array.from(byUser.values()).map(u => {
+      const grouped: GradeRow[] = Array.from(byUser.entries()).map(([userId, u]) => {
         const attempts = u.attempts;
         const avg = attempts.length > 0
           ? Math.round(attempts.reduce((sum: number, a: any) => sum + (a.score ?? 0), 0) / attempts.length)
           : 0;
         const anyPassed = attempts.some((a: any) => a.is_passed);
         return {
+          studentId: userId,
           studentName: u.studentName,
           studentEmail: u.studentEmail,
           completedCount: attempts.length,
           averageScore: avg,
           status: anyPassed ? 'Passed' : 'Failed',
           attempts: attempts.map((a: any) => {
-            const cId = a.quiz?.uuid_pembelajaran || a.uuid_pembelajaran || '';
+            // _courseId is injected from per-course fetch, fallback to quiz field
+            const cId = a._courseId || a.quiz?.uuid_pembelajaran || a.uuid_pembelajaran || '';
             const cTitle = courseMap.get(cId) || a.quiz?.pembelajaran?.title || a.pembelajaran?.title || '-';
             return {
               quizTitle: a.quiz?.title || '-',
@@ -189,6 +300,7 @@ export default function PenilaianPage() {
     } finally {
       setQuizLoading(false);
       setRefreshing(false);
+
     }
   };
 
@@ -525,8 +637,15 @@ export default function PenilaianPage() {
                           : <span style={s.pillRed}>Tidak Lulus</span>}
                       </td>
                       <td style={{ ...s.td, textAlign: 'right' }}>
-                        <button onClick={() => setSelectedStudent(row)} style={s.btnView}>
-                          <span>Rekap</span><ChevronRight size={14} />
+                        <button
+                          onClick={() => {
+                            const courseId = row.attempts?.find((a: any) => a.courseId)?.courseId || selectedCourse || 'all';
+                            const params = new URLSearchParams({ name: row.studentName, email: row.studentEmail, courseId });
+                            router.push(`/lecturer/penilaian/student/${row.studentId}?${params.toString()}`);
+                          }}
+                          style={s.btnView}
+                        >
+                          <span>Rekap Jawaban</span><ChevronRight size={14} />
                         </button>
                       </td>
                     </tr>
@@ -536,54 +655,7 @@ export default function PenilaianPage() {
             </div>
           )}
 
-          {/* Student Recap Modal */}
-          {selectedStudent && (
-            <Portal>
-              <div style={s.overlay} onClick={() => setSelectedStudent(null)}>
-                <div style={s.modal} className="glass-panel" onClick={e => e.stopPropagation()}>
-                  <div style={s.modalHead}>
-                    <div>
-                      <h3 style={{ margin: 0 }}>{selectedStudent.studentName}</h3>
-                      <span style={{ fontSize: '0.8rem', color: 'var(--grey-blue)' }}>{selectedStudent.studentEmail}</span>
-                    </div>
-                    <button onClick={() => setSelectedStudent(null)} style={s.closeBtn}><X size={18} /></button>
-                  </div>
-                  <div style={{ padding: '18px 24px', overflowY: 'auto', maxHeight: '60vh' }}>
-                    <h4 style={{ marginTop: 0, fontSize: '0.85rem', color: 'var(--grey-blue)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Riwayat Kuis</h4>
-                    {selectedStudent.attempts.length === 0 ? (
-                      <p style={{ color: 'var(--grey-blue)', fontSize: '0.85rem' }}>Siswa ini belum mengerjakan kuis apapun.</p>
-                    ) : (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                        {selectedStudent.attempts.map((a, i) => (
-                          <div key={i} className="glass-panel" style={{ borderRadius: 10, padding: 14 }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                                <Brain size={15} color="var(--azure)" />
-                                <span style={{ fontWeight: 600, color: '#fff', fontSize: '0.88rem' }}>{a.quizTitle}</span>
-                              </div>
-                              <span style={{ fontSize: '0.75rem', padding: '3px 9px', borderRadius: 12, background: a.isPassed ? 'rgba(0,200,83,0.1)' : 'rgba(255,82,82,0.1)', color: a.isPassed ? '#00C853' : '#FF5252' }}>
-                                {a.isPassed ? 'Lulus' : 'Tidak Lulus'}
-                              </span>
-                            </div>
-                            <div style={{ fontSize: '0.78rem', color: 'var(--grey-blue)', marginBottom: 8 }}>
-                              Kelas: <strong>{a.courseTitle}</strong>&nbsp;•&nbsp;{a.date}
-                            </div>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.82rem', marginBottom: 6 }}>
-                              <span>Nilai</span>
-                              <strong style={{ color: a.score >= a.passingScore ? 'var(--azure)' : '#FF5252' }}>{a.score}%</strong>
-                            </div>
-                            <div style={{ background: 'rgba(255,255,255,0.05)', borderRadius: 4, height: 6 }}>
-                              <div style={{ width: `${Math.min(a.score, 100)}%`, background: a.score >= a.passingScore ? 'var(--azure)' : '#FF5252', height: '100%', borderRadius: 4, transition: 'width 0.5s' }} />
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </Portal>
-          )}
+          {/* Student Recap Modal removed to root level */}
         </>
       )}
 
@@ -1104,11 +1176,15 @@ export default function PenilaianPage() {
                           </td>
                           <td style={{ ...s.td, textAlign: 'right' }}>
                             <button
-                              onClick={() => setSelectedStudent(row)}
+                              onClick={() => {
+                                const courseId = row.attempts?.find((a: any) => a.courseId)?.courseId || selectedCourse || 'all';
+                                const params = new URLSearchParams({ name: row.studentName, email: row.studentEmail, courseId });
+                                router.push(`/lecturer/penilaian/student/${row.studentId}?${params.toString()}`);
+                              }}
                               style={s.btnGhost}
                             >
                               <Award size={13} />
-                              <span>Detail Riwayat</span>
+                              <span>Lihat Jawaban</span>
                             </button>
                           </td>
                         </tr>
@@ -1121,8 +1197,420 @@ export default function PenilaianPage() {
           )}
         </>
       )}
+
+      {selectedStudent && (
+        <Portal>
+          <div style={s.overlay} onClick={() => setSelectedStudent(null)}>
+            <div style={{ ...s.modal, maxWidth: 600 }} className="glass-panel" onClick={e => e.stopPropagation()}>
+              <div style={s.modalHead}>
+                <div>
+                  <h3 style={{ margin: 0, color: '#fff', fontWeight: 700 }}>{selectedStudent.studentName}</h3>
+                  <span style={{ fontSize: '0.8rem', color: 'var(--grey-blue)' }}>{selectedStudent.studentEmail}</span>
+                </div>
+                <button onClick={() => setSelectedStudent(null)} style={s.closeBtn}><X size={18} /></button>
+              </div>
+              
+              <div style={{ padding: '18px 24px', overflowY: 'auto', maxHeight: '70vh', display: 'flex', flexDirection: 'column', gap: 18 }}>
+                
+                {detailsLoading ? (
+                  <div style={s.centered}>
+                    <Loader2 size={24} style={{ animation: 'spin 1s linear infinite' }} />
+                    <p style={{ margin: '8px 0 0', fontSize: '0.85rem' }}>Memuat riwayat lengkap...</p>
+                  </div>
+                ) : (
+                  <>
+                    {/* Quiz Filter Dropdown */}
+                    {studentDetails?.quizzes && studentDetails.quizzes.length > 0 && (
+                      <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        gap: 12,
+                        borderBottom: '1px solid rgba(255,255,255,0.06)',
+                        paddingBottom: 12,
+                        marginBottom: 6
+                      }}>
+                        <label style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--grey-blue)' }}>Detail Jawaban Kuis:</label>
+                        <select
+                          value={selectedAttemptId}
+                          onChange={e => setSelectedAttemptId(e.target.value)}
+                          style={{
+                            backgroundColor: '#18181b',
+                            border: '1px solid var(--border-color)',
+                            borderRadius: '8px',
+                            padding: '6px 12px',
+                            color: '#ffffff',
+                            fontSize: '0.8rem',
+                            outline: 'none',
+                            width: 'auto',
+                            minWidth: '180px',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          <option value="all">Semua Riwayat (Ringkasan)</option>
+                          {studentDetails.quizzes.map((a: any) => (
+                            <option key={a.uuid_attempt} value={a.uuid_attempt}>
+                              {a.quiz?.title || 'Kuis'} ({a.score}%)
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+
+                    {selectedAttemptId === 'all' ? (
+                      <>
+                        {/* 1. FINAL GRADE */}
+                        {studentDetails?.finalGrade && (
+                          <div style={{
+                            background: 'rgba(65, 150, 240, 0.08)',
+                            border: '1px solid rgba(65, 150, 240, 0.2)',
+                            borderRadius: 12,
+                            padding: 16,
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center'
+                          }}>
+                            <div>
+                              <span style={{ fontSize: '0.75rem', color: 'var(--grey-blue)', textTransform: 'uppercase', fontWeight: 600 }}>Nilai Akhir Kelas</span>
+                              <h4 style={{ margin: '2px 0 0', fontSize: '1.25rem', fontWeight: 800, color: 'var(--azure)' }}>
+                                {studentDetails.finalGrade.final_score}%
+                              </h4>
+                            </div>
+                            <span style={{
+                              fontSize: '0.78rem', padding: '4px 12px', borderRadius: 20, fontWeight: 700,
+                              background: studentDetails.finalGrade.is_passed ? 'rgba(0,200,83,0.15)' : 'rgba(255,82,82,0.15)',
+                              color: studentDetails.finalGrade.is_passed ? '#00C853' : '#FF5252'
+                            }}>
+                              {studentDetails.finalGrade.is_passed ? 'LULUS' : 'BELUM LULUS'}
+                            </span>
+                          </div>
+                        )}
+
+                        {/* 2. QUIZ HISTORY */}
+                        <div>
+                          <h4 style={{ marginTop: 0, marginBottom: 10, fontSize: '0.85rem', color: '#fff', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'flex', alignItems: 'center', gap: 6 }}>
+                            <Brain size={14} color="var(--azure)" />
+                            <span>Riwayat Kuis</span>
+                          </h4>
+                          {!studentDetails?.quizzes || studentDetails.quizzes.length === 0 ? (
+                            <p style={{ color: 'var(--grey-blue)', fontSize: '0.85rem', margin: '4px 0 0' }}>Belum mengerjakan kuis.</p>
+                          ) : (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                              {studentDetails.quizzes.map((a: any, i: number) => (
+                                <div
+                                  key={i}
+                                  className="glass-panel"
+                                  onClick={() => setSelectedAttemptId(a.uuid_attempt)}
+                                  style={{
+                                    borderRadius: 10,
+                                    padding: 12,
+                                    border: '1px solid rgba(255,255,255,0.04)',
+                                    cursor: 'pointer',
+                                    transition: 'all 0.2s'
+                                  }}
+                                  title="Klik untuk melihat detail jawaban"
+                                >
+                                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                                    <span style={{ fontWeight: 600, color: '#E2E8F0', fontSize: '0.85rem' }}>{a.quiz?.title || 'Kuis'}</span>
+                                    <span style={{ fontSize: '0.72rem', padding: '2px 8px', borderRadius: 10, background: a.is_passed ? 'rgba(0,200,83,0.08)' : 'rgba(255,82,82,0.08)', color: a.is_passed ? '#00C853' : '#FF5252' }}>
+                                      {a.is_passed ? 'Lulus' : 'Gagal'}
+                                    </span>
+                                  </div>
+                                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', color: 'var(--grey-blue)' }}>
+                                    <span>Skor: <strong style={{ color: a.is_passed ? 'var(--azure)' : '#FF5252' }}>{a.score}%</strong></span>
+                                    <span style={{ fontSize: '0.72rem', color: 'var(--azure)', display: 'flex', alignItems: 'center', gap: 2 }}>
+                                      Lihat Detail <ChevronRight size={12} />
+                                    </span>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* 3. STUDY CASE HISTORY */}
+                        <div>
+                          <h4 style={{ marginTop: 0, marginBottom: 10, fontSize: '0.85rem', color: '#fff', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'flex', alignItems: 'center', gap: 6 }}>
+                            <FileText size={14} color="#FF9100" />
+                            <span>Riwayat Studi Kasus</span>
+                          </h4>
+                          {!studentDetails?.studyCases || studentDetails.studyCases.length === 0 ? (
+                            <p style={{ color: 'var(--grey-blue)', fontSize: '0.85rem', margin: '4px 0 0' }}>Belum mengumpulkan studi kasus.</p>
+                          ) : (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                              {studentDetails.studyCases.map((sc: any, i: number) => {
+                                const finalScore = sc.released_score ?? sc.ai_score ?? 0;
+                                const isVerified = sc.is_released || sc.lecture_status === 'Verified' || sc.mentor_status === 'Verified';
+                                return (
+                                  <div key={i} className="glass-panel" style={{ borderRadius: 10, padding: 12, border: '1px solid rgba(255,255,255,0.04)' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                                      <span style={{ fontWeight: 600, color: '#E2E8F0', fontSize: '0.85rem' }}>{sc.tugas?.title || 'Studi Kasus'}</span>
+                                      <span style={{ fontSize: '0.72rem', padding: '2px 8px', borderRadius: 10, background: isVerified ? 'rgba(0,200,83,0.08)' : 'rgba(255,178,64,0.08)', color: isVerified ? '#00C853' : '#FFB240' }}>
+                                        {isVerified ? 'Verified' : 'Pending'}
+                                      </span>
+                                    </div>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', color: 'var(--grey-blue)' }}>
+                                      <span>Nilai: <strong style={{ color: '#fff' }}>{finalScore}/100</strong></span>
+                                      <span>{sc.submitted_at ? new Date(sc.submitted_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' }) : '-'}</span>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* 4. ADDITIONAL SCORES */}
+                        {studentDetails?.additionalScores && studentDetails.additionalScores.length > 0 && (
+                          <div>
+                            <h4 style={{ marginTop: 0, marginBottom: 10, fontSize: '0.85rem', color: '#fff', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'flex', alignItems: 'center', gap: 6 }}>
+                              <Star size={14} color="var(--lemon)" />
+                              <span>Nilai Tambahan</span>
+                            </h4>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                              {studentDetails.additionalScores.map((as: any, i: number) => (
+                                <div key={i} className="glass-panel" style={{ borderRadius: 10, padding: 12, border: '1px solid rgba(255,255,255,0.04)' }}>
+                                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                                    <span style={{ fontWeight: 600, color: '#E2E8F0', fontSize: '0.85rem' }}>{as.description}</span>
+                                    <strong style={{ color: 'var(--azure)', fontSize: '0.85rem' }}>+{as.score}</strong>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </>
+                    ) : (() => {
+                      const selectedAttempt = studentDetails.quizzes.find((q: any) => q.uuid_attempt === selectedAttemptId);
+                      if (!selectedAttempt) return <p style={{ color: 'var(--grey-blue)', fontSize: '0.85rem' }}>Pengerjaan kuis tidak ditemukan.</p>;
+
+                      let answersList: any[] = [];
+                      if (selectedAttempt.answers) {
+                        if (typeof selectedAttempt.answers === 'string') {
+                          try {
+                            const parsed = JSON.parse(selectedAttempt.answers);
+                            answersList = Array.isArray(parsed) ? parsed : (parsed.answers || []);
+                          } catch (e) {
+                            console.error(e);
+                          }
+                        } else if (typeof selectedAttempt.answers === 'object') {
+                          const obj = selectedAttempt.answers as any;
+                          answersList = Array.isArray(obj) ? obj : (obj.answers || []);
+                        }
+                      }
+
+                      return (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <button
+                              type="button"
+                              onClick={() => setSelectedAttemptId('all')}
+                              style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: 4,
+                                background: 'none',
+                                border: 'none',
+                                color: 'var(--azure)',
+                                cursor: 'pointer',
+                                fontSize: '0.8rem',
+                                padding: 0,
+                                fontWeight: 600
+                              }}
+                            >
+                              <ArrowLeft size={14} /> <span>Kembali ke Ringkasan</span>
+                            </button>
+                          </div>
+                          <div style={{ padding: 14, borderRadius: 12, background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)' }}>
+                            <h4 style={{ margin: 0, color: '#fff', fontSize: '0.9rem', fontWeight: 700 }}>{selectedAttempt.quiz?.title || 'Kuis'}</h4>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 8, fontSize: '0.78rem', color: 'var(--grey-blue)' }}>
+                              <span>Skor Akhir: <strong style={{ color: selectedAttempt.is_passed ? 'var(--azure)' : '#FF5252' }}>{selectedAttempt.score}%</strong></span>
+                              <span>Status: <strong style={{ color: selectedAttempt.is_passed ? '#00C853' : '#FF5252' }}>{selectedAttempt.is_passed ? 'Lulus' : 'Gagal'}</strong></span>
+                            </div>
+                          </div>
+                          
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 16, marginTop: 4 }}>
+                            {answersList.length === 0 ? (
+                              <p style={{ fontSize: '0.85rem', color: 'var(--grey-blue)' }}>Detail jawaban tidak tersedia.</p>
+                            ) : (
+                              answersList.map((item: any, idx: number) => {
+                                const qType = item.type;
+                                const optionsList: any[] = Array.isArray(item.correct_answer)
+                                  ? [] // options rebuilt below from correct_answer hints
+                                  : [];
+                                // Build a combined options list for rendering:
+                                // items stored in answers[] already carry correct_answer (array of {id, text})
+                                // submitted_answer is the raw id or array of ids
+                                const correctIds: string[] = Array.isArray(item.correct_answer)
+                                  ? item.correct_answer.map((c: any) => String(c.id ?? c).trim().toLowerCase())
+                                  : [];
+
+                                const submittedRaw = item.submitted_answer;
+                                const submittedIds: string[] = submittedRaw === null || submittedRaw === undefined
+                                  ? []
+                                  : Array.isArray(submittedRaw)
+                                    ? submittedRaw.map((s: any) => String(s).trim().toLowerCase())
+                                    : [String(submittedRaw).trim().toLowerCase()];
+
+                                // Build full options list from correct_answer objects + submitted ids not in correct
+                                const allOptionMap = new Map<string, { id: string; text: string }>();
+                                if (Array.isArray(item.correct_answer)) {
+                                  item.correct_answer.forEach((c: any) => {
+                                    if (c.id != null) allOptionMap.set(String(c.id).trim().toLowerCase(), { id: String(c.id), text: c.text || String(c.id) });
+                                  });
+                                }
+                                // Add submitted if not already present (wrong answers won't be in correct_answer)
+                                submittedIds.forEach(sid => {
+                                  if (!allOptionMap.has(sid)) {
+                                    allOptionMap.set(sid, { id: sid, text: sid });
+                                  }
+                                });
+                                const mergedOptions = Array.from(allOptionMap.values());
+                                const hasFullOptions = mergedOptions.length > 0 && !['Essay'].includes(qType);
+
+                                return (
+                                  <div key={idx} style={{
+                                    padding: '16px',
+                                    borderRadius: 14,
+                                    border: `1px solid ${item.is_correct ? 'rgba(0,200,83,0.25)' : 'rgba(255,82,82,0.25)'}`,
+                                    background: 'rgba(255,255,255,0.015)',
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    gap: 10
+                                  }}>
+                                    {/* Question header */}
+                                    <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+                                      <div style={{
+                                        width: 28, height: 28, borderRadius: '50%', flexShrink: 0,
+                                        background: item.is_correct ? 'rgba(0,200,83,0.15)' : 'rgba(255,82,82,0.15)',
+                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                        color: item.is_correct ? '#00C853' : '#FF5252', fontSize: '0.7rem', fontWeight: 800
+                                      }}>
+                                        {idx + 1}
+                                      </div>
+                                      <div style={{ flex: 1 }}>
+                                        <p style={{ margin: 0, fontSize: '0.88rem', color: '#E2E8F0', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>
+                                          {item.question_text}
+                                        </p>
+                                      </div>
+                                      <span style={{
+                                        fontSize: '0.7rem', padding: '3px 10px', borderRadius: 20, flexShrink: 0,
+                                        background: item.is_correct ? 'rgba(0,200,83,0.1)' : 'rgba(255,82,82,0.1)',
+                                        color: item.is_correct ? '#00C853' : '#FF5252', fontWeight: 700
+                                      }}>
+                                        {item.is_correct ? '✓ Benar' : '✗ Salah'}
+                                      </span>
+                                    </div>
+
+                                    {/* Description */}
+                                    {item.description && (
+                                      <div style={{ fontSize: '0.8rem', color: '#CBD5E0', background: 'rgba(255,255,255,0.04)', padding: '8px 12px', borderRadius: 8, whiteSpace: 'pre-wrap', fontFamily: /[{};()=>]/.test(item.description) ? 'monospace' : 'inherit' }}>
+                                        {item.description}
+                                      </div>
+                                    )}
+
+                                    {/* Options visualization */}
+                                    {hasFullOptions && (
+                                      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                                        {mergedOptions.map(opt => {
+                                          const optIdLower = String(opt.id).trim().toLowerCase();
+                                          const isCorrectOpt = correctIds.includes(optIdLower);
+                                          const isSubmittedOpt = submittedIds.includes(optIdLower);
+
+                                          let border = '1px solid rgba(255,255,255,0.05)';
+                                          let bg = 'rgba(255,255,255,0.01)';
+                                          let textColor = 'var(--grey-blue)';
+                                          if (isCorrectOpt) { border = '1px solid rgba(0,200,83,0.3)'; bg = 'rgba(0,200,83,0.06)'; textColor = '#00C853'; }
+                                          if (isSubmittedOpt && !isCorrectOpt) { border = '1px solid rgba(255,82,82,0.3)'; bg = 'rgba(255,82,82,0.06)'; textColor = '#FF5252'; }
+
+                                          return (
+                                            <div key={opt.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '9px 12px', borderRadius: 8, border, background: bg, color: textColor }}>
+                                              <span style={{
+                                                width: 20, height: 20, borderRadius: '50%', flexShrink: 0,
+                                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                background: isSubmittedOpt ? (isCorrectOpt ? '#00C853' : '#FF5252') : (isCorrectOpt ? 'rgba(0,200,83,0.2)' : 'rgba(255,255,255,0.06)'),
+                                                color: isSubmittedOpt ? '#fff' : (isCorrectOpt ? '#00C853' : 'var(--grey-blue)'),
+                                                fontSize: '0.7rem', fontWeight: 800
+                                              }}>
+                                                {qType === 'TrueFalse' ? '' : opt.id.toUpperCase()}
+                                              </span>
+                                              <span style={{ fontSize: '0.82rem', flex: 1, whiteSpace: 'pre-wrap', fontFamily: /[{};()=>]/.test(opt.text) ? 'monospace' : 'inherit' }}>
+                                                {opt.text}
+                                              </span>
+                                              {isCorrectOpt && !isSubmittedOpt && <span style={{ fontSize: '0.68rem', fontWeight: 700, color: '#00C853', flexShrink: 0 }}>(Kunci)</span>}
+                                              {isSubmittedOpt && isCorrectOpt && <span style={{ fontSize: '0.68rem', fontWeight: 700, color: '#00C853', flexShrink: 0 }}>✓ Benar</span>}
+                                              {isSubmittedOpt && !isCorrectOpt && <span style={{ fontSize: '0.68rem', fontWeight: 700, color: '#FF5252', flexShrink: 0 }}>✗ Salah</span>}
+                                            </div>
+                                          );
+                                        })}
+                                      </div>
+                                    )}
+
+                                    {/* Fallback text summary (for Essay or when no options) */}
+                                    {!hasFullOptions && (
+                                      <div style={{ display: 'flex', flexDirection: 'column', gap: 6, padding: '10px 12px', borderRadius: 8, background: 'rgba(255,255,255,0.02)' }}>
+                                        <div style={{ fontSize: '0.78rem' }}>
+                                          <span style={{ color: 'var(--grey-blue)' }}>Jawaban Siswa: </span>
+                                          <strong style={{ color: item.is_correct ? '#00C853' : '#FF5252' }}>
+                                            {formatSubmittedAnswer(item.submitted_answer, item.correct_answer, !!item.is_correct)}
+                                          </strong>
+                                        </div>
+                                        {!item.is_correct && item.correct_answer && (
+                                          <div style={{ fontSize: '0.78rem' }}>
+                                            <span style={{ color: 'var(--grey-blue)' }}>Jawaban Benar: </span>
+                                            <strong style={{ color: '#00C853' }}>{formatCorrectAnswer(item.correct_answer)}</strong>
+                                          </div>
+                                        )}
+                                      </div>
+                                    )}
+
+                                    {/* Explanation */}
+                                    {item.explanation && (
+                                      <div style={{ fontSize: '0.78rem', color: 'var(--azure)', padding: '8px 12px', borderRadius: 8, background: 'rgba(65,150,240,0.06)', borderLeft: '3px solid var(--azure)' }}>
+                                        <strong>Pembahasan: </strong>
+                                        <span style={{ color: '#CBD5E0' }}>{item.explanation}</span>
+                                      </div>
+                                    )}
+                                  </div>
+                                );
+                              })
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })()}
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+        </Portal>
+      )}
     </div>
   );
+}
+
+function formatSubmittedAnswer(submitted: any, correct: any, isCorrect: boolean) {
+  if (submitted === null || submitted === undefined) return 'Tidak dijawab';
+  
+  if (isCorrect && correct) {
+    if (Array.isArray(correct)) {
+      return correct.map((c: any) => `${c.id}. ${c.text}`).join('; ');
+    }
+  }
+
+  if (Array.isArray(submitted)) {
+    return submitted.join(', ');
+  }
+  return String(submitted);
+}
+
+function formatCorrectAnswer(correct: any) {
+  if (!correct) return '-';
+  if (Array.isArray(correct)) {
+    return correct.map((c: any) => `${c.id}. ${c.text}`).join('; ');
+  }
+  return String(correct);
 }
 
 // ─── Inline styles ────────────────────────────────────────────────────────────

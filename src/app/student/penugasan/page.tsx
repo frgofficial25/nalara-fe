@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import {
   ClipboardList, Upload, CheckCircle2, AlertCircle, Loader2,
   FileText, Brain, X, Info, Calendar, ChevronRight,
-  ExternalLink, Clock, Play, Check, Users, Lock, Crown, Eye, Download
+  ExternalLink, Clock, Play, Check, Users, Lock, Crown, Eye, Download, Award
 } from 'lucide-react';
 import { apiGet, apiPost } from '@/lib/api';
 import { getStoredToken } from '@/services/auth';
@@ -624,7 +624,11 @@ export default function PenugasanPage() {
 
     setLoadingQuizDetail(true);
     const courseQuery = quiz.courseId ? `&courseId=${encodeURIComponent(quiz.courseId)}` : '';
-    router.push(`/quiz?id=${encodeURIComponent(quiz.id)}${courseQuery}`);
+    if (already) {
+      router.push(`/student/penugasan/pembahasan_kuis?id=${encodeURIComponent(quiz.id)}&attempt=${already.uuid_attempt}${courseQuery}`);
+    } else {
+      router.push(`/quiz?id=${encodeURIComponent(quiz.id)}${courseQuery}`);
+    }
   };
 
   // Timer countdown
@@ -989,7 +993,7 @@ export default function PenugasanPage() {
                             transition: 'all 0.2s'
                           }}
                         >
-                          <Info size={12} /> Lihat Pembahasan
+                          <Award size={12} /> Lihat Hasil
                         </button>
                       </div>
                     </div>

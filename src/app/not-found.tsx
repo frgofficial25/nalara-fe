@@ -26,10 +26,11 @@ export default function NotFound() {
 
         {/* Logo */}
         <div style={s.logoArea}>
-          <div style={s.logoIcon}>
-            <span style={s.logoInitials}>N</span>
-          </div>
-          <span style={s.logoTitle}>Nalara</span>
+          <img 
+            src="/image/logonalara2.png" 
+            alt="Logo Nalara" 
+            style={{ height: 32, objectFit: 'contain' }} 
+          />
         </div>
 
         {/* 404 Display */}

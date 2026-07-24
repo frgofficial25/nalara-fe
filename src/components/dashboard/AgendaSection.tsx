@@ -29,7 +29,14 @@ interface AgendaSectionProps {
   allowManage?: boolean;
 }
 
-type ModalMode = 'create' | 'edit' | 'delete' | null;
+type ModalMode = 'create' | 'create_bulk' | 'edit' | 'delete' | null;
+
+interface BulkAgendaFormItem {
+  nama_agenda: string;
+  waktu_mulai: string;
+  waktu_selesai: string;
+  link_meet: string;
+}
 
 export default function AgendaSection({ allowManage = false }: AgendaSectionProps) {
   const [agendas, setAgendas] = useState<Agenda[]>([]);
@@ -45,6 +52,7 @@ export default function AgendaSection({ allowManage = false }: AgendaSectionProp
     waktu_selesai: '',
     link_meet: '',
   });
+  const [bulkForms, setBulkForms] = useState<BulkAgendaFormItem[]>([]);
 
   const getHeaders = useCallback(() => {
     const token = getStoredToken();
@@ -122,6 +130,138 @@ export default function AgendaSection({ allowManage = false }: AgendaSectionProp
   const openCreateModal = () => {
     resetForm();
     setModalMode('create');
+  };
+
+  const openCreateBulkModal = () => {
+    setBulkForms([
+      {
+        nama_agenda: '',
+        waktu_mulai: '',
+        waktu_selesai: '',
+        link_meet: '',
+      }
+    ]);
+    setFormError(null);
+    setModalMode('create_bulk');
+  };
+
+  const addBulkRow = () => {
+    let defaultStart = '';
+    let defaultEnd = '';
+    
+    if (bulkForms.length > 0) {
+      const lastForm = bulkForms[bulkForms.length - 1];
+      if (lastForm.waktu_selesai) {
+        try {
+          const prevEndDate = new Date(lastForm.waktu_selesai);
+          if (!isNaN(prevEndDate.getTime())) {
+            const newStartDate = new Date(prevEndDate.getTime() + 15 * 60 * 1000); // 15 mins gap
+            const newEndDate = new Date(newStartDate.getTime() + 60 * 60 * 1000); // 1 hour duration
+            defaultStart = toDateTimeLocalValue(newStartDate.toISOString());
+            defaultEnd = toDateTimeLocalValue(newEndDate.toISOString());
+          }
+        } catch (e) {
+          console.error("Error pre-filling bulk row date time:", e);
+        }
+      }
+    }
+    
+    setBulkForms(current => [
+      ...current,
+      {
+        nama_agenda: '',
+        waktu_mulai: defaultStart,
+        waktu_selesai: defaultEnd,
+        link_meet: '',
+      }
+    ]);
+  };
+
+  const handleBulkFieldChange = (index: number, field: keyof BulkAgendaFormItem, value: string) => {
+    setBulkForms(current => {
+      const updated = [...current];
+      updated[index] = {
+        ...updated[index],
+        [field]: value
+      };
+      
+      if (field === 'waktu_mulai' && value && !updated[index].waktu_selesai) {
+        try {
+          const startDate = new Date(value);
+          if (!isNaN(startDate.getTime())) {
+            const endDate = new Date(startDate.getTime() + 60 * 60 * 1000);
+            updated[index].waktu_selesai = toDateTimeLocalValue(endDate.toISOString());
+          }
+        } catch (e) {
+          console.error(e);
+        }
+      }
+      return updated;
+    });
+  };
+
+  const removeBulkRow = (index: number) => {
+    setBulkForms(current => current.filter((_, i) => i !== index));
+  };
+
+  const validateBulkForms = () => {
+    for (let i = 0; i < bulkForms.length; i++) {
+      const item = bulkForms[i];
+      if (!item.nama_agenda || !item.waktu_mulai || !item.waktu_selesai) {
+        return `Agenda #${i + 1}: Nama agenda, waktu mulai, dan waktu selesai wajib diisi`;
+      }
+      if (new Date(item.waktu_selesai) <= new Date(item.waktu_mulai)) {
+        return `Agenda #${i + 1}: Waktu selesai harus lebih besar dari waktu mulai`;
+      }
+      if (item.link_meet) {
+        const meetRegex = /^(https?:\/\/)?(meet\.google\.com\/[a-zA-Z0-9-]+)/i;
+        const zoomRegex = /^(https?:\/\/)?([a-zA-Z0-9-]+\.)?zoom\.us\/(j\/|my\/)?[a-zA-Z0-9_.-]+/i;
+        if (!meetRegex.test(item.link_meet) && !zoomRegex.test(item.link_meet)) {
+          return `Agenda #${i + 1}: Link harus berupa link Google Meet atau Zoom yang valid`;
+        }
+      }
+    }
+    return null;
+  };
+
+  const handleCreateBulk = async (event: React.FormEvent) => {
+    event.preventDefault();
+
+    const validationError = validateBulkForms();
+    if (validationError) {
+      setFormError(validationError);
+      return;
+    }
+
+    setSubmitting(true);
+    setFormError(null);
+
+    try {
+      const headers = getHeaders();
+      const promises = bulkForms.map(async (formItem) => {
+        const payload = {
+          nama_agenda: formItem.nama_agenda,
+          waktu_mulai: new Date(formItem.waktu_mulai).toISOString(),
+          waktu_selesai: new Date(formItem.waktu_selesai).toISOString(),
+          link_meet: formItem.link_meet.trim() || null,
+        };
+        const response = await apiPost<{ success: boolean; message?: string }>('/api/agenda', payload, headers);
+        if (!response?.success) {
+          throw new Error(response?.message || 'Gagal menambahkan salah satu agenda');
+        }
+        return response;
+      });
+
+      await Promise.all(promises);
+
+      setFlashMessage({ type: 'success', text: `${bulkForms.length} agenda berhasil ditambahkan` });
+      closeModal();
+      await fetchAgendas();
+    } catch (err) {
+      setFormError(err instanceof Error ? err.message : 'Terjadi kesalahan saat menyimpan agenda massal');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const openEditModal = (agenda: Agenda) => {
@@ -238,6 +378,125 @@ export default function AgendaSection({ allowManage = false }: AgendaSectionProp
       return null;
     }
 
+    if (modalMode === 'create_bulk') {
+      return (
+        <Portal>
+          <div style={s.modalOverlay} onClick={closeModal}>
+            <div
+              className="glass-panel"
+              style={{ ...s.modalContent, maxWidth: 640 }}
+              onClick={(event) => event.stopPropagation()}
+            >
+              <div style={s.modalHeader}>
+                <h3 style={s.modalTitle}>Tambah Banyak Agenda</h3>
+                <button onClick={closeModal} style={s.modalCloseBtn} type="button">
+                  <X size={18} />
+                </button>
+              </div>
+
+              {formError && (
+                <div style={s.modalAlert}>
+                  <AlertTriangle size={16} />
+                  <span>{formError}</span>
+                </div>
+              )}
+
+              <form onSubmit={handleCreateBulk} style={s.form}>
+                <div style={s.bulkContainer}>
+                  {bulkForms.map((item, index) => (
+                    <div key={index} style={s.bulkRowCard}>
+                      <div style={s.bulkRowHeader}>
+                        <h4 style={s.bulkRowTitle}>Agenda #{index + 1}</h4>
+                        {bulkForms.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => removeBulkRow(index)}
+                            className="bulk-remove-btn"
+                            style={s.bulkRemoveBtn}
+                          >
+                            <Trash2 size={14} />
+                            <span>Hapus</span>
+                          </button>
+                        )}
+                      </div>
+
+                      <div className="form-grid-responsive">
+                        <div style={s.formGroup}>
+                          <label style={s.label}>Nama Agenda</label>
+                          <input
+                            type="text"
+                            required
+                            value={item.nama_agenda}
+                            onChange={(e) => handleBulkFieldChange(index, 'nama_agenda', e.target.value)}
+                            placeholder="Contoh: Kuliah Pengantar AI"
+                            style={s.input}
+                          />
+                        </div>
+
+                        <div style={s.formGroup}>
+                          <label style={s.label}>Link Meeting (Opsional)</label>
+                          <input
+                            type="url"
+                            value={item.link_meet}
+                            onChange={(e) => handleBulkFieldChange(index, 'link_meet', e.target.value)}
+                            placeholder="Contoh: https://meet.google.com/xxx-xxxx-xxx"
+                            style={s.input}
+                          />
+                        </div>
+
+                        <div style={s.formGroup}>
+                          <label style={s.label}>Waktu Mulai</label>
+                          <input
+                            type="datetime-local"
+                            required
+                            value={item.waktu_mulai}
+                            onChange={(e) => handleBulkFieldChange(index, 'waktu_mulai', e.target.value)}
+                            style={s.input}
+                          />
+                        </div>
+
+                        <div style={s.formGroup}>
+                          <label style={s.label}>Waktu Selesai</label>
+                          <input
+                            type="datetime-local"
+                            required
+                            value={item.waktu_selesai}
+                            onChange={(e) => handleBulkFieldChange(index, 'waktu_selesai', e.target.value)}
+                            style={s.input}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <div style={s.bulkActionRow}>
+                  <button
+                    type="button"
+                    onClick={addBulkRow}
+                    className="btn-add-bulk-row"
+                    style={s.addBulkRowBtn}
+                  >
+                    <Plus size={14} />
+                    <span>Tambah Baris Agenda</span>
+                  </button>
+                </div>
+
+                <div style={s.modalFooter}>
+                  <button type="button" onClick={closeModal} style={s.cancelBtn} disabled={submitting}>
+                    Batal
+                  </button>
+                  <button type="submit" style={s.submitBtn} disabled={submitting}>
+                    {submitting ? 'Menyimpan...' : `Simpan ${bulkForms.length} Agenda`}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </Portal>
+      );
+    }
+
     const isDelete = modalMode === 'delete';
     const heading = modalMode === 'create' ? 'Tambah Agenda Baru' : modalMode === 'edit' ? 'Edit Agenda' : 'Hapus Agenda';
 
@@ -345,10 +604,16 @@ export default function AgendaSection({ allowManage = false }: AgendaSectionProp
             <h3 style={s.title}>Today&apos;s Schedule</h3>
           </div>
           {allowManage && (
-            <button onClick={openCreateModal} style={s.addBtn} type="button">
-              <Plus size={14} />
-              <span>Add Event</span>
-            </button>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button onClick={openCreateModal} className="btn-add-single" style={s.addBtn} type="button">
+                <Plus size={14} />
+                <span>Add Event</span>
+              </button>
+              <button onClick={openCreateBulkModal} className="btn-add-bulk" style={s.addBulkBtn} type="button">
+                <Plus size={14} />
+                <span>Add Bulk Events</span>
+              </button>
+            </div>
           )}
         </div>
 
@@ -449,6 +714,45 @@ export default function AgendaSection({ allowManage = false }: AgendaSectionProp
         }
         .meet-live-pulse {
           animation: pulseGlowMeet 2s infinite ease-in-out;
+        }
+        .btn-add-bulk {
+          transition: all 0.2s ease-in-out;
+        }
+        .btn-add-bulk:hover {
+          background-color: rgba(65, 150, 240, 0.2) !important;
+          border-color: rgba(65, 150, 240, 0.6) !important;
+          transform: translateY(-1px);
+        }
+        .btn-add-single {
+          transition: all 0.2s ease-in-out;
+        }
+        .btn-add-single:hover {
+          background-color: rgba(255, 255, 255, 0.1) !important;
+          border-color: rgba(255, 255, 255, 0.2) !important;
+          transform: translateY(-1px);
+        }
+        .form-grid-responsive {
+          display: grid;
+          grid-template-columns: repeat(2, 1fr);
+          gap: 12px;
+        }
+        @media (max-width: 580px) {
+          .form-grid-responsive {
+            grid-template-columns: 1fr !important;
+          }
+        }
+        .bulk-remove-btn {
+          transition: all 0.2s ease;
+        }
+        .bulk-remove-btn:hover {
+          background-color: rgba(239, 68, 68, 0.1) !important;
+        }
+        .btn-add-bulk-row {
+          transition: all 0.2s ease;
+        }
+        .btn-add-bulk-row:hover {
+          background-color: rgba(65, 150, 240, 0.1) !important;
+          border-color: rgba(65, 150, 240, 0.6) !important;
         }
       ` }} />
 
@@ -842,5 +1146,81 @@ const s: Record<string, React.CSSProperties> = {
     color: '#CBD5E1',
     fontSize: '0.92rem',
     lineHeight: 1.6,
+  },
+  addBulkBtn: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '8px',
+    padding: '10px 14px',
+    borderRadius: '10px',
+    border: '1px solid rgba(65, 150, 240, 0.4)',
+    background: 'rgba(65, 150, 240, 0.05)',
+    color: 'var(--azure)',
+    fontSize: '0.82rem',
+    fontWeight: 600,
+    cursor: 'pointer',
+  },
+  bulkContainer: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '16px',
+    maxHeight: '420px',
+    overflowY: 'auto',
+    marginBottom: '20px',
+    paddingRight: '8px',
+  },
+  bulkRowCard: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '14px',
+    padding: '18px',
+    borderRadius: '12px',
+    border: '1px solid rgba(255, 255, 255, 0.06)',
+    background: 'rgba(255, 255, 255, 0.02)',
+  },
+  bulkRowHeader: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    borderBottom: '1px dashed rgba(255, 255, 255, 0.06)',
+    paddingBottom: '8px',
+    marginBottom: '4px',
+  },
+  bulkRowTitle: {
+    margin: 0,
+    fontSize: '0.92rem',
+    fontWeight: 700,
+    color: 'var(--azure)',
+  },
+  bulkRemoveBtn: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '6px',
+    background: 'none',
+    border: 'none',
+    color: '#EF4444',
+    fontSize: '0.8rem',
+    fontWeight: 600,
+    cursor: 'pointer',
+    padding: '4px 8px',
+    borderRadius: '6px',
+  },
+  bulkActionRow: {
+    display: 'flex',
+    justifyContent: 'center',
+    marginBottom: '20px',
+  },
+  addBulkRowBtn: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '6px',
+    padding: '8px 16px',
+    borderRadius: '8px',
+    border: '1px dashed rgba(65, 150, 240, 0.4)',
+    background: 'rgba(65, 150, 240, 0.05)',
+    color: 'var(--azure)',
+    fontSize: '0.85rem',
+    fontWeight: 600,
+    cursor: 'pointer',
   },
 };

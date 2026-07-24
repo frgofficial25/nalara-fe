@@ -181,7 +181,7 @@ function DetailQuizView({
       <Card glow style={{ padding: '3rem', position: 'relative', overflow: 'hidden' }}>
         {/* Decorative background blur */}
         <div style={{ position: 'absolute', top: '-50%', right: '-20%', width: '400px', height: '400px', background: 'radial-gradient(circle, rgba(65, 150, 240, 0.1) 0%, transparent 70%)', filter: 'blur(40px)', zIndex: 0, pointerEvents: 'none' }} />
-        
+
         <div style={{ position: 'relative', zIndex: 1 }}>
           {/* Title + Status */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1.5rem', marginBottom: '2rem' }}>
@@ -326,8 +326,8 @@ function DetailQuizView({
                     const qExplanation = ans.explanation || originalQ?.explanation || '';
                     const optionsList = originalQ?.options || [];
 
-                    let displaySubmitted = Array.isArray(ans.submitted_answer) 
-                      ? ans.submitted_answer.join(', ') 
+                    let displaySubmitted = Array.isArray(ans.submitted_answer)
+                      ? ans.submitted_answer.join(', ')
                       : (ans.submitted_answer || '-');
                     if (qType === 'TrueFalse') {
                       const matchedOpt = optionsList.find(o => o.id === ans.submitted_answer);
@@ -415,20 +415,20 @@ function DetailQuizView({
                         )}
 
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginTop: '1rem' }}>
-                           <div style={{ background: 'rgba(255,255,255,0.03)', padding: '12px', borderRadius: '10px' }}>
-                             <div style={{ fontSize: '0.75rem', color: 'var(--grey)', marginBottom: '4px' }}>Jawaban Anda:</div>
-                             <strong style={{ color: (ans.submitted_answer === null || ans.submitted_answer === undefined) ? 'var(--grey)' : (ans.is_correct ? '#00E676' : '#FF5252') }}>
-                               {(ans.submitted_answer === null || ans.submitted_answer === undefined) ? 'Tidak dijawab' : displaySubmitted}
-                             </strong>
-                           </div>
-                           <div style={{ background: 'rgba(0,200,83,0.05)', padding: '12px', borderRadius: '10px' }}>
-                             <div style={{ fontSize: '0.75rem', color: 'var(--grey)', marginBottom: '4px' }}>Jawaban Benar:</div>
-                             <strong style={{ color: '#00E676', whiteSpace: 'pre-wrap', fontFamily: Array.isArray(ans.correct_answer) && ans.correct_answer.some((c:any)=>/[{};()=>]/.test(c.text)) ? 'monospace' : 'inherit' }}>
-                               {Array.isArray(ans.correct_answer) 
-                                 ? ans.correct_answer.map((c: any) => c.text || c.id).join(', ') 
-                                 : '-'}
-                             </strong>
-                           </div>
+                          <div style={{ background: 'rgba(255,255,255,0.03)', padding: '12px', borderRadius: '10px' }}>
+                            <div style={{ fontSize: '0.75rem', color: 'var(--grey)', marginBottom: '4px' }}>Jawaban Anda:</div>
+                            <strong style={{ color: (ans.submitted_answer === null || ans.submitted_answer === undefined) ? 'var(--grey)' : (ans.is_correct ? '#00E676' : '#FF5252') }}>
+                              {(ans.submitted_answer === null || ans.submitted_answer === undefined) ? 'Tidak dijawab' : displaySubmitted}
+                            </strong>
+                          </div>
+                          <div style={{ background: 'rgba(0,200,83,0.05)', padding: '12px', borderRadius: '10px' }}>
+                            <div style={{ fontSize: '0.75rem', color: 'var(--grey)', marginBottom: '4px' }}>Jawaban Benar:</div>
+                            <strong style={{ color: '#00E676', whiteSpace: 'pre-wrap', fontFamily: Array.isArray(ans.correct_answer) && ans.correct_answer.some((c: any) => /[{};()=>]/.test(c.text)) ? 'monospace' : 'inherit' }}>
+                              {Array.isArray(ans.correct_answer)
+                                ? ans.correct_answer.map((c: any) => c.text || c.id).join(', ')
+                                : '-'}
+                            </strong>
+                          </div>
                         </div>
 
                         {qExplanation && (
@@ -770,17 +770,17 @@ function ResultView({ result, quizTitle, questions, onBack }: { result: SubmitRe
   return (
     <Card style={{ padding: '4rem 2rem', textAlign: 'center', position: 'relative', overflow: 'hidden' }}>
       <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '6px', background: passed ? 'linear-gradient(90deg, #00C853, #00E676)' : 'linear-gradient(90deg, #FF5252, #FF8A80)' }} />
-      
-      <div style={{ 
-        width: 88, height: 88, borderRadius: '24px', 
-        background: passed ? 'linear-gradient(135deg, rgba(0,200,83,0.2), rgba(0,230,118,0.1))' : 'linear-gradient(135deg, rgba(255,82,82,0.2), rgba(255,138,128,0.1))', 
-        display: 'flex', alignItems: 'center', justifyContent: 'center', 
+
+      <div style={{
+        width: 88, height: 88, borderRadius: '24px',
+        background: passed ? 'linear-gradient(135deg, rgba(0,200,83,0.2), rgba(0,230,118,0.1))' : 'linear-gradient(135deg, rgba(255,82,82,0.2), rgba(255,138,128,0.1))',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
         margin: '0 auto 1.5rem', boxShadow: passed ? '0 12px 30px rgba(0,200,83,0.2)' : '0 12px 30px rgba(255,82,82,0.2)',
         border: passed ? '1px solid rgba(0,200,83,0.3)' : '1px solid rgba(255,82,82,0.3)'
       }}>
         {passed ? <Trophy size={44} color="#00E676" /> : <XCircle size={44} color="#FF5252" />}
       </div>
-      
+
       <h2 style={{ fontSize: '2.2rem', fontWeight: 800, color: '#fff', margin: '0 0 0.75rem 0', letterSpacing: '-0.02em' }}>
         {passed ? 'Selamat, Nilai Anda Di Atas KKM!' : 'Tetap Semangat!'}
       </h2>
@@ -823,14 +823,40 @@ function ResultView({ result, quizTitle, questions, onBack }: { result: SubmitRe
               const originalQ = questions?.find(q => q.uuid_question === ans.uuid_question);
               const qType = ans.type || originalQ?.type;
               const optionsList = originalQ?.options || [];
-              const hasAnswer = ans.submitted_answer !== null && ans.submitted_answer !== undefined;
-              let displaySubmitted = hasAnswer ? (Array.isArray(ans.submitted_answer) 
-                ? ans.submitted_answer.join(', ') 
-                : String(ans.submitted_answer)) : 'Tidak dijawab';
-              if (qType === 'TrueFalse' && hasAnswer) {
-                const matchedOpt = optionsList.find(o => o.id === ans.submitted_answer);
-                if (matchedOpt) displaySubmitted = matchedOpt.text;
+              const noAnswer = ans.submitted_answer === null || ans.submitted_answer === undefined;
+              const submittedIds = noAnswer
+                ? []
+                : Array.isArray(ans.submitted_answer)
+                  ? ans.submitted_answer.map(s => String(s).trim().toLowerCase())
+                  : [String(ans.submitted_answer).trim().toLowerCase()];
+
+              let displaySubmitted = 'Tidak dijawab';
+              if (!noAnswer) {
+                if (qType === 'Essay') {
+                  displaySubmitted = String(ans.submitted_answer);
+                } else {
+                  const selectedOpts = optionsList.filter(o => submittedIds.includes(String(o.id).trim().toLowerCase()));
+                  if (selectedOpts.length > 0) {
+                    displaySubmitted = selectedOpts.map(o => o.text).join(', ');
+                  } else {
+                    displaySubmitted = String(ans.submitted_answer);
+                  }
+                }
               }
+
+              const correctIds = Array.isArray(ans.correct_answer)
+                ? ans.correct_answer.map((c: any) => String(c.id ?? c).trim().toLowerCase())
+                : [];
+              let displayCorrect = '-';
+              if (Array.isArray(ans.correct_answer)) {
+                const correctOpts = optionsList.filter(o => correctIds.includes(String(o.id).trim().toLowerCase()));
+                if (correctOpts.length > 0) {
+                  displayCorrect = correctOpts.map(o => o.text).join(', ');
+                } else {
+                  displayCorrect = ans.correct_answer.map((c: any) => c.text || c.id || c).join(', ');
+                }
+              }
+              const hasAnswer = !noAnswer;
 
               return (
                 <div key={ans.uuid_question || idx} style={{
@@ -906,27 +932,25 @@ function ResultView({ result, quizTitle, questions, onBack }: { result: SubmitRe
                         {displaySubmitted}
                       </strong>
                     </div>
-                   <div style={{ background: 'rgba(0,200,83,0.05)', padding: '12px', borderRadius: '10px' }}>
-                     <div style={{ fontSize: '0.75rem', color: 'var(--grey)', marginBottom: '4px' }}>Jawaban Benar:</div>
-                     <strong style={{ color: '#00E676', whiteSpace: 'pre-wrap', fontFamily: Array.isArray(ans.correct_answer) && ans.correct_answer.some((c:any)=>/[{};()=>]/.test(c.text)) ? 'monospace' : 'inherit' }}>
-                       {Array.isArray(ans.correct_answer) 
-                         ? ans.correct_answer.map((c: any) => c.text || c.id).join(', ') 
-                         : '-'}
-                     </strong>
-                   </div>
-                </div>
-
-                {ans.explanation && (
-                  <div style={{ marginTop: '16px', background: 'rgba(65, 150, 240, 0.08)', borderLeft: '4px solid var(--azure)', padding: '14px', borderRadius: '8px' }}>
-                    <div style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--azure)', marginBottom: '6px' }}>PEMBAHASAN</div>
-                    <div style={{ fontSize: '0.95rem', color: '#E2E8F0', whiteSpace: 'pre-wrap', fontFamily: /[{};()=>]/.test(ans.explanation) ? 'monospace' : 'inherit' }}>
-                      {ans.explanation}
+                    <div style={{ background: 'rgba(0,200,83,0.05)', padding: '12px', borderRadius: '10px' }}>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--grey)', marginBottom: '4px' }}>Jawaban Benar:</div>
+                      <strong style={{ color: '#00E676', whiteSpace: 'pre-wrap' }}>
+                        {displayCorrect}
+                      </strong>
                     </div>
                   </div>
-                )}
-              </div>
-            );
-          })}
+
+                  {ans.explanation && (
+                    <div style={{ marginTop: '16px', background: 'rgba(65, 150, 240, 0.08)', borderLeft: '4px solid var(--azure)', padding: '14px', borderRadius: '8px' }}>
+                      <div style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--azure)', marginBottom: '6px' }}>PEMBAHASAN</div>
+                      <div style={{ fontSize: '0.95rem', color: '#E2E8F0', whiteSpace: 'pre-wrap', fontFamily: /[{};()=>]/.test(ans.explanation) ? 'monospace' : 'inherit' }}>
+                        {ans.explanation}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </div>
       )}
@@ -1246,7 +1270,7 @@ function QuizPageInner() {
   const status = getStatus();
 
   return (
-    <div 
+    <div
       className="quiz-page-container"
       style={{
         minHeight: '100vh',

@@ -16,6 +16,7 @@ interface UpcomingTask {
   course_name: string;
   module_name: string;
   deadline: string;
+  is_quiz?: boolean;
 }
 
 interface StudentData {
@@ -45,6 +46,7 @@ interface StudentTaskRaw {
   module_name?: string;
   deadline?: string;
   deadline_at?: string;
+  tipe?: string;
 }
 
 interface StudentDashboardResponse {
@@ -129,6 +131,10 @@ function DeadlineCountdown({ deadline }: { deadline: string }) {
     const interval = setInterval(calculateTimeLeft, 1000);
     return () => clearInterval(interval);
   }, [deadline]);
+
+  if (deadline === 'Segera' || deadline === 'Tenggat Segera') {
+    return null;
+  }
 
   if (timeLeft.isExpired) {
     return (
@@ -215,18 +221,62 @@ export default function StudentDashboard() {
         console.warn('Failed to fetch authentic task list, falling back to dashboard items:', tugasErr);
       }
 
+      const nowTime = new Date().getTime();
+
       const rawTasks = rawData.tugas_mendesak || rawData.upcoming_tasks || [];
-      const upcoming_tasks = rawTasks.map((t: StudentTaskRaw, idx: number) => {
-        // Match backend's task object to find corresponding task from /api/tugas endpoint
-        const matchedTugas = activeTugasList.find(at => at.uuid_tugas === t.id_tugas);
-        return {
-          id: t.id_tugas || t.id || idx + 1,
-          task_name: t.nama_tugas || t.task_name || 'Tugas Baru',
-          course_name: t.pembelajaran_asal || t.course_name || 'Kelas',
-          module_name: t.modul_asal || t.module_name || 'Modul',
-          deadline: matchedTugas?.deadline_at || t.deadline_at || t.deadline || 'Segera'
-        };
-      });
+      const upcoming_tasks = rawTasks
+        .map((t: StudentTaskRaw, idx: number) => {
+          const matchedTugas = activeTugasList.find(at => at.uuid_tugas === t.id_tugas);
+          return {
+            id: t.id_tugas || t.id || idx + 1,
+            task_name: t.nama_tugas || t.task_name || 'Tugas Baru',
+            course_name: t.pembelajaran_asal || t.course_name || 'Kelas',
+            module_name: t.modul_asal || t.module_name || 'Modul',
+            deadline: matchedTugas?.deadline_at || t.deadline_at || t.deadline || 'Segera',
+            is_quiz: false,
+            tipe: t.tipe || (t as any).type || ''
+          };
+        })
+        .filter((t: any) => {
+          // Hanya tampilkan tugas bertipe CaseStudy atau Practice (jangan Reading)
+          if (t.tipe === 'Reading') return false;
+
+          // Jika tenggat sudah terlewat, jangan ditampilkan
+          if (!t.deadline || t.deadline === 'Segera' || t.deadline === 'Tenggat Segera') return true;
+          const tTime = new Date(t.deadline).getTime();
+          return isNaN(tTime) || tTime > nowTime;
+        });
+
+      // Fetch pending quizzes
+      let pendingQuizzes: any[] = [];
+      try {
+        const [quizRes, rekapRes] = await Promise.all([
+          apiGet<any>('/api/quiz', { token: token || undefined, headers }),
+          apiGet<any>('/api/quiz/rekap', { token: token || undefined, headers }),
+        ]);
+        const quizList = Array.isArray(quizRes) ? quizRes : (quizRes?.data || []);
+        const rekapList = Array.isArray(rekapRes) ? rekapRes : (rekapRes?.data || []);
+        
+        const attemptedQuizIds = new Set(rekapList.map((r: any) => r.uuid_quiz || r.quiz_id));
+        const unattemptedQuizzes = quizList.filter((q: any) => !attemptedQuizIds.has(q.uuid_quiz || q.id));
+        
+        pendingQuizzes = unattemptedQuizzes
+          .map((q: any) => ({
+            id: q.uuid_quiz || q.id,
+            task_name: q.nama_quiz || q.title || 'Untitled Quiz',
+            course_name: q.asal_pembelajaran || q.nama_pembelajaran || 'Kelas',
+            module_name: q.asal_modul || q.nama_modul || 'Kuis',
+            deadline: q.deadline || q.tenggat_pengerjaan || 'Segera',
+            is_quiz: true
+          }))
+          .filter((q: any) => {
+            if (!q.deadline || q.deadline === 'Segera') return true;
+            const qTime = new Date(q.deadline).getTime();
+            return isNaN(qTime) || qTime > nowTime;
+          });
+      } catch (quizErr) {
+        console.warn('Failed to fetch quizzes for dashboard:', quizErr);
+      }
 
       // Get completed materials count from localStorage
       let localCompletedCount = 0;
@@ -251,7 +301,7 @@ export default function StudentDashboard() {
         pending_assignments: rawData.pending_assignments || { done: 0, ongoing: 0, overdue: 0 },
         learning_streak: rawData.learning_streak || 0,
         longest_streak: rawData.longest_streak || 0,
-        upcoming_tasks,
+        upcoming_tasks: [...upcoming_tasks, ...pendingQuizzes],
       });
     } catch (err) {
       console.error(err);
@@ -281,7 +331,20 @@ export default function StudentDashboard() {
   const longestStreak = data?.longest_streak ?? 0;
 
   const urgentTask = data?.upcoming_tasks && data.upcoming_tasks.length > 0
-    ? [...data.upcoming_tasks].sort((a, b) => new Date(a.deadline).getTime() - new Date(b.deadline).getTime())[0]
+    ? [...data.upcoming_tasks].sort((a, b) => {
+        const timeA = (!a.deadline || a.deadline === 'Segera' || a.deadline === 'Tenggat Segera') ? 0 : new Date(a.deadline).getTime();
+        const timeB = (!b.deadline || b.deadline === 'Segera' || b.deadline === 'Tenggat Segera') ? 0 : new Date(b.deadline).getTime();
+        
+        if (timeA === 0 && timeB === 0) {
+          if (a.is_quiz && !b.is_quiz) return -1;
+          if (!a.is_quiz && b.is_quiz) return 1;
+          return 0;
+        }
+        if (timeA === 0) return -1;
+        if (timeB === 0) return 1;
+        
+        return timeA - timeB;
+      })[0]
     : null;
 
   const kpiCards = [
@@ -368,12 +431,36 @@ export default function StudentDashboard() {
           </div>
         </div>
       ) : urgentTask ? (
-        <div style={{ ...s.bannerCard, background: 'linear-gradient(135deg, #4c1d1d 0%, #1a0505 100%)', border: '1px solid rgba(239, 82, 82, 0.25)' }}>
+        <div style={{
+          ...s.bannerCard,
+          background: 'linear-gradient(135deg, #4c1d1d 0%, #1a0505 100%)',
+          border: '1px solid rgba(239, 82, 82, 0.25)'
+        }}>
           <div style={s.bannerLeft}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12, background: 'rgba(239, 82, 82, 0.15)', border: '1px solid rgba(239, 82, 82, 0.25)', borderRadius: 6, padding: '4px 10px', width: 'fit-content' }}>
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6,
+              marginBottom: 12,
+              background: 'rgba(239, 82, 82, 0.15)',
+              border: '1px solid rgba(239, 82, 82, 0.25)',
+              borderRadius: 6,
+              padding: '4px 10px',
+              width: 'fit-content'
+            }}>
               <ShieldAlert size={14} color="#FF5252" />
-              <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#FF5252', letterSpacing: '0.05em' }}>TUGAS MENDESAK</span>
+              <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#FF5252', letterSpacing: '0.05em' }}>
+                {urgentTask.is_quiz ? 'KUIS MENDESAK' : 'TUGAS MENDESAK'}
+              </span>
             </div>
+
+            {/* Jika tidak ada studi kasus sama sekali tapi ada kuis */}
+            {urgentTask.is_quiz && (!data?.upcoming_tasks || data.upcoming_tasks.filter(t => !t.is_quiz).length === 0) && (
+              <p style={{ margin: '0 0 8px 0', fontSize: '0.85rem', color: '#fca5a5', fontWeight: 600 }}>
+                ✓ Tugas studi kasus aman / belum ada
+              </p>
+            )}
+
             <h2 style={s.bannerGreeting}>{urgentTask.task_name}</h2>
             <p style={{ ...s.bannerSubtitle, color: '#fca5a5' }}>
               Kelas Asal: <strong>{urgentTask.course_name}</strong>
@@ -388,9 +475,22 @@ export default function StudentDashboard() {
               <DeadlineCountdown deadline={urgentTask.deadline} />
             </div>
             <div style={s.bannerBtnRow}>
-              <button onClick={() => router.push('/student/penugasan')} style={{ ...s.bannerBtnPrimary, background: '#FF5252', cursor: 'pointer' }}>
+              <button
+                onClick={() => {
+                  if (urgentTask.is_quiz) {
+                    router.push(`/quiz?id=${encodeURIComponent(urgentTask.id)}`);
+                  } else {
+                    router.push('/student/penugasan');
+                  }
+                }}
+                style={{
+                  ...s.bannerBtnPrimary,
+                  background: '#FF5252',
+                  cursor: 'pointer'
+                }}
+              >
                 <Play size={14} fill="#fff" color="#fff" style={{ marginRight: 6 }} />
-                Kerjakan Tugas
+                {urgentTask.is_quiz ? 'Mulai Kuis' : 'Kerjakan Tugas'}
               </button>
               <button onClick={() => router.push('/student/kelas')} style={{ ...s.bannerBtnSecondary, cursor: 'pointer' }}>
                 Lanjutkan Pembelajaran
@@ -483,10 +583,19 @@ export default function StudentDashboard() {
                     <DeadlineCountdown deadline={task.deadline} />
                   </div>
                 </div>
-                <button onClick={() => router.push('/student/penugasan')} style={{ ...s.startTaskBtn, cursor: 'pointer' }}>
-                  <span>Start</span>
-                  <ChevronRight size={14} />
-                </button>
+                 <button
+                   onClick={() => {
+                     if (task.is_quiz) {
+                       router.push(`/quiz?id=${encodeURIComponent(task.id)}`);
+                     } else {
+                       router.push('/student/penugasan');
+                     }
+                   }}
+                   style={{ ...s.startTaskBtn, cursor: 'pointer' }}
+                 >
+                   <span>Start</span>
+                   <ChevronRight size={14} />
+                 </button>
               </div>
             ))
           ) : (
