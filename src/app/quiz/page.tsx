@@ -899,16 +899,26 @@ function ResultView({ result, quizTitle, questions, onBack }: { result: SubmitRe
                         let optBorder = '1px solid rgba(255,255,255,0.06)';
                         let optBg = 'rgba(255,255,255,0.01)';
                         let optColor = 'var(--grey-blue)';
-                        if (isOptCorrect) { optBorder = '1px solid rgba(0,200,83,0.3)'; optBg = 'rgba(0,200,83,0.06)'; optColor = '#00C853'; }
-                        else if (isSubmitted && !isOptCorrect) { optBorder = '1px solid rgba(255,82,82,0.3)'; optBg = 'rgba(255,82,82,0.06)'; optColor = '#FF5252'; }
+                        
+                        if (isSubmitted) {
+                          if (ans.is_correct) {
+                            optBorder = '1px solid rgba(0,200,83,0.3)';
+                            optBg = 'rgba(0,200,83,0.06)';
+                            optColor = '#00C853';
+                          } else {
+                            optBorder = '1px solid rgba(255,82,82,0.3)';
+                            optBg = 'rgba(255,82,82,0.06)';
+                            optColor = '#FF5252';
+                          }
+                        }
 
                         return (
                           <div key={opt.id} style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', padding: '12px 16px', borderRadius: '8px', border: optBorder, background: optBg, color: optColor }}>
                             <span style={{
                               width: '20px', height: '20px', borderRadius: '50%',
                               display: 'flex', alignItems: 'center', justifyContent: 'center',
-                              background: isSubmitted ? (isOptCorrect ? '#00C853' : '#FF5252') : (isOptCorrect ? 'rgba(0,200,83,0.2)' : 'rgba(255,255,255,0.06)'),
-                              color: isSubmitted ? '#fff' : (isOptCorrect ? '#00C853' : 'var(--grey-blue)'),
+                              background: isSubmitted ? (ans.is_correct ? '#00C853' : '#FF5252') : 'rgba(255,255,255,0.06)',
+                              color: isSubmitted ? '#fff' : 'var(--grey-blue)',
                               fontSize: '0.75rem', fontWeight: 800, flexShrink: 0
                             }}>
                               {qType === 'TrueFalse' ? '' : opt.id}
@@ -916,38 +926,22 @@ function ResultView({ result, quizTitle, questions, onBack }: { result: SubmitRe
                             <span style={{ fontSize: '0.9rem', whiteSpace: 'pre-wrap', flex: 1, minWidth: 0, fontFamily: /[{};()=>]/.test(opt.text) ? 'monospace' : 'inherit' }}>
                               {opt.text}
                             </span>
-                            {isOptCorrect && !isSubmitted && <span style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', color: '#00C853', marginLeft: 'auto' }}>(Kunci Jawaban)</span>}
-                            {isSubmitted && !isOptCorrect && <span style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', color: '#FF5252', marginLeft: 'auto' }}>(Jawaban Anda - Salah)</span>}
-                            {isSubmitted && isOptCorrect && <span style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', color: '#00C853', marginLeft: '8px' }}>(Jawaban Anda - Benar)</span>}
+                            {isSubmitted && !ans.is_correct && <span style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', color: '#FF5252', marginLeft: 'auto' }}>(Jawaban Anda - Salah)</span>}
+                            {isSubmitted && ans.is_correct && <span style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', color: '#00C853', marginLeft: '8px' }}>(Jawaban Anda - Benar)</span>}
                           </div>
                         );
                       })}
                     </div>
                   )}
 
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginTop: '1rem' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '1rem', marginTop: '1rem' }}>
                     <div style={{ background: 'rgba(255,255,255,0.03)', padding: '12px', borderRadius: '10px' }}>
                       <div style={{ fontSize: '0.75rem', color: 'var(--grey)', marginBottom: '4px' }}>Jawaban Anda:</div>
                       <strong style={{ color: !hasAnswer ? 'var(--grey)' : (ans.is_correct ? '#00E676' : '#FF5252') }}>
                         {displaySubmitted}
                       </strong>
                     </div>
-                    <div style={{ background: 'rgba(0,200,83,0.05)', padding: '12px', borderRadius: '10px' }}>
-                      <div style={{ fontSize: '0.75rem', color: 'var(--grey)', marginBottom: '4px' }}>Jawaban Benar:</div>
-                      <strong style={{ color: '#00E676', whiteSpace: 'pre-wrap' }}>
-                        {displayCorrect}
-                      </strong>
-                    </div>
                   </div>
-
-                  {ans.explanation && (
-                    <div style={{ marginTop: '16px', background: 'rgba(65, 150, 240, 0.08)', borderLeft: '4px solid var(--azure)', padding: '14px', borderRadius: '8px' }}>
-                      <div style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--azure)', marginBottom: '6px' }}>PEMBAHASAN</div>
-                      <div style={{ fontSize: '0.95rem', color: '#E2E8F0', whiteSpace: 'pre-wrap', fontFamily: /[{};()=>]/.test(ans.explanation) ? 'monospace' : 'inherit' }}>
-                        {ans.explanation}
-                      </div>
-                    </div>
-                  )}
                 </div>
               );
             })}

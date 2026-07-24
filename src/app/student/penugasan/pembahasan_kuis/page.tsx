@@ -165,52 +165,51 @@ function AnswerCard({ item, questions }: { item: AnswerDetail; questions: Questi
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
           {optionsList.map(opt => {
             const optIdLower = String(opt.id).trim().toLowerCase();
-            const isCorrectOpt = correctIds.includes(optIdLower);
             const isSubmittedOpt = submittedIds.includes(optIdLower);
+            
+            // Hanya warnai hijau jika itu jawaban siswa dan benar, merah jika jawaban siswa dan salah.
+            // Opsi lain yang benar tetapi tidak dipilih siswa tetap berwarna abu-abu biasa (tidak dibocorkan).
             let border = '1px solid rgba(255,255,255,0.06)';
             let bg = 'rgba(255,255,255,0.01)';
             let textColor = 'var(--grey-blue)';
-            if (isCorrectOpt) { border = '1px solid rgba(0,200,83,0.35)'; bg = 'rgba(0,200,83,0.07)'; textColor = '#00C853'; }
-            if (isSubmittedOpt && !isCorrectOpt) { border = '1px solid rgba(255,82,82,0.35)'; bg = 'rgba(255,82,82,0.07)'; textColor = '#FF5252'; }
+            
+            if (isSubmittedOpt) {
+              if (item.is_correct) {
+                border = '1px solid rgba(0,200,83,0.35)';
+                bg = 'rgba(0,200,83,0.07)';
+                textColor = '#00C853';
+              } else {
+                border = '1px solid rgba(255,82,82,0.35)';
+                bg = 'rgba(255,82,82,0.07)';
+                textColor = '#FF5252';
+              }
+            }
+
             return (
               <div key={opt.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '10px 14px', borderRadius: 10, border, background: bg, color: textColor }}>
-                <span style={{ width: 22, height: 22, borderRadius: '50%', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: isSubmittedOpt ? (isCorrectOpt ? '#00C853' : '#FF5252') : (isCorrectOpt ? 'rgba(0,200,83,0.2)' : 'rgba(255,255,255,0.06)'), color: isSubmittedOpt ? '#fff' : (isCorrectOpt ? '#00C853' : 'var(--grey-blue)'), fontSize: '0.72rem', fontWeight: 800 }}>
+                <span style={{ width: 22, height: 22, borderRadius: '50%', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: isSubmittedOpt ? (item.is_correct ? '#00C853' : '#FF5252') : 'rgba(255,255,255,0.06)', color: isSubmittedOpt ? '#fff' : 'var(--grey-blue)', fontSize: '0.72rem', fontWeight: 800 }}>
                   {originalQ?.type === 'TrueFalse' ? '' : opt.id.toUpperCase()}
                 </span>
                 <span style={{ fontSize: '0.9rem', flex: 1, whiteSpace: 'pre-wrap', fontFamily: /[{};()=>]/.test(opt.text) ? 'monospace' : 'inherit' }}>
                   {opt.text}
                 </span>
-                {isCorrectOpt && !isSubmittedOpt && <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#00C853', flexShrink: 0 }}>(Kunci)</span>}
-                {isSubmittedOpt && isCorrectOpt && <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#00C853', flexShrink: 0 }}>✓ Benar</span>}
-                {isSubmittedOpt && !isCorrectOpt && <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#FF5252', flexShrink: 0 }}>✗ Salah</span>}
+                {isSubmittedOpt && item.is_correct && <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#00C853', flexShrink: 0 }}>✓ Jawaban Anda Benar</span>}
+                {isSubmittedOpt && !item.is_correct && <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#FF5252', flexShrink: 0 }}>✗ Jawaban Anda Salah</span>}
               </div>
             );
           })}
         </div>
       )}
 
-      {/* Detail Jawaban Anda & Jawaban Benar */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginTop: '0.5rem' }}>
+      {/* Hanya tampilkan Jawaban Anda, hapus Jawaban Benar */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '1rem', marginTop: '0.5rem' }}>
         <div style={{ background: 'rgba(255,255,255,0.03)', padding: '12px', borderRadius: '10px' }}>
           <div style={{ fontSize: '0.75rem', color: 'var(--grey)', marginBottom: '4px', fontWeight: 600 }}>Jawaban Anda:</div>
           <strong style={{ color: noAnswer ? 'var(--grey)' : (item.is_correct ? '#00E676' : '#FF5252'), fontSize: '0.9rem', whiteSpace: 'pre-wrap' }}>
             {displaySubmitted}
           </strong>
         </div>
-        <div style={{ background: 'rgba(0,200,83,0.05)', padding: '12px', borderRadius: '10px' }}>
-          <div style={{ fontSize: '0.75rem', color: 'var(--grey)', marginBottom: '4px', fontWeight: 600 }}>Jawaban Benar:</div>
-          <strong style={{ color: '#00E676', fontSize: '0.9rem', whiteSpace: 'pre-wrap' }}>
-            {displayCorrect}
-          </strong>
-        </div>
       </div>
-
-      {item.explanation && (
-        <div style={{ borderLeft: '3px solid var(--azure)', background: 'rgba(65,150,240,0.07)', padding: '10px 14px', borderRadius: '0 8px 8px 0', marginTop: '0.5rem' }}>
-          <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--azure)', marginBottom: 4, textTransform: 'uppercase' }}>Pembahasan</div>
-          <p style={{ margin: 0, fontSize: '0.9rem', color: '#CBD5E0', whiteSpace: 'pre-wrap' }}>{item.explanation}</p>
-        </div>
-      )}
     </div>
   );
 }
