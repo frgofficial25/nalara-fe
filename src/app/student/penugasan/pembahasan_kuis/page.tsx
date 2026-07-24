@@ -66,7 +66,15 @@ interface RekapResult {
 
 function AnswerCard({ item, questions }: { item: AnswerDetail; questions: QuestionItem[] }) {
   const originalQ = questions.find(q => q.uuid_question === item.uuid_question);
-  const optionsList = originalQ?.options || [];
+  
+  const rawOptionsList = (item as any).options && (item as any).options.length > 0
+    ? (item as any).options
+    : (originalQ?.options || []);
+    
+  // Sort options alphabetically by ID so they appear as A, B, C, D regardless of backend shuffling
+  const optionsList: Option[] = [...rawOptionsList].sort((a, b) => {
+    return String(a.id).localeCompare(String(b.id));
+  });
 
   const correctIds: string[] = Array.isArray(item.correct_answer)
     ? item.correct_answer.map((c: any) => String(c.id ?? c).trim().toLowerCase())
@@ -85,9 +93,13 @@ function AnswerCard({ item, questions }: { item: AnswerDetail; questions: Questi
     if (originalQ?.type === 'Essay') {
       displaySubmitted = String(item.submitted_answer);
     } else {
-      const selectedOpts = optionsList.filter(o => submittedIds.includes(String(o.id).trim().toLowerCase()));
-      if (selectedOpts.length > 0) {
-        displaySubmitted = selectedOpts.map(o => o.text).join(', ');
+      const selectedIndices = optionsList
+        .map((o, idx) => ({ o, idx }))
+        .filter(({ o }) => submittedIds.includes(String(o.id).trim().toLowerCase()));
+      if (selectedIndices.length > 0) {
+        displaySubmitted = selectedIndices.map(({ o, idx }) => 
+          originalQ?.type === 'TrueFalse' ? o.text : `${String.fromCharCode(65 + idx)}. ${o.text}`
+        ).join('\n');
       } else {
         displaySubmitted = String(item.submitted_answer);
       }
@@ -96,11 +108,15 @@ function AnswerCard({ item, questions }: { item: AnswerDetail; questions: Questi
 
   let displayCorrect = '-';
   if (Array.isArray(item.correct_answer)) {
-    const correctOpts = optionsList.filter(o => correctIds.includes(String(o.id).trim().toLowerCase()));
-    if (correctOpts.length > 0) {
-      displayCorrect = correctOpts.map(o => o.text).join(', ');
+    const correctIndices = optionsList
+      .map((o, idx) => ({ o, idx }))
+      .filter(({ o }) => correctIds.includes(String(o.id).trim().toLowerCase()));
+    if (correctIndices.length > 0) {
+      displayCorrect = correctIndices.map(({ o, idx }) => 
+        originalQ?.type === 'TrueFalse' ? o.text : `${String.fromCharCode(65 + idx)}. ${o.text}`
+      ).join('\n');
     } else {
-      displayCorrect = item.correct_answer.map((c: any) => c.text || c.id || c).join(', ');
+      displayCorrect = item.correct_answer.map((c: any) => c.text || c.id || c).join('\n');
     }
   }
 
@@ -221,11 +237,11 @@ function PembahasanKuisContent() {
       setError(null);
       try {
         const auth = getAuth();
-        
+
         // 1. Ambil detail kuis
         const qRes = await apiGet<any>(`/api/quiz/${quizId}`, { token: auth.token, headers: auth.headers });
         const qData = qRes.data || qRes;
-        
+
         const detailObj: QuizDetail = {
           uuid_quiz: qData.uuid_quiz || quizId,
           title: qData.nama_quiz || qData.title || 'Kuis',
@@ -254,18 +270,18 @@ function PembahasanKuisContent() {
         if (studentId) {
           const rekapRes = await apiGet<any>(`/api/students/${studentId}/quiz-rekap`, { token: auth.token, headers: auth.headers });
           const rekapList: any[] = Array.isArray(rekapRes) ? rekapRes : (rekapRes?.data || []);
-          
+
           // Match by attemptId, or fallback to matching quiz_title with the detailObj.title
-          const match = rekapList.find((att: any) => 
-            (attemptId && att.uuid_attempt === attemptId) || 
+          const match = rekapList.find((att: any) =>
+            (attemptId && att.uuid_attempt === attemptId) ||
             (att.quiz_title && att.quiz_title.trim().toLowerCase() === detailObj.title.trim().toLowerCase())
           );
-          
+
           if (match) {
             let answers: AnswerDetail[] = [];
             if (match.answers) {
               if (typeof match.answers === 'string') {
-                try { const p = JSON.parse(match.answers); answers = Array.isArray(p) ? p : (p.answers || []); } catch {}
+                try { const p = JSON.parse(match.answers); answers = Array.isArray(p) ? p : (p.answers || []); } catch { }
               } else if (Array.isArray(match.answers)) {
                 answers = match.answers as AnswerDetail[];
               }
@@ -314,7 +330,7 @@ function PembahasanKuisContent() {
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)', padding: '2rem' }}>
       <div style={{ maxWidth: 900, margin: '0 auto' }}>
-        
+
         <button
           type="button"
           onClick={() => router.push('/student/penugasan')}
@@ -332,7 +348,7 @@ function PembahasanKuisContent() {
             {rekap.is_passed ? 'Kuis Selesai - Lulus KKM!' : 'Kuis Selesai - Di Bawah KKM'}
           </h2>
           <p style={{ color: 'var(--grey-blue)', fontSize: '0.92rem', margin: '0 0 1.5rem' }}>{quizDetail.title}</p>
-          
+
           <div style={{ display: 'flex', justifyContent: 'center', gap: 16, flexWrap: 'wrap' }}>
             {[
               { val: `${rekap.score}%`, label: 'Skor Kuis', color: rekap.is_passed ? '#00E676' : '#FF5252' },

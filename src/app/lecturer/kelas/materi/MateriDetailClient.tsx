@@ -4,7 +4,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import {
   ArrowLeft, ChevronRight, FileText, Download, Loader2,
   AlertCircle, BookOpen, Video, Trash2, Upload, File,
-  ExternalLink, RefreshCw, ZoomIn
+  ExternalLink, RefreshCw, ZoomIn, Table2
 } from 'lucide-react';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { apiGet, apiUploadPost, apiDelete, apiPut } from '@/lib/api';
@@ -62,6 +62,99 @@ function getAuth() {
   return { token: token ?? undefined, headers };
 }
 
+// ─── CSV Preview Component ────────────────────────────────────────────────────
+function CSVPreview({ file, url }: { file: MateriFile; url: string }) {
+  const [rows, setRows] = useState<string[][]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [showAll, setShowAll] = useState(false);
+
+  useEffect(() => {
+    if (!url) { setError('URL file tidak tersedia.'); setLoading(false); return; }
+    setLoading(true);
+    fetch(url)
+      .then(r => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        return r.text();
+      })
+      .then(text => {
+        const parsed = text.trim().split('\n').map(line =>
+          line.split(',').map(cell => cell.replace(/^"|"$/g, '').trim())
+        );
+        setRows(parsed);
+        setLoading(false);
+      })
+      .catch(e => { setError('Gagal memuat CSV: ' + e.message); setLoading(false); });
+  }, [url]);
+
+  const headers = rows[0] || [];
+  const dataRows = rows.slice(1);
+  const displayRows = showAll ? dataRows : dataRows.slice(0, 50);
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', borderRadius: 14, overflow: 'hidden', border: '1px solid rgba(99,102,241,0.2)' }}>
+      {/* Toolbar */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 16px', background: 'rgba(30,30,46,0.98)', borderBottom: '1px solid rgba(99,102,241,0.15)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <Table2 size={15} color="#a5b4fc" />
+          <span style={{ fontSize: '0.82rem', color: '#94a3b8', fontWeight: 600 }}>{file.nama_file || 'data.csv'}</span>
+          {file.ukuran_file && <span style={{ fontSize: '0.72rem', padding: '2px 8px', borderRadius: 10, background: 'rgba(99,102,241,0.1)', color: '#a5b4fc', border: '1px solid rgba(99,102,241,0.2)' }}>{(file.ukuran_file / 1024).toFixed(1)} KB</span>}
+          {!loading && !error && <span style={{ fontSize: '0.72rem', padding: '2px 8px', borderRadius: 10, background: 'rgba(16,185,129,0.1)', color: '#6ee7b7', border: '1px solid rgba(16,185,129,0.2)' }}>{dataRows.length} baris · {headers.length} kolom</span>}
+        </div>
+        <button onClick={() => downloadFile(url, file.nama_file || 'data.csv')} style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'rgba(99,102,241,0.1)', border: '1px solid rgba(99,102,241,0.2)', borderRadius: 8, padding: '6px 12px', color: '#a5b4fc', fontSize: '0.78rem', fontWeight: 600, cursor: 'pointer' }}>
+          <Download size={13} /> Download
+        </button>
+      </div>
+
+      {/* Table */}
+      {loading ? (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, padding: '3rem', background: 'rgba(15,15,25,0.8)' }}>
+          <Loader2 size={22} color="#a5b4fc" style={{ animation: 'spin 1s linear infinite' }} />
+          <span style={{ color: '#64748b', fontSize: '0.9rem' }}>Memuat CSV...</span>
+        </div>
+      ) : error ? (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, padding: '3rem', background: 'rgba(15,15,25,0.8)', flexDirection: 'column' }}>
+          <AlertCircle size={28} color="#f87171" />
+          <span style={{ color: '#f87171', fontSize: '0.88rem' }}>{error}</span>
+          <button onClick={() => downloadFile(url, file.nama_file || 'data.csv')} style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 6, background: 'rgba(99,102,241,0.1)', border: '1px solid rgba(99,102,241,0.2)', borderRadius: 8, padding: '8px 14px', color: '#a5b4fc', fontSize: '0.82rem', fontWeight: 600, cursor: 'pointer' }}>
+            <Download size={13} /> Download Langsung
+          </button>
+        </div>
+      ) : (
+        <div style={{ overflowX: 'auto', maxHeight: 520, overflowY: 'auto', background: 'rgba(10,10,20,0.95)' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem', minWidth: 400 }}>
+            <thead>
+              <tr>
+                <th style={{ padding: '10px 12px', background: 'rgba(99,102,241,0.12)', color: '#a5b4fc', fontWeight: 700, textAlign: 'center', borderBottom: '1px solid rgba(99,102,241,0.2)', whiteSpace: 'nowrap', width: 40, position: 'sticky', top: 0, zIndex: 1 }}>#</th>
+                {headers.map((h, i) => (
+                  <th key={i} style={{ padding: '10px 16px', background: 'rgba(99,102,241,0.12)', color: '#c7d2fe', fontWeight: 700, textAlign: 'left', borderBottom: '1px solid rgba(99,102,241,0.2)', whiteSpace: 'nowrap', position: 'sticky', top: 0, zIndex: 1 }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {displayRows.map((row, ri) => (
+                <tr key={ri} style={{ background: ri % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.02)' }}>
+                  <td style={{ padding: '8px 12px', color: '#475569', borderBottom: '1px solid rgba(255,255,255,0.04)', textAlign: 'center', fontVariantNumeric: 'tabular-nums', fontSize: '0.75rem' }}>{ri + 1}</td>
+                  {headers.map((_, ci) => (
+                    <td key={ci} style={{ padding: '8px 16px', color: '#cbd5e1', borderBottom: '1px solid rgba(255,255,255,0.04)', whiteSpace: 'nowrap', maxWidth: 240, overflow: 'hidden', textOverflow: 'ellipsis' }}>{row[ci] ?? ''}</td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          {!showAll && dataRows.length > 50 && (
+            <div style={{ padding: '12px', textAlign: 'center', background: 'rgba(10,10,20,0.95)', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+              <button onClick={() => setShowAll(true)} style={{ background: 'rgba(99,102,241,0.1)', border: '1px solid rgba(99,102,241,0.25)', borderRadius: 8, padding: '7px 18px', color: '#a5b4fc', fontSize: '0.82rem', fontWeight: 600, cursor: 'pointer' }}>
+                Tampilkan semua {dataRows.length} baris
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── File Preview Component ───────────────────────────────────────────────────
 function FilePreviewSection({ file, tipe }: { file: MateriFile; tipe?: string }) {
   const [fullscreen, setFullscreen] = useState(false);
@@ -76,6 +169,7 @@ function FilePreviewSection({ file, tipe }: { file: MateriFile; tipe?: string })
   const isPDF = ext === 'pdf' || ext.includes('pdf') || (file.nama_file && file.nama_file.toLowerCase().endsWith('.pdf'));
   const isDoc = ['docx', 'doc', 'ppt', 'pptx'].includes(ext) || (file.nama_file && /\.(docx|doc|ppt|pptx)$/i.test(file.nama_file));
   const isVideo = ['mp4', 'webm', 'mov', 'avi'].includes(ext) || tipe === 'Video' || (file.nama_file && /\.(mp4|webm|mov|avi)$/i.test(file.nama_file));
+  const isCSV = ext === 'csv' || (file.nama_file && file.nama_file.toLowerCase().endsWith('.csv'));
 
   // Normalize URL to ensure it ends with the format extension (critical for Cloudinary raw uploads & Google Viewer)
   let url = (rawUrl || '').replace('/upload/fl_attachment/', '/upload/');
@@ -215,6 +309,11 @@ function FilePreviewSection({ file, tipe }: { file: MateriFile; tipe?: string })
   }
 
 
+  // CSV — fetch and render as scrollable table
+  if (isCSV) {
+    return <CSVPreview file={file} url={url} />;
+  }
+
   // Generic fallback
   return (
     <div style={genericFileCard}>
@@ -299,13 +398,13 @@ function UploadSection({ tugasId, onSuccess }: { tugasId: string; onSuccess: () 
           }
         </p>
         <p style={{ color: '#475569', fontSize: '0.75rem', margin: 0 }}>
-          PDF, DOCX, PPT, PPTX, MP4, WEBM • Maks. 100MB
+          PDF, DOCX, PPT, PPTX, MP4, WEBM, CSV • Maks. 100MB
         </p>
         <input
           id="materi-file-input"
           type="file"
           onChange={(e) => { if (e.target.files?.[0]) setSelectedFile(e.target.files[0]); }}
-          accept=".pdf,.doc,.docx,.ppt,.pptx,.mp4,.webm,.mov,.avi,.ipynb"
+          accept=".pdf,.doc,.docx,.ppt,.pptx,.mp4,.webm,.mov,.avi,.ipynb,.csv"
           style={{ display: 'none' }}
         />
       </div>
