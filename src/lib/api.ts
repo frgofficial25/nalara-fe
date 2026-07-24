@@ -11,7 +11,14 @@
  * Jika refresh juga gagal, semua storage dibersihkan dan user diarahkan ke /login.
  */
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL as string;
+// Backend base URL kini dikelola oleh middleware (src/middleware.ts)
+// Frontend mengirim request ke /api-proxy/... untuk di-intercept
+function resolveApiUrl(path: string): string {
+  // Pastikan path selalu dimulai dengan /
+  const normalizedPath = path.startsWith('/') ? path : `/${path}`;
+  // Ganti awalan /api menjadi /api-proxy
+  return normalizedPath.replace(/^\/api/, '/api-proxy');
+}
 
 const TOKEN_KEY         = 'nalara_auth_token';
 const REFRESH_TOKEN_KEY = 'nalara_refresh_token';
@@ -81,11 +88,9 @@ async function refreshAccessToken(): Promise<string | null> {
   if (!refreshToken) return null;
 
   try {
-    const apiKey = process.env.NEXT_PUBLIC_API_KEY;
     const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-    if (apiKey) headers['x-api-key'] = apiKey;
 
-    const res = await fetch(`${API_BASE_URL}/api/auth/refresh`, {
+    const res = await fetch(resolveApiUrl('/api/auth/refresh'), {
       method: 'POST',
       headers,
       body: JSON.stringify({ refresh_token: refreshToken }),
@@ -124,7 +129,7 @@ async function apiFetch<TResponse>(
   init: RequestInit,
   options: RequestOptions = {}
 ): Promise<TResponse> {
-  const response = await fetch(`${API_BASE_URL}${path}`, init);
+  const response = await fetch(resolveApiUrl(path), init);
 
   // Auto-refresh sekali jika 401 dan belum pernah di-retry
   if (response.status === 401 && !options._retried) {
@@ -169,13 +174,6 @@ function buildHeaders(
 ): Record<string, string> {
   const headers: Record<string, string> = { ...extra, ...options.headers };
   if (options.token) headers['Authorization'] = `Bearer ${options.token}`;
-
-  // Backend mewajibkan API key statis di x-api-key pada hampir semua endpoint.
-  // Pakai nilai dari env agar tidak tercampur dengan access token user.
-  const apiKey = process.env.NEXT_PUBLIC_API_KEY;
-  if (apiKey) {
-    headers['x-api-key'] = apiKey;
-  }
 
   return headers;
 }
