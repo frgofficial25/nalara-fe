@@ -22,7 +22,7 @@ export default function Curriculum() {
     menengah: {
       title: 'Level Menengah (Intermediate)',
       duration: '32 Jam Instruksional',
-      dates: '31 Juli, 1, 2, 3 Agustus',
+      dates: '30, 31 Juli, 1, 2 Agustus',
       schedule: [
         { day: 'Kamis, 30 Juli 2026', topic: 'Review Evaluasi Level Dasar', desc: 'Analisis hasil ujian level dasar, pembahasan feedback coding portofolio, dan sinkronisasi tools model menengah.' },
         { day: 'Jumat, 31 Juli 2026', topic: 'Modul 6: Fundamental Deep Learning & CNN', desc: 'Arsitektur Neural Network (neuron, weight, activation function ReLU/Sigmoid/Softmax), forward pass & backpropagation secara konseptual, optimizer (Adam), dataset Fashion MNIST, "The Big 4 Layers" CNN (Convolutional, Pooling, Flatten, Dense), regularisasi (Dropout, Early Stopping, Data Augmentation), serta visualisasi training curve.' },
@@ -34,13 +34,13 @@ export default function Curriculum() {
     advanced: {
       title: 'Level Advanced (MLOps)',
       duration: '32 Jam Instruksional',
-      dates: '7, 8, 9, 10 Agustus',
+      dates: '6, 7, 8, 9 Agustus',
       schedule: [
-        { day: 'Kamis, 6 Agustus 2026', topic: 'Modul 10: Briefing Project Akhir & Hybrid Pipeline', desc: 'Pembagian tim proyek, pengumuman studi kasus hybrid pipeline, dan konsultasi arsitektur deployment.' },
-        { day: 'Jumat, 7 Agustus 2026', topic: 'Modul 11: MLOps Automation Lifecycle', desc: 'Version control untuk model (DVC), tracking eksperimen menggunakan MLflow, dan pembuatan docker image untuk environment model.' },
-        { day: 'Sabtu, 8 Agustus 2026', topic: 'Modul 12: Production API & Cloud Deployment', desc: 'Membangun REST API performa tinggi dengan FastAPI, deployment model ke Kubernetes/Cloud Engine, dan monitoring model drift.' },
-        { day: 'Minggu, 9 Agustus 2026', topic: 'Modul 13: Pitching Project Evaluated by Industry Reviewers', desc: 'Presentasi hasil proyek akhir di depan Dosen Pembina & reviewer industri terkemuka untuk validasi kelayakan produk.' },
-        { day: 'Senin, 10 Agustus 2026', topic: 'Graduation Ceremony & Career Networking', desc: 'Penyerahan sertifikat kelulusan resmi FRG FILKOM UB, sesi networking alumni, dan tips integrasi portofolio ke rekrutmen.' }
+        { day: 'Kamis, 6 Agustus 2026', topic: 'Modul 10: Kelas Advanced - Modul Pembelajaran Arsitektur Hybrid & Ekstraksi ROI', desc: 'Implementasi arsitektur hybrid pipeline (kombinasi machine learning & image processing), serta teknik ekstraksi ROI (Region of Interest) dari data citra secara dinamis.' },
+        { day: 'Jumat, 7 Agustus 2026', topic: 'Modul 11: Kelas Advanced - Modul Pembelajaran Integrasi Klasifikasi & Perakitan Pipeline', desc: 'Penggabungan modul klasifikasi dengan deteksi/segmentasi, perakitan pipeline end-to-end, version control untuk model (DVC), serta tracking eksperimen (MLflow).' },
+        { day: 'Sabtu, 8 Agustus 2026', topic: 'Modul 12: Kelas Advanced - Modul Pembelajaran Cloud Deployment & Implementasi Telemetri (Logging)', desc: 'Membangun production API performa tinggi (FastAPI), deployment model ke arsitektur cloud/Kubernetes, serta implementasi telemetri sistem logging untuk monitoring performa model.' },
+        { day: 'Minggu, 9 Agustus 2026', topic: 'Modul 13: Kelas Advanced - Modul Pembelajaran Dashboard Monitoring & Pitching', desc: 'Pembuatan dashboard MLOps monitoring untuk tracking metrik bisnis dan drift model, persiapan presentasi pitching proyek akhir, serta pengujian oleh reviewer industri.' },
+        { day: 'Jumat, 14 Agustus 2026', topic: 'Graduation Ceremony', desc: 'Penyerahan sertifikat kelulusan.' }
       ]
     }
   };
