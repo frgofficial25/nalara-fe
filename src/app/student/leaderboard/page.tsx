@@ -153,8 +153,12 @@ export default function LeaderboardPage() {
   };
 
   useEffect(() => {
-    fetchLeaderboard();
-  }, [selectedCourseId]);
+    if (selectedCourseId === 'global' && courses.length > 0) {
+      setSelectedCourseId(courses[0].uuid_pembelajaran || courses[0].id);
+    } else {
+      fetchLeaderboard();
+    }
+  }, [selectedCourseId, courses]);
 
   const handleRefresh = () => {
     setIsRefreshing(true);
@@ -203,9 +207,9 @@ export default function LeaderboardPage() {
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <Award size={28} color="var(--azure)" />
-            <h1 style={s.title}>Student Leaderboard</h1>
+            <h1 style={s.title}>Nalarians Leaderboard</h1>
           </div>
-          <p style={s.subtitle}>Lihat peringkat 10 besar student Nalara dan pantau posisi belajarmu!</p>
+          <p style={s.subtitle}>Lihat peringkat 10 besar Nalarians dan pantau posisi belajarmu!</p>
         </div>
         <button 
           onClick={handleRefresh}
@@ -233,7 +237,6 @@ export default function LeaderboardPage() {
             onChange={e => setSelectedCourseId(e.target.value)} 
             style={s.select}
           >
-            <option value="global">Global Leaderboard</option>
             {courses.map((c: any) => (
               <option key={c.uuid_pembelajaran || c.id} value={c.uuid_pembelajaran || c.id}>
                 Leaderboard: {c.title || c.nama_pembelajaran}
@@ -351,27 +354,6 @@ export default function LeaderboardPage() {
                   <span style={s.metricLabel}>Nilai Akhir</span>
                   <span style={s.metricValue}>{data.userRank.final_score}%</span>
                 </div>
-                <div style={s.metricItem}>
-                  <span style={s.metricLabel}>Status Kelulusan</span>
-                  <span style={{
-                    ...s.statusBadge,
-                    background: data.userRank.status_kelulusan === "Lulus" ? 'rgba(0, 200, 83, 0.12)' : 'rgba(255, 61, 0, 0.12)',
-                    color: data.userRank.status_kelulusan === "Lulus" ? '#00C853' : '#FF3D00',
-                    border: data.userRank.status_kelulusan === "Lulus" ? '1px solid rgba(0, 200, 83, 0.2)' : '1px solid rgba(255, 61, 0, 0.2)'
-                  }}>
-                    {data.userRank.status_kelulusan === "Lulus" ? (
-                      <>
-                        <CheckCircle size={12} style={{ marginRight: 4 }} />
-                        Lulus
-                      </>
-                    ) : (
-                      <>
-                        <AlertTriangle size={12} style={{ marginRight: 4 }} />
-                        Tidak Lulus
-                      </>
-                    )}
-                  </span>
-                </div>
               </div>
             </div>
           )}
@@ -478,14 +460,6 @@ export default function LeaderboardPage() {
 
                   <div style={s.rowRight}>
                     <span style={s.rowScore}>{student.final_score}%</span>
-                    <span style={{
-                      ...s.statusBadge,
-                      background: student.status_kelulusan === "Lulus" ? 'rgba(0, 200, 83, 0.08)' : 'rgba(255, 61, 0, 0.08)',
-                      color: student.status_kelulusan === "Lulus" ? '#00C853' : '#FF3D00',
-                      border: student.status_kelulusan === "Lulus" ? '1px solid rgba(0, 200, 83, 0.15)' : '1px solid rgba(255, 61, 0, 0.15)'
-                    }}>
-                      {student.status_kelulusan}
-                    </span>
                   </div>
                 </div>
               ))}
