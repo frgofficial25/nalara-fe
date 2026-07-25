@@ -956,13 +956,6 @@ export default function PenugasanPage() {
                         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
                           <Brain size={16} color="var(--azure)" />
                           <span style={s.courseLabel}>{quiz.moduleTitle}</span>
-                          <span style={{ 
-                            ...s.statusBadge, 
-                            background: isPassed ? 'rgba(0,200,83,0.12)' : 'rgba(255,82,82,0.12)', 
-                            color: isPassed ? '#00C853' : '#FF5252' 
-                          }}>
-                            {isPassed ? 'Lulus' : 'Tidak Lulus'}
-                          </span>
                         </div>
                         <h3 style={s.taskTitle}>{quiz.title}</h3>
                         <div style={{ display: 'flex', gap: 16, marginTop: 8, fontSize: '0.78rem', color: 'var(--grey-blue)', flexWrap: 'wrap', alignItems: 'center' }}>

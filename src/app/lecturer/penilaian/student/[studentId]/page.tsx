@@ -369,7 +369,7 @@ function StudentRecapContent() {
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
               <Brain size={18} color="var(--azure)" />
               <h2 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700, color: '#fff' }}>
-                Kuis yang Sudah Dikerjakan ({quizzes.length})
+                Riwayat Kuis ({quizzes.length})
               </h2>
             </div>
             <p style={{ margin: '0 0 8px', fontSize: '0.85rem', color: 'var(--grey-blue)' }}>
@@ -387,11 +387,6 @@ function StudentRecapContent() {
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
                       <Brain size={14} color="var(--azure)" />
                       <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--grey-blue)' }}>{quiz.quiz?.asal_pembelajaran || 'Kuis'}</span>
-                      <span style={{
-                        fontSize: '0.72rem', padding: '3px 10px', borderRadius: 12, fontWeight: 700,
-                        background: quiz.is_passed ? 'rgba(0,200,83,0.12)' : 'rgba(255,82,82,0.12)',
-                        color: quiz.is_passed ? '#00C853' : '#FF5252'
-                      }}>{quiz.is_passed ? 'Lulus' : 'Tidak Lulus'}</span>
                     </div>
                     <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 700, color: '#fff' }}>{quiz.quiz?.title}</h3>
                     <div style={{ display: 'flex', gap: 16, marginTop: 6, fontSize: '0.76rem', color: 'var(--grey-blue)' }}>
