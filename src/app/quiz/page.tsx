@@ -352,7 +352,7 @@ function DetailQuizView({
                         </div>
 
                         {qDesc && (
-                          <div style={{ background: 'rgba(255,255,255,0.05)', padding: '12px', borderRadius: '8px', marginBottom: '12px', fontSize: '0.9rem', color: '#E2E8F0', whiteSpace: 'pre-wrap', fontFamily: /[{};()=>]/.test(qDesc) ? 'monospace' : 'inherit' }}>
+                          <div style={{ background: 'rgba(255,255,255,0.05)', padding: '12px', borderRadius: '8px', marginBottom: '12px', fontSize: '0.9rem', color: '#E2E8F0', whiteSpace: 'pre-wrap', fontFamily: 'inherit' }}>
                             {qDesc}
                           </div>
                         )}
@@ -402,7 +402,7 @@ function DetailQuizView({
                                   }}>
                                     {qType === 'TrueFalse' ? '' : opt.id}
                                   </span>
-                                  <span style={{ fontSize: '0.9rem', whiteSpace: 'pre-wrap', flex: 1, minWidth: 0, fontFamily: /[{};()=>]/.test(opt.text) ? 'monospace' : 'inherit' }}>
+                                  <span style={{ fontSize: '0.9rem', whiteSpace: 'pre-wrap', flex: 1, minWidth: 0, fontFamily: 'inherit' }}>
                                     {opt.text}
                                   </span>
                                   {isOptCorrect && !isSubmitted && <span style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', color: '#00C853', marginLeft: 'auto' }}>(Kunci Jawaban)</span>}
@@ -422,19 +422,19 @@ function DetailQuizView({
                             </strong>
                           </div>
                           <div style={{ background: 'rgba(0,200,83,0.05)', padding: '12px', borderRadius: '10px' }}>
-                            <div style={{ fontSize: '0.75rem', color: 'var(--grey)', marginBottom: '4px' }}>Jawaban Benar:</div>
-                            <strong style={{ color: '#00E676', whiteSpace: 'pre-wrap', fontFamily: Array.isArray(ans.correct_answer) && ans.correct_answer.some((c: any) => /[{};()=>]/.test(c.text)) ? 'monospace' : 'inherit' }}>
-                              {Array.isArray(ans.correct_answer)
-                                ? ans.correct_answer.map((c: any) => c.text || c.id).join(', ')
-                                : '-'}
-                            </strong>
-                          </div>
+                                    <div style={{ fontSize: '0.75rem', color: 'var(--grey)', marginBottom: '4px' }}>Jawaban Benar:</div>
+                                    <strong style={{ color: '#00E676', whiteSpace: 'pre-wrap', fontFamily: 'inherit' }}>
+                                      {Array.isArray(ans.correct_answer)
+                                        ? ans.correct_answer.map((c: any) => c.text || c.id).join(', ')
+                                        : '-'}
+                                    </strong>
+                                  </div>
                         </div>
 
                         {qExplanation && (
                           <div style={{ marginTop: '16px', background: 'rgba(65, 150, 240, 0.08)', borderLeft: '4px solid var(--azure)', padding: '14px', borderRadius: '8px' }}>
                             <div style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--azure)', marginBottom: '6px' }}>PEMBAHASAN</div>
-                            <div style={{ fontSize: '0.95rem', color: '#E2E8F0', whiteSpace: 'pre-wrap', fontFamily: /[{};()=>]/.test(qExplanation) ? 'monospace' : 'inherit' }}>
+                            <div style={{ fontSize: '0.95rem', color: '#E2E8F0', whiteSpace: 'pre-wrap', fontFamily: 'inherit' }}>
                               {qExplanation}
                             </div>
                           </div>
@@ -574,7 +574,7 @@ function QuizWorkView({
           box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
         }
 
-        .qwv-q-text { font-size: 1.45rem; font-weight: 700; color: #fff; line-height: 1.45; margin: 0 0 1.75rem; letter-spacing: -0.01em; white-space: pre-wrap; }
+        .qwv-q-text { font-size: 1.2rem; font-weight: 700; color: #fff; line-height: 1.45; margin: 0 0 1.75rem; letter-spacing: -0.01em; white-space: pre-wrap; }
 
         .qwv-options { display: flex; flex-direction: column; gap: 0.85rem; }
         .qwv-opt {
@@ -599,7 +599,7 @@ function QuizWorkView({
           .qwv-body { flex-direction: column-reverse; gap: 1rem; align-items: stretch; }
           .qwv-sidebar { width: 100%; padding: 12px 12px 0 12px; }
           .qwv-card { padding: 1.5rem 1.25rem; border-radius: 0; border-left: none; border-right: none; }
-          .qwv-q-text { font-size: 1.15rem; margin-bottom: 1.25rem; }
+          .qwv-q-text { font-size: 1.05rem; margin-bottom: 1.25rem; }
           .qwv-opt { padding: 14px 16px; font-size: 0.88rem; border-radius: 10px; }
           .qwv-numgrid { grid-template-columns: repeat(6, 1fr); }
         }
@@ -650,11 +650,11 @@ function QuizWorkView({
                   borderRadius: '10px',
                   padding: '16px 18px',
                   marginBottom: '24px',
-                  fontSize: '0.95rem',
+                  fontSize: '0.9rem',
                   lineHeight: 1.65,
                   color: '#E2E8F0',
                   whiteSpace: 'pre-wrap',
-                  fontFamily: /[{};()=>]/.test(q.description) ? 'Consolas, Monaco, "Courier New", monospace' : 'inherit'
+                  fontFamily: 'inherit'
                 }}>
                   {q.description}
                 </div>
@@ -688,8 +688,6 @@ function QuizWorkView({
                     ? Array.isArray(currentAnswer) && currentAnswer.includes(opt.id)
                     : currentAnswer === opt.id;
 
-                  const isCode = /[{};()=>]/.test(opt.text);
-
                   return (
                     <button key={opt.id} onClick={() => onSelect(q.uuid_question, opt.id)}
                       className={`qwv-opt${isSel ? ' sel' : ''}`}
@@ -701,8 +699,8 @@ function QuizWorkView({
                       <span style={{
                         whiteSpace: 'pre-wrap',
                         textAlign: 'left',
-                        fontFamily: isCode ? 'Consolas, Monaco, "Courier New", monospace' : 'inherit',
-                        fontSize: isCode ? '0.88rem' : '0.94rem',
+                        fontFamily: 'inherit',
+                        fontSize: '0.94rem',
                         lineHeight: 1.6,
                         flex: 1,
                         minWidth: 0,

@@ -92,7 +92,7 @@ function AnswerCard({ item, idx }: { item: AnswerItem; idx: number }) {
       </div>
 
       {item.description && (
-        <div style={{ background: 'rgba(255,255,255,0.05)', padding: '10px 14px', borderRadius: 8, fontSize: '0.9rem', color: '#CBD5E0', whiteSpace: 'pre-wrap', fontFamily: /[{};()=>]/.test(item.description) ? 'monospace' : 'inherit' }}>
+        <div style={{ background: 'rgba(255,255,255,0.05)', padding: '10px 14px', borderRadius: 8, fontSize: '0.9rem', color: '#CBD5E0', whiteSpace: 'pre-wrap', fontFamily: 'inherit' }}>
           {item.description}
         </div>
       )}
@@ -119,7 +119,7 @@ function AnswerCard({ item, idx }: { item: AnswerItem; idx: number }) {
                 <span style={{ width: 22, height: 22, borderRadius: '50%', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: isSubmittedOpt ? (isCorrectOpt ? '#00C853' : '#FF5252') : (isCorrectOpt ? 'rgba(0,200,83,0.2)' : 'rgba(255,255,255,0.06)'), color: isSubmittedOpt ? '#fff' : (isCorrectOpt ? '#00C853' : 'var(--grey-blue)'), fontSize: '0.72rem', fontWeight: 800 }}>
                   {item.type === 'TrueFalse' ? '' : opt.id.toUpperCase()}
                 </span>
-                <span style={{ fontSize: '0.9rem', flex: 1, whiteSpace: 'pre-wrap', fontFamily: /[{};()=>]/.test(opt.text) ? 'monospace' : 'inherit' }}>
+                <span style={{ fontSize: '0.9rem', flex: 1, whiteSpace: 'pre-wrap', fontFamily: 'inherit' }}>
                   {opt.text}
                 </span>
                 {isCorrectOpt && !isSubmittedOpt && <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#00C853', flexShrink: 0 }}>(Kunci)</span>}
@@ -131,7 +131,7 @@ function AnswerCard({ item, idx }: { item: AnswerItem; idx: number }) {
         </div>
       )}
 
-      {item.type === 'Essay' && (
+      {item.type === 'Essay' ? (
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
           <div style={{ background: 'rgba(255,255,255,0.03)', padding: '12px 14px', borderRadius: 10 }}>
             <div style={{ fontSize: '0.72rem', color: 'var(--grey)', marginBottom: 4, fontWeight: 600, textTransform: 'uppercase' }}>Jawaban Student</div>
@@ -144,6 +144,35 @@ function AnswerCard({ item, idx }: { item: AnswerItem; idx: number }) {
             <p style={{ margin: 0, fontSize: '0.9rem', color: '#00E676', whiteSpace: 'pre-wrap' }}>
               {Array.isArray(item.correct_answer) ? item.correct_answer.map((c: any) => c.text || c.id).join(', ') : '-'}
             </p>
+          </div>
+        </div>
+      ) : (
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginTop: '0.5rem' }}>
+          <div style={{ background: 'rgba(255,255,255,0.03)', padding: '12px 14px', borderRadius: 10 }}>
+            <div style={{ fontSize: '0.72rem', color: 'var(--grey)', marginBottom: 4, fontWeight: 600, textTransform: 'uppercase' }}>Jawaban Student</div>
+            <strong style={{ color: noAnswer ? 'var(--grey)' : (item.is_correct ? '#00E676' : '#FF5252'), fontSize: '0.9rem', whiteSpace: 'pre-wrap', fontWeight: 600 }}>
+              {noAnswer ? 'Tidak dijawab' : (
+                Array.isArray(item.submitted_answer) 
+                  ? item.submitted_answer.map((s: any) => {
+                      const found = mergedOptions.find(o => String(o.id).trim().toLowerCase() === String(s).trim().toLowerCase());
+                      return found ? (item.type === 'TrueFalse' ? found.text : `${String(found.id).toUpperCase()}. ${found.text}`) : String(s);
+                    }).join(', ')
+                  : (() => {
+                      const found = mergedOptions.find(o => String(o.id).trim().toLowerCase() === String(item.submitted_answer).trim().toLowerCase());
+                      return found ? (item.type === 'TrueFalse' ? found.text : `${String(found.id).toUpperCase()}. ${found.text}`) : String(item.submitted_answer);
+                    })()
+              )}
+            </strong>
+          </div>
+          <div style={{ background: 'rgba(0,200,83,0.05)', padding: '12px 14px', borderRadius: 10 }}>
+            <div style={{ fontSize: '0.72rem', color: 'var(--grey)', marginBottom: 4, fontWeight: 600, textTransform: 'uppercase' }}>Jawaban Benar</div>
+            <strong style={{ color: '#00C853', fontSize: '0.9rem', whiteSpace: 'pre-wrap', fontWeight: 600 }}>
+              {Array.isArray(item.correct_answer)
+                ? item.correct_answer.map((c: any) => {
+                    return item.type === 'TrueFalse' ? (c.text || c.id) : `${String(c.id).toUpperCase()}. ${c.text || c.id}`;
+                  }).join(', ')
+                : '-'}
+            </strong>
           </div>
         </div>
       )}

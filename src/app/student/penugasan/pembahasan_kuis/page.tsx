@@ -150,7 +150,7 @@ function AnswerCard({ item, questions }: { item: AnswerDetail; questions: Questi
       </div>
 
       {item.description && (
-        <div style={{ background: 'rgba(255,255,255,0.05)', padding: '10px 14px', borderRadius: 8, fontSize: '0.9rem', color: '#CBD5E0', whiteSpace: 'pre-wrap', fontFamily: /[{};()=>]/.test(item.description) ? 'monospace' : 'inherit' }}>
+        <div style={{ background: 'rgba(255,255,255,0.05)', padding: '10px 14px', borderRadius: 8, fontSize: '0.9rem', color: '#CBD5E0', whiteSpace: 'pre-wrap', fontFamily: 'inherit' }}>
           {item.description}
         </div>
       )}
@@ -190,7 +190,7 @@ function AnswerCard({ item, questions }: { item: AnswerDetail; questions: Questi
                 <span style={{ width: 22, height: 22, borderRadius: '50%', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: isSubmittedOpt ? (item.is_correct ? '#00C853' : '#FF5252') : 'rgba(255,255,255,0.06)', color: isSubmittedOpt ? '#fff' : 'var(--grey-blue)', fontSize: '0.72rem', fontWeight: 800 }}>
                   {originalQ?.type === 'TrueFalse' ? '' : opt.id.toUpperCase()}
                 </span>
-                <span style={{ fontSize: '0.9rem', flex: 1, whiteSpace: 'pre-wrap', fontFamily: /[{};()=>]/.test(opt.text) ? 'monospace' : 'inherit' }}>
+                <span style={{ fontSize: '0.9rem', flex: 1, whiteSpace: 'pre-wrap', fontFamily: 'inherit' }}>
                   {opt.text}
                 </span>
                 {isSubmittedOpt && item.is_correct && <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#00C853', flexShrink: 0 }}>✓ Jawaban Anda Benar</span>}
