@@ -206,9 +206,9 @@ function FilePreviewSection({ file, tipe }: { file: MateriFile; tipe?: string })
     const pdfUrl = url.split('?')[0].toLowerCase().endsWith('.pdf')
       ? url
       : url.split('?')[0] + '.pdf' + (url.includes('?') ? '?' + url.split('?')[1] : '');
-      
+
     const googleViewerUrl = `https://docs.google.com/viewer?url=${encodeURIComponent(pdfUrl)}&embedded=true`;
-    
+
     return (
       <div style={{ width: '100%', borderRadius: 12, overflow: 'hidden', background: '#1e1e2e', display: 'flex', flexDirection: 'column' }}>
         {/* Toolbar */}
@@ -240,7 +240,7 @@ function FilePreviewSection({ file, tipe }: { file: MateriFile; tipe?: string })
               allow="fullscreen"
             />
           )}
-          
+
           {autoFallback && (
             <div style={{ position: 'absolute', top: 10, right: 10, background: 'rgba(239,68,68,0.1)', color: '#ef4444', padding: '6px 12px', borderRadius: 6, fontSize: '0.75rem', fontWeight: 500, display: 'flex', alignItems: 'center', gap: 6 }}>
               <AlertCircle size={14} /> Memuat viewer alternatif...
@@ -326,10 +326,14 @@ function FilePreviewSection({ file, tipe }: { file: MateriFile; tipe?: string })
         </p>
         <div style={{ display: 'flex', gap: 8, marginTop: 6, flexWrap: 'wrap' }}>
           {file.format_file && <span style={fileSizeBadge}>{file.format_file}</span>}
-          {file.ukuran_file && <span style={fileSizeBadge}>{formatFileSize(file.ukuran_file)}</span>}
+          {file.ukuran_file ? <span style={fileSizeBadge}>{formatFileSize(file.ukuran_file)}</span> : null}
         </div>
       </div>
-      <button onClick={() => downloadFile(url, file.nama_file || 'materi')} style={{ ...downloadBigBtn, cursor: 'pointer' }}><Download size={14} /> Download</button>
+      {file.format_file === 'LINK' ? (
+        <button onClick={() => window.open(url, '_blank')} style={{ ...downloadBigBtn, cursor: 'pointer' }}><ExternalLink size={14} /> Buka Link</button>
+      ) : (
+        <button onClick={() => downloadFile(url, file.nama_file || 'materi')} style={{ ...downloadBigBtn, cursor: 'pointer' }}><Download size={14} /> Download</button>
+      )}
     </div>
   );
 }
@@ -341,13 +345,17 @@ function UploadSection({ tugasId, onSuccess }: { tugasId: string; onSuccess: () 
   const [error, setError] = useState<string | null>(null);
   const [dragging, setDragging] = useState(false);
 
+  const [uploadMode, setUploadMode] = useState<'file' | 'link'>('file');
+  const [linkUrl, setLinkUrl] = useState('');
+  const [linkName, setLinkName] = useState('');
+
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     setDragging(false);
     if (e.dataTransfer.files.length > 0) setSelectedFile(e.dataTransfer.files[0]);
   };
 
-  const handleUpload = async () => {
+  const handleUploadFile = async () => {
     if (!selectedFile) return;
     setUploading(true);
     setError(null);
@@ -365,58 +373,147 @@ function UploadSection({ tugasId, onSuccess }: { tugasId: string; onSuccess: () 
     }
   };
 
+  const handleLinkFile = async () => {
+    if (!linkUrl.trim()) return;
+    setUploading(true);
+    setError(null);
+    try {
+      const auth = getAuth();
+      const payload = {
+        link: linkUrl.trim(),
+        nama_file: linkName.trim() || 'Link Google Drive'
+      };
+
+      const res = await fetch(`/api-proxy/materi/${tugasId}/link`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(auth.token && { 'Authorization': `Bearer ${auth.token}` }),
+          ...auth.headers,
+        },
+        body: JSON.stringify(payload)
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.message || 'Gagal menyimpan link');
+      }
+
+      setLinkUrl('');
+      setLinkName('');
+      onSuccess();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Upload gagal');
+    } finally {
+      setUploading(false);
+    }
+  };
+
   return (
     <div>
+      {/* Tabs */}
+      <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+        <button
+          onClick={() => setUploadMode('file')}
+          style={{ ...primaryBtnSm, background: uploadMode === 'file' ? '#6366f1' : 'rgba(99,102,241,0.1)', color: uploadMode === 'file' ? '#fff' : '#a5b4fc', border: '1px solid rgba(99,102,241,0.3)' }}
+        >
+          <Upload size={14} /> Upload File
+        </button>
+        <button
+          onClick={() => setUploadMode('link')}
+          style={{ ...primaryBtnSm, background: uploadMode === 'link' ? '#6366f1' : 'rgba(99,102,241,0.1)', color: uploadMode === 'link' ? '#fff' : '#a5b4fc', border: '1px solid rgba(99,102,241,0.3)' }}
+        >
+          <ExternalLink size={14} /> Link Drive (External)
+        </button>
+      </div>
+
       {error && (
         <div style={{ ...errBoxSmall, marginBottom: 12 }}>
           <AlertCircle size={14} /> {error}
         </div>
       )}
-      <div
-        onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
-        onDragLeave={() => setDragging(false)}
-        onDrop={handleDrop}
-        onClick={() => document.getElementById('materi-file-input')?.click()}
-        style={{
-          border: `2px dashed ${dragging ? '#6366f1' : 'rgba(99,102,241,0.3)'}`,
-          borderRadius: 12,
-          padding: '32px 20px',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          gap: 10,
-          cursor: 'pointer',
-          background: dragging ? 'rgba(99,102,241,0.08)' : 'rgba(99,102,241,0.03)',
-          transition: 'all 0.2s ease',
-        }}
-      >
-        <Upload size={30} color={dragging ? '#6366f1' : '#475569'} />
-        <p style={{ color: '#94a3b8', fontSize: '0.85rem', margin: 0, textAlign: 'center' }}>
-          {selectedFile
-            ? <span style={{ color: '#a5b4fc', fontWeight: 600 }}>✅ {selectedFile.name} ({formatFileSize(selectedFile.size)})</span>
-            : <>Drag & drop file atau <span style={{ color: '#a5b4fc', fontWeight: 600 }}>klik untuk pilih</span></>
-          }
-        </p>
-        <p style={{ color: '#475569', fontSize: '0.75rem', margin: 0 }}>
-          PDF, DOCX, PPT, PPTX, MP4, WEBM, CSV • Maks. 100MB
-        </p>
-        <input
-          id="materi-file-input"
-          type="file"
-          onChange={(e) => { if (e.target.files?.[0]) setSelectedFile(e.target.files[0]); }}
-          accept=".pdf,.doc,.docx,.ppt,.pptx,.mp4,.webm,.mov,.avi,.ipynb,.csv"
-          style={{ display: 'none' }}
-        />
-      </div>
-      {selectedFile && (
-        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 12 }}>
-          <button onClick={() => setSelectedFile(null)} style={secondaryBtnSm}>Batal</button>
-          <button onClick={handleUpload} disabled={uploading} style={{ ...primaryBtnSm, opacity: uploading ? 0.7 : 1 }}>
-            {uploading
-              ? <><Loader2 size={13} style={{ animation: 'spin 1s linear infinite' }} /> Uploading...</>
-              : <><Upload size={13} /> Upload File</>
-            }
-          </button>
+
+      {uploadMode === 'file' ? (
+        <>
+          <div
+            onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
+            onDragLeave={() => setDragging(false)}
+            onDrop={handleDrop}
+            onClick={() => document.getElementById('materi-file-input')?.click()}
+            style={{
+              border: `2px dashed ${dragging ? '#6366f1' : 'rgba(99,102,241,0.3)'}`,
+              borderRadius: 12,
+              padding: '32px 20px',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: 10,
+              cursor: 'pointer',
+              background: dragging ? 'rgba(99,102,241,0.08)' : 'rgba(99,102,241,0.03)',
+              transition: 'all 0.2s ease',
+            }}
+          >
+            <Upload size={30} color={dragging ? '#6366f1' : '#475569'} />
+            <p style={{ color: '#94a3b8', fontSize: '0.85rem', margin: 0, textAlign: 'center' }}>
+              {selectedFile
+                ? <span style={{ color: '#a5b4fc', fontWeight: 600 }}>✅ {selectedFile.name} ({formatFileSize(selectedFile.size)})</span>
+                : <>Drag & drop file atau <span style={{ color: '#a5b4fc', fontWeight: 600 }}>klik untuk pilih</span></>
+              }
+            </p>
+            <p style={{ color: '#475569', fontSize: '0.75rem', margin: 0 }}>
+              PDF, DOCX, PPT, PPTX, MP4, WEBM, CSV • Maks. 100MB
+            </p>
+            <input
+              id="materi-file-input"
+              type="file"
+              onChange={(e) => { if (e.target.files?.[0]) setSelectedFile(e.target.files[0]); }}
+              accept=".pdf,.doc,.docx,.ppt,.pptx,.mp4,.webm,.mov,.avi,.ipynb,.csv"
+              style={{ display: 'none' }}
+            />
+          </div>
+          {selectedFile && (
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 12 }}>
+              <button onClick={() => setSelectedFile(null)} style={secondaryBtnSm}>Batal</button>
+              <button onClick={handleUploadFile} disabled={uploading} style={{ ...primaryBtnSm, opacity: uploading ? 0.7 : 1 }}>
+                {uploading
+                  ? <><Loader2 size={13} style={{ animation: 'spin 1s linear infinite' }} /> Uploading...</>
+                  : <><Upload size={13} /> Upload File</>
+                }
+              </button>
+            </div>
+          )}
+        </>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12, padding: 16, background: 'rgba(99,102,241,0.03)', borderRadius: 12, border: '1px solid rgba(99,102,241,0.1)' }}>
+          <div>
+            <label style={{ display: 'block', marginBottom: 6, fontSize: '0.85rem', color: '#94a3b8' }}>URL Google Drive / Link Eksternal</label>
+            <input
+              type="url"
+              value={linkUrl}
+              onChange={e => setLinkUrl(e.target.value)}
+              placeholder="https://drive.google.com/..."
+              style={{ width: '100%', padding: '10px 14px', borderRadius: 8, background: 'rgba(15,15,25,0.8)', border: '1px solid rgba(255,255,255,0.1)', color: '#fff' }}
+            />
+          </div>
+          <div>
+            <label style={{ display: 'block', marginBottom: 6, fontSize: '0.85rem', color: '#94a3b8' }}>Nama Tampilan (Opsional)</label>
+            <input
+              type="text"
+              value={linkName}
+              onChange={e => setLinkName(e.target.value)}
+              placeholder="Materi Drive"
+              style={{ width: '100%', padding: '10px 14px', borderRadius: 8, background: 'rgba(15,15,25,0.8)', border: '1px solid rgba(255,255,255,0.1)', color: '#fff' }}
+            />
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 4 }}>
+            <button onClick={() => { setLinkUrl(''); setLinkName(''); }} style={secondaryBtnSm}>Batal</button>
+            <button onClick={handleLinkFile} disabled={uploading || !linkUrl.trim()} style={{ ...primaryBtnSm, opacity: (uploading || !linkUrl.trim()) ? 0.7 : 1 }}>
+              {uploading
+                ? <><Loader2 size={13} style={{ animation: 'spin 1s linear infinite' }} /> Menyimpan...</>
+                : <><ExternalLink size={13} /> Tautkan Link</>
+              }
+            </button>
+          </div>
         </div>
       )}
     </div>
@@ -720,7 +817,7 @@ export default function MateriDetailClient() {
                 )}
                 <div style={{ display: 'flex', gap: 10 }}>
                   <button onClick={() => setEditYoutubeMode(true)} style={secondaryBtn}>Edit Link YouTube</button>
-                  <button 
+                  <button
                     onClick={async () => {
                       if (confirm('Hapus link YouTube ini?')) {
                         setSavingYoutube(true);
@@ -735,7 +832,7 @@ export default function MateriDetailClient() {
                           setSavingYoutube(false);
                         }
                       }
-                    }} 
+                    }}
                     style={{ ...secondaryBtn, color: '#f87171', borderColor: 'rgba(239,68,68,0.3)' }}
                   >
                     Hapus Link YouTube
@@ -763,9 +860,9 @@ export default function MateriDetailClient() {
                       fontSize: '0.85rem'
                     }}
                   />
-                  <button 
-                    onClick={handleSaveYoutube} 
-                    disabled={savingYoutube || !youtubeUrl.trim()} 
+                  <button
+                    onClick={handleSaveYoutube}
+                    disabled={savingYoutube || !youtubeUrl.trim()}
                     style={primaryBtn}
                   >
                     {savingYoutube ? 'Menyimpan...' : 'Simpan Link'}
@@ -855,8 +952,8 @@ export default function MateriDetailClient() {
                   {toast.message}
                 </p>
               </div>
-              <button 
-                onClick={() => setToast(null)} 
+              <button
+                onClick={() => setToast(null)}
                 style={{
                   width: '100%',
                   padding: '10px 0',

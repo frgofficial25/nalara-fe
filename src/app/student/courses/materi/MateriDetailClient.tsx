@@ -322,12 +322,18 @@ function FilePreviewSection({
         </p>
         <div style={{ display: 'flex', gap: 8, marginTop: 6, flexWrap: 'wrap' }}>
           {fileFormat && <span style={fileSizeBadge}>{fileFormat}</span>}
-          {fileSize && <span style={fileSizeBadge}>{formatFileSize(fileSize)}</span>}
+          {fileSize ? <span style={fileSizeBadge}>{formatFileSize(fileSize)}</span> : null}
         </div>
       </div>
-      <button onClick={() => downloadFile(url, fileName || 'materi')} style={{ ...downloadBigBtn, background: 'rgba(99,102,241,0.15)', border: '1px solid rgba(99,102,241,0.3)', cursor: 'pointer' }}>
-        <Download size={14} /> Download
-      </button>
+      {fileFormat === 'LINK' ? (
+        <button onClick={() => window.open(url, '_blank')} style={{ ...downloadBigBtn, background: 'rgba(99,102,241,0.15)', border: '1px solid rgba(99,102,241,0.3)', cursor: 'pointer' }}>
+          <ExternalLink size={14} /> Buka Link
+        </button>
+      ) : (
+        <button onClick={() => downloadFile(url, fileName || 'materi')} style={{ ...downloadBigBtn, background: 'rgba(99,102,241,0.15)', border: '1px solid rgba(99,102,241,0.3)', cursor: 'pointer' }}>
+          <Download size={14} /> Download
+        </button>
+      )}
     </div>
   );
 }
