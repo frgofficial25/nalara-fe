@@ -782,7 +782,7 @@ function ResultView({ result, quizTitle, questions, onBack }: { result: SubmitRe
       <h2 style={{ fontSize: '2.2rem', fontWeight: 800, color: '#fff', margin: '0 0 0.75rem 0', letterSpacing: '-0.02em' }}>
         {passed ? 'Selamat, Nilai Anda Di Atas KKM!' : 'Tetap Semangat!'}
       </h2>
-      <p style={{ color: 'var(--grey)', fontSize: '1rem', margin: '0 auto 2.5rem 0', maxWidth: '400px', lineHeight: 1.6 }}>
+      <p style={{ color: 'var(--grey)', fontSize: '1rem', margin: '0 auto 2.5rem auto', maxWidth: '400px', lineHeight: 1.6 }}>
         Anda telah menyelesaikan kuis <strong>{quizTitle}</strong>.
       </p>
 
@@ -977,6 +977,8 @@ function QuizPageInner() {
   const [result, setResult] = useState<SubmitResult | null>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const autoSubmittedRef = useRef(false);
+  const handleSubmitRef = useRef<() => Promise<void>>(async () => {});
+
 
   /* ─── Role Check ─────────────────────────────────────────────────────── */
   useEffect(() => {
@@ -1086,10 +1088,28 @@ function QuizPageInner() {
           if (remaining > 0) {
             // Resume quiz
             setTimeLeft(remaining);
+            const savedAnswersStr = localStorage.getItem('nalara_quiz_answers_' + quizId);
+            if (savedAnswersStr) {
+              try {
+                setAnswers(JSON.parse(savedAnswersStr));
+              } catch (e) {
+                console.error('Failed to parse saved answers:', e);
+              }
+            }
             setView('quiz');
           } else {
-            // Timer expired while away → can't attempt
+            // Timer expired while away → auto submit the answers they had
             clearPersistedEndTime(quizId);
+            const savedAnswersStr = localStorage.getItem('nalara_quiz_answers_' + quizId);
+            let savedAnswers: Record<string, string | string[]> = {};
+            if (savedAnswersStr) {
+              try {
+                savedAnswers = JSON.parse(savedAnswersStr);
+              } catch (e) {
+                console.error('Failed to parse saved answers on expiration:', e);
+              }
+            }
+            submitQuizData(mapped, savedAnswers);
           }
         }
       } catch (err) {
@@ -1099,6 +1119,9 @@ function QuizPageInner() {
       }
     })();
   }, [quizId]);
+
+  // Keep the submit function ref updated on every render to prevent stale closures in the timer effect
+  handleSubmitRef.current = handleSubmit;
 
   /* ─── Timer effect ───────────────────────────────────────────────────── */
   useEffect(() => {
@@ -1111,7 +1134,7 @@ function QuizPageInner() {
         if (prev <= 1) {
           if (!autoSubmittedRef.current) {
             autoSubmittedRef.current = true;
-            handleSubmit();
+            handleSubmitRef.current();
           }
           return 0;
         }
@@ -1148,6 +1171,7 @@ function QuizPageInner() {
     setTimeLeft(detail.waktu_pengerjaan * 60);
     setCurrentIdx(0);
     setAnswers({});
+    localStorage.removeItem('nalara_quiz_answers_' + quizId);
     autoSubmittedRef.current = false;
     setView('quiz');
   };
@@ -1158,28 +1182,34 @@ function QuizPageInner() {
     const q = detail.questions.find(x => x.uuid_question === qId);
     if (!q) return;
 
-    if (q.type === 'Checkbox') {
-      setAnswers(prev => {
+    setAnswers(prev => {
+      let next: string | string[];
+      if (q.type === 'Checkbox') {
         const current = (prev[qId] as string[]) || [];
-        const next = current.includes(optId) ? current.filter(id => id !== optId) : [...current, optId];
-        return { ...prev, [qId]: next };
-      });
-    } else {
-      setAnswers(prev => ({ ...prev, [qId]: optId }));
-    }
+        next = current.includes(optId) ? current.filter(id => id !== optId) : [...current, optId];
+      } else {
+        next = optId;
+      }
+      const newAnswers = { ...prev, [qId]: next };
+      if (quizId) {
+        localStorage.setItem('nalara_quiz_answers_' + quizId, JSON.stringify(newAnswers));
+      }
+      return newAnswers;
+    });
   };
 
-  /* ─── Submit quiz ────────────────────────────────────────────────────── */
-  const handleSubmit = async () => {
-    if (!detail || !quizId || submitting) return;
+  /* ─── Submit data helper ─────────────────────────────────────────────── */
+  const submitQuizData = async (targetDetail: QuizDetail, targetAnswers: Record<string, string | string[]>) => {
+    if (!quizId || submitting) return;
     setSubmitting(true);
     if (timerRef.current) clearInterval(timerRef.current);
     clearPersistedEndTime(quizId);
+    localStorage.removeItem('nalara_quiz_answers_' + quizId);
 
     // Build answers payload per Swagger: { answers: [{ uuid_question, submitted_answer }] }
     const payload = {
-      answers: detail.questions.map(q => {
-        const ans = answers[q.uuid_question];
+      answers: targetDetail.questions.map(q => {
+        const ans = targetAnswers[q.uuid_question];
         return {
           uuid_question: q.uuid_question,
           submitted_answer: ans || ''
@@ -1209,8 +1239,8 @@ function QuizPageInner() {
       // Fallback: compute client-side
       let benar = 0;
       let salah = 0;
-      detail.questions.forEach(q => {
-        const ans = answers[q.uuid_question];
+      targetDetail.questions.forEach(q => {
+        const ans = targetAnswers[q.uuid_question];
         const correct = q.options.filter(o => o.is_correct).map(o => o.id);
         let isCorrect = false;
         if (q.type === 'Checkbox') {
@@ -1221,7 +1251,7 @@ function QuizPageInner() {
         }
         if (isCorrect) benar++; else salah++;
       });
-      const skor = Math.round((benar / detail.questions.length) * 100);
+      const skor = Math.round((benar / targetDetail.questions.length) * 100);
       setResult({ benar, salah, skor });
       setRekap({ uuid_quiz: quizId, benar, salah, skor });
     } finally {
@@ -1229,6 +1259,12 @@ function QuizPageInner() {
       setView('result');
     }
   };
+
+  /* ─── Submit quiz ────────────────────────────────────────────────────── */
+  async function handleSubmit() {
+    if (!detail) return;
+    await submitQuizData(detail, answers);
+  }
 
   /* ─── Navigation ─────────────────────────────────────────────────────── */
   const goBack = () => {
