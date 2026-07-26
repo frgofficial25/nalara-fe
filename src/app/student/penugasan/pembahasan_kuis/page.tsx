@@ -18,9 +18,51 @@ function getAuth() {
   return { token: token || undefined, headers };
 }
 
+function normalizeOptionId(raw: any, index: number): string {
+  if (raw && typeof raw === 'object') {
+    if (raw.id) return String(raw.id);
+    if (raw.option_id) return String(raw.option_id);
+    if (raw.key) return String(raw.key);
+    if (raw.label) return String(raw.label);
+  }
+  return String.fromCharCode(65 + index);
+}
+
+function normalizeQuestionOptions(rawOptions: any): { id: string; text: string; is_correct?: boolean }[] {
+  if (Array.isArray(rawOptions)) {
+    return rawOptions.map((o: any, idx: number) => {
+      if (typeof o === 'string') {
+        return {
+          id: String.fromCharCode(65 + idx),
+          text: o,
+          is_correct: false,
+        };
+      }
+
+      return {
+        id: normalizeOptionId(o, idx),
+        text: String(o?.text ?? o?.option_text ?? o?.label ?? o?.value ?? o?.detail_opsi ?? ''),
+        is_correct: !!(o?.is_correct ?? o?.correct),
+      };
+    });
+  }
+
+  if (rawOptions && typeof rawOptions === 'object') {
+    const entries = Object.entries(rawOptions).filter(([k]) => k !== 'answer' && k !== 'correct' && k !== 'correct_answer');
+    return entries.map(([key, value], idx) => ({
+      id: key || String.fromCharCode(65 + idx),
+      text: String(value ?? ''),
+      is_correct: false,
+    }));
+  }
+
+  return [];
+}
+
 interface Option {
   id: string;
   text: string;
+  is_correct?: boolean;
 }
 
 interface QuestionItem {
@@ -265,10 +307,7 @@ function PembahasanKuisContent() {
             description: q.description,
             image_url: q.image_url,
             type: q.tipe_soal || q.type || 'MultipleChoice',
-            options: (q.opsi_jawaban || q.options || []).map((o: any) => ({
-              id: o.uuid_opsi || o.id || o.label || '',
-              text: o.detail_opsi || o.text || o.option_text || ''
-            }))
+            options: normalizeQuestionOptions(q.opsi_jawaban || q.options || [])
           }))
         };
         setQuizDetail(detailObj);
