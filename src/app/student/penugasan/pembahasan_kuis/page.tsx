@@ -184,7 +184,7 @@ function AnswerCard({ item, questions }: { item: AnswerDetail; questions: Questi
                 textColor = '#FF5252';
               }
             }
-
+            
             return (
               <div key={opt.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '10px 14px', borderRadius: 10, border, background: bg, color: textColor }}>
                 <span style={{ width: 22, height: 22, borderRadius: '50%', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: isSubmittedOpt ? (item.is_correct ? '#00C853' : '#FF5252') : 'rgba(255,255,255,0.06)', color: isSubmittedOpt ? '#fff' : 'var(--grey-blue)', fontSize: '0.72rem', fontWeight: 800 }}>
@@ -289,8 +289,8 @@ function PembahasanKuisContent() {
               uuid_attempt: match.uuid_attempt,
               uuid_quiz: match.uuid_quiz || quizId,
               score: match.score ?? match.skor ?? 0,
-              benar: answers.filter(a => a.is_correct).length,
-              salah: answers.filter(a => !a.is_correct).length,
+              benar: match.benar !== undefined ? match.benar : answers.filter(a => a.is_correct).length,
+              salah: match.salah !== undefined ? match.salah : answers.filter(a => !a.is_correct).length,
               is_passed: match.is_passed ?? (match.score >= 75),
               completed_at: match.completed_at || match.updated_at,
               answers
