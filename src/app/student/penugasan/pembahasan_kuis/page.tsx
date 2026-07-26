@@ -59,9 +59,21 @@ interface RekapResult {
   score: number;
   benar: number;
   salah: number;
+  kosong?: number;
   is_passed: boolean;
   completed_at?: string;
   answers: AnswerDetail[];
+}
+
+function checkIsAnswerEmpty(submittedAnswer: any): boolean {
+  if (submittedAnswer === null || submittedAnswer === undefined) return true;
+  const str = String(submittedAnswer).trim();
+  if (str === '' || str === '-' || str === '[]' || str === '[""]') return true;
+  if (Array.isArray(submittedAnswer)) {
+    if (submittedAnswer.length === 0) return true;
+    if (submittedAnswer.length === 1 && String(submittedAnswer[0]).trim() === '') return true;
+  }
+  return false;
 }
 
 function AnswerCard({ item, questions }: { item: AnswerDetail; questions: QuestionItem[] }) {
@@ -80,7 +92,7 @@ function AnswerCard({ item, questions }: { item: AnswerDetail; questions: Questi
     ? item.correct_answer.map((c: any) => String(c.id ?? c).trim().toLowerCase())
     : [];
 
-  const noAnswer = item.submitted_answer === null || item.submitted_answer === undefined;
+  const noAnswer = checkIsAnswerEmpty(item.submitted_answer);
   const submittedIds: string[] = noAnswer
     ? []
     : Array.isArray(item.submitted_answer)
@@ -123,7 +135,7 @@ function AnswerCard({ item, questions }: { item: AnswerDetail; questions: Questi
   return (
     <div style={{
       borderRadius: 16,
-      border: `1px solid ${item.is_correct ? 'rgba(0,200,83,0.3)' : 'rgba(255,82,82,0.3)'}`,
+      border: `1px solid ${noAnswer ? 'rgba(255,255,255,0.08)' : item.is_correct ? 'rgba(0,200,83,0.3)' : 'rgba(255,82,82,0.3)'}`,
       background: 'rgba(255,255,255,0.02)',
       padding: '1.5rem',
       display: 'flex', flexDirection: 'column', gap: 12,
@@ -131,21 +143,21 @@ function AnswerCard({ item, questions }: { item: AnswerDetail; questions: Questi
       <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
         <div style={{
           width: 32, height: 32, borderRadius: '50%', flexShrink: 0,
-          background: item.is_correct ? 'rgba(0,200,83,0.15)' : 'rgba(255,82,82,0.15)',
+          background: noAnswer ? 'rgba(255,255,255,0.08)' : item.is_correct ? 'rgba(0,200,83,0.15)' : 'rgba(255,82,82,0.15)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          color: item.is_correct ? '#00C853' : '#FF5252', fontWeight: 800, fontSize: '0.85rem',
+          color: noAnswer ? 'var(--grey-blue)' : item.is_correct ? '#00C853' : '#FF5252', fontWeight: 800, fontSize: '0.85rem',
         }}>
-          {item.is_correct ? '✓' : '✗'}
+          {noAnswer ? <AlertCircle size={16} /> : item.is_correct ? '✓' : '✗'}
         </div>
         <p style={{ flex: 1, margin: 0, fontSize: '1rem', color: '#E2E8F0', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>
           {item.question_text}
         </p>
         <span style={{
           flexShrink: 0, fontSize: '0.75rem', padding: '4px 12px', borderRadius: 20, fontWeight: 700,
-          background: item.is_correct ? 'rgba(0,200,83,0.12)' : 'rgba(255,82,82,0.12)',
-          color: item.is_correct ? '#00C853' : '#FF5252',
+          background: noAnswer ? 'rgba(255,255,255,0.08)' : item.is_correct ? 'rgba(0,200,83,0.12)' : 'rgba(255,82,82,0.12)',
+          color: noAnswer ? 'var(--grey-blue)' : item.is_correct ? '#00C853' : '#FF5252',
         }}>
-          {item.is_correct ? 'Benar' : 'Salah'}
+          {noAnswer ? 'Kosong' : item.is_correct ? 'Benar' : 'Salah'}
         </span>
       </div>
 
@@ -285,12 +297,25 @@ function PembahasanKuisContent() {
                 answers = match.answers as AnswerDetail[];
               }
             }
+            let benarCount = 0;
+            let salahCount = 0;
+            let kosongCount = 0;
+            answers.forEach((ans: any) => {
+              const noAns = checkIsAnswerEmpty(ans.submitted_answer);
+              if (noAns) {
+                kosongCount++;
+              } else {
+                if (ans.is_correct) benarCount++; else salahCount++;
+              }
+            });
+
             setRekap({
               uuid_attempt: match.uuid_attempt,
               uuid_quiz: match.uuid_quiz || quizId,
               score: match.score ?? match.skor ?? 0,
-              benar: match.benar !== undefined ? match.benar : answers.filter(a => a.is_correct).length,
-              salah: match.salah !== undefined ? match.salah : answers.filter(a => !a.is_correct).length,
+              benar: benarCount,
+              salah: salahCount,
+              kosong: kosongCount,
               is_passed: match.is_passed ?? (match.score >= 75),
               completed_at: match.completed_at || match.updated_at,
               answers
@@ -353,6 +378,7 @@ function PembahasanKuisContent() {
               { val: `${rekap.score}%`, label: 'Skor Kuis', color: rekap.is_passed ? '#00E676' : '#FF5252' },
               { val: rekap.benar, label: 'Benar', color: '#00E676' },
               { val: rekap.salah, label: 'Salah', color: '#FF5252' },
+              { val: rekap.kosong ?? 0, label: 'Kosong', color: '#94A3B8' },
             ].map(item => (
               <div key={item.label} style={{ background: 'rgba(255,255,255,0.04)', borderRadius: 12, padding: '10px 24px', minWidth: 100 }}>
                 <div style={{ fontSize: '1.8rem', fontWeight: 900, color: item.color }}>{item.val}</div>

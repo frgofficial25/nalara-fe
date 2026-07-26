@@ -56,6 +56,7 @@ interface RekapResult {
   skor?: number;
   benar?: number;
   salah?: number;
+  kosong?: number;
   status?: string;
   detail_jawaban?: AnswerDetail[];
 }
@@ -63,6 +64,7 @@ interface RekapResult {
 interface SubmitResult {
   benar: number;
   salah: number;
+  kosong: number;
   skor: number;
   detail_jawaban?: AnswerDetail[];
 }
@@ -157,6 +159,17 @@ function fmtDate(iso: string): string {
       hour: '2-digit', minute: '2-digit'
     });
   } catch { return iso; }
+}
+
+function checkIsAnswerEmpty(submittedAnswer: any): boolean {
+  if (submittedAnswer === null || submittedAnswer === undefined) return true;
+  const str = String(submittedAnswer).trim();
+  if (str === '' || str === '-' || str === '[]' || str === '[""]') return true;
+  if (Array.isArray(submittedAnswer)) {
+    if (submittedAnswer.length === 0) return true;
+    if (submittedAnswer.length === 1 && String(submittedAnswer[0]).trim() === '') return true;
+  }
+  return false;
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -309,6 +322,7 @@ function DetailQuizView({
               <RekapCard label="Nilai Akhir" value={`${rekap.skor ?? 0}`} color="#FFD700" />
               <RekapCard label="Jawaban Benar" value={`${rekap.benar ?? 0}`} color="#00C853" />
               <RekapCard label="Jawaban Salah" value={`${rekap.salah ?? 0}`} color="#FF5252" />
+              <RekapCard label="Jawaban Kosong" value={`${rekap.kosong ?? 0}`} color="#94A3B8" />
             </div>
           </Card>
 
@@ -334,19 +348,40 @@ function DetailQuizView({
                       if (matchedOpt) displaySubmitted = matchedOpt.text;
                     }
 
+                    const noAnswer = checkIsAnswerEmpty(ans.submitted_answer);
+
                     return (
                       <div key={ans.uuid_question || idx} style={{
                         background: 'rgba(255,255,255,0.02)',
-                        border: `1px solid ${ans.is_correct ? 'rgba(0,200,83,0.3)' : 'rgba(255,82,82,0.3)'}`,
+                        border: noAnswer 
+                          ? '1px solid rgba(255,255,255,0.08)' 
+                          : `1px solid ${ans.is_correct ? 'rgba(0,200,83,0.3)' : 'rgba(255,82,82,0.3)'}`,
                         borderRadius: '16px', padding: '1.5rem'
                       }}>
                         <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start', marginBottom: '12px' }}>
-                          <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: ans.is_correct ? 'rgba(0,200,83,0.2)' : 'rgba(255,82,82,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: ans.is_correct ? '#00E676' : '#FF5252', flexShrink: 0 }}>
-                            {ans.is_correct ? <Check size={18} /> : <XCircle size={18} />}
+                          <div style={{
+                            width: '32px', height: '32px', borderRadius: '50%',
+                            background: noAnswer 
+                              ? 'rgba(255,255,255,0.08)' 
+                              : ans.is_correct ? 'rgba(0,200,83,0.2)' : 'rgba(255,82,82,0.2)',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            color: noAnswer 
+                              ? 'var(--grey-blue)' 
+                              : ans.is_correct ? '#00E676' : '#FF5252',
+                            flexShrink: 0
+                          }}>
+                            {noAnswer ? <AlertCircle size={18} /> : ans.is_correct ? <Check size={18} /> : <XCircle size={18} />}
                           </div>
                           <div style={{ flex: 1 }}>
-                            <h4 style={{ margin: 0, fontSize: '1.1rem', color: '#fff', lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>
-                              {qText}
+                            <h4 style={{ margin: 0, fontSize: '1.1rem', color: '#fff', lineHeight: 1.5, whiteSpace: 'pre-wrap', display: 'inline-flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                              <span>{qText}</span>
+                              {noAnswer ? (
+                                <span style={{ fontSize: '0.75rem', padding: '3px 10px', borderRadius: '12px', background: 'rgba(255,255,255,0.08)', color: 'var(--grey-blue)', fontWeight: 600 }}>Tidak Dijawab</span>
+                              ) : ans.is_correct ? (
+                                <span style={{ fontSize: '0.75rem', padding: '3px 10px', borderRadius: '12px', background: 'rgba(0,200,83,0.12)', color: '#00C853', fontWeight: 600 }}>Benar</span>
+                              ) : (
+                                <span style={{ fontSize: '0.75rem', padding: '3px 10px', borderRadius: '12px', background: 'rgba(255,82,82,0.12)', color: '#FF5252', fontWeight: 600 }}>Salah</span>
+                              )}
                             </h4>
                           </div>
                         </div>
@@ -377,14 +412,16 @@ function DetailQuizView({
                               let bg = 'rgba(255,255,255,0.01)';
                               let textColor = 'var(--grey-blue)';
 
-                              if (isOptCorrect) {
-                                border = '1px solid rgba(0,200,83,0.3)';
-                                bg = 'rgba(0,200,83,0.06)';
-                                textColor = '#00C853';
-                              } else if (isSubmitted && !isOptCorrect) {
-                                border = '1px solid rgba(255,82,82,0.3)';
-                                bg = 'rgba(255,82,82,0.06)';
-                                textColor = '#FF5252';
+                              if (isSubmitted) {
+                                if (isOptCorrect) {
+                                  border = '1px solid rgba(0,200,83,0.3)';
+                                  bg = 'rgba(0,200,83,0.06)';
+                                  textColor = '#00C853';
+                                } else {
+                                  border = '1px solid rgba(255,82,82,0.3)';
+                                  bg = 'rgba(255,82,82,0.06)';
+                                  textColor = '#FF5252';
+                                }
                               }
 
                               return (
@@ -396,8 +433,8 @@ function DetailQuizView({
                                   <span style={{
                                     width: '20px', height: '20px', borderRadius: '50%',
                                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                    background: isSubmitted ? (isOptCorrect ? '#00C853' : '#FF5252') : (isOptCorrect ? 'rgba(0,200,83,0.2)' : 'rgba(255,255,255,0.06)'),
-                                    color: isSubmitted ? '#fff' : (isOptCorrect ? '#00C853' : 'var(--grey-blue)'),
+                                    background: isSubmitted ? (isOptCorrect ? '#00C853' : '#FF5252') : 'rgba(255,255,255,0.06)',
+                                    color: isSubmitted ? '#fff' : 'var(--grey-blue)',
                                     fontSize: '0.75rem', fontWeight: 800, flexShrink: 0
                                   }}>
                                     {qType === 'TrueFalse' ? '' : opt.id}
@@ -405,40 +442,22 @@ function DetailQuizView({
                                   <span style={{ fontSize: '0.9rem', whiteSpace: 'pre-wrap', flex: 1, minWidth: 0, fontFamily: 'inherit' }}>
                                     {opt.text}
                                   </span>
-                                  {isOptCorrect && !isSubmitted && <span style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', color: '#00C853', marginLeft: 'auto' }}>(Kunci Jawaban)</span>}
-                                  {isSubmitted && !isOptCorrect && <span style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', color: '#FF5252', marginLeft: isOptCorrect ? '8px' : 'auto' }}>(Jawaban Anda - Salah)</span>}
-                                  {isSubmitted && isOptCorrect && <span style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', color: '#00C853', marginLeft: '8px' }}>(Jawaban Anda - Benar)</span>}
+                                  {isSubmitted && !isOptCorrect && <span style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', color: '#FF5252', marginLeft: 'auto' }}>(Jawaban Anda - Salah)</span>}
+                                  {isSubmitted && isOptCorrect && <span style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', color: '#00C853', marginLeft: 'auto' }}>(Jawaban Anda - Benar)</span>}
                                 </div>
                               );
                             })}
                           </div>
                         )}
 
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginTop: '1rem' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '1rem', marginTop: '1rem' }}>
                           <div style={{ background: 'rgba(255,255,255,0.03)', padding: '12px', borderRadius: '10px' }}>
                             <div style={{ fontSize: '0.75rem', color: 'var(--grey)', marginBottom: '4px' }}>Jawaban Anda:</div>
                             <strong style={{ color: (ans.submitted_answer === null || ans.submitted_answer === undefined) ? 'var(--grey)' : (ans.is_correct ? '#00E676' : '#FF5252') }}>
                               {(ans.submitted_answer === null || ans.submitted_answer === undefined) ? 'Tidak dijawab' : displaySubmitted}
                             </strong>
                           </div>
-                          <div style={{ background: 'rgba(0,200,83,0.05)', padding: '12px', borderRadius: '10px' }}>
-                                    <div style={{ fontSize: '0.75rem', color: 'var(--grey)', marginBottom: '4px' }}>Jawaban Benar:</div>
-                                    <strong style={{ color: '#00E676', whiteSpace: 'pre-wrap', fontFamily: 'inherit' }}>
-                                      {Array.isArray(ans.correct_answer)
-                                        ? ans.correct_answer.map((c: any) => c.text || c.id).join(', ')
-                                        : '-'}
-                                    </strong>
-                                  </div>
                         </div>
-
-                        {qExplanation && (
-                          <div style={{ marginTop: '16px', background: 'rgba(65, 150, 240, 0.08)', borderLeft: '4px solid var(--azure)', padding: '14px', borderRadius: '8px' }}>
-                            <div style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--azure)', marginBottom: '6px' }}>PEMBAHASAN</div>
-                            <div style={{ fontSize: '0.95rem', color: '#E2E8F0', whiteSpace: 'pre-wrap', fontFamily: 'inherit' }}>
-                              {qExplanation}
-                            </div>
-                          </div>
-                        )}
                       </div>
                     );
                   })}
@@ -802,7 +821,7 @@ function ResultView({ result, quizTitle, questions, onBack }: { result: SubmitRe
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', maxWidth: '420px', margin: '0 auto 3rem' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '1.5rem', maxWidth: '600px', margin: '0 auto 3rem' }}>
         <div style={{ background: 'rgba(0,200,83,0.05)', border: '1px solid rgba(0,200,83,0.15)', padding: '1.5rem', borderRadius: '16px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
           <div style={{ fontSize: '0.8rem', color: 'var(--grey)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px', fontWeight: 700 }}>Jawaban Benar</div>
           <div style={{ fontSize: '2.2rem', fontWeight: 800, color: '#00E676' }}>{result.benar}</div>
@@ -810,6 +829,10 @@ function ResultView({ result, quizTitle, questions, onBack }: { result: SubmitRe
         <div style={{ background: 'rgba(255,82,82,0.05)', border: '1px solid rgba(255,82,82,0.15)', padding: '1.5rem', borderRadius: '16px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
           <div style={{ fontSize: '0.8rem', color: 'var(--grey)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px', fontWeight: 700 }}>Jawaban Salah</div>
           <div style={{ fontSize: '2.2rem', fontWeight: 800, color: '#FF5252' }}>{result.salah}</div>
+        </div>
+        <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', padding: '1.5rem', borderRadius: '16px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
+          <div style={{ fontSize: '0.8rem', color: 'var(--grey)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px', fontWeight: 700 }}>Jawaban Kosong</div>
+          <div style={{ fontSize: '2.2rem', fontWeight: 800, color: '#94A3B8' }}>{result.kosong}</div>
         </div>
       </div>
 
@@ -821,7 +844,7 @@ function ResultView({ result, quizTitle, questions, onBack }: { result: SubmitRe
               const originalQ = questions?.find(q => q.uuid_question === ans.uuid_question);
               const qType = ans.type || originalQ?.type;
               const optionsList = originalQ?.options || [];
-              const noAnswer = ans.submitted_answer === null || ans.submitted_answer === undefined;
+              const noAnswer = checkIsAnswerEmpty(ans.submitted_answer);
               const submittedIds = noAnswer
                 ? []
                 : Array.isArray(ans.submitted_answer)
@@ -859,16 +882,35 @@ function ResultView({ result, quizTitle, questions, onBack }: { result: SubmitRe
               return (
                 <div key={ans.uuid_question || idx} style={{
                   background: 'rgba(255,255,255,0.02)',
-                  border: `1px solid ${ans.is_correct ? 'rgba(0,200,83,0.3)' : 'rgba(255,82,82,0.3)'}`,
+                  border: noAnswer 
+                    ? '1px solid rgba(255,255,255,0.08)' 
+                    : `1px solid ${ans.is_correct ? 'rgba(0,200,83,0.3)' : 'rgba(255,82,82,0.3)'}`,
                   borderRadius: '16px', padding: '1.5rem'
                 }}>
                   <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start', marginBottom: '12px' }}>
-                    <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: ans.is_correct ? 'rgba(0,200,83,0.2)' : 'rgba(255,82,82,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: ans.is_correct ? '#00E676' : '#FF5252', flexShrink: 0 }}>
-                      {ans.is_correct ? <Check size={18} /> : <XCircle size={18} />}
+                    <div style={{
+                      width: '32px', height: '32px', borderRadius: '50%',
+                      background: noAnswer 
+                        ? 'rgba(255,255,255,0.08)' 
+                        : ans.is_correct ? 'rgba(0,200,83,0.2)' : 'rgba(255,82,82,0.2)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      color: noAnswer 
+                        ? 'var(--grey-blue)' 
+                        : ans.is_correct ? '#00E676' : '#FF5252',
+                      flexShrink: 0
+                    }}>
+                      {noAnswer ? <AlertCircle size={18} /> : ans.is_correct ? <Check size={18} /> : <XCircle size={18} />}
                     </div>
                     <div style={{ flex: 1 }}>
-                      <h4 style={{ margin: 0, fontSize: '1.1rem', color: '#fff', lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>
-                        {ans.question_text}
+                      <h4 style={{ margin: 0, fontSize: '1.1rem', color: '#fff', lineHeight: 1.5, whiteSpace: 'pre-wrap', display: 'inline-flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                        <span>{ans.question_text}</span>
+                        {noAnswer ? (
+                          <span style={{ fontSize: '0.75rem', padding: '3px 10px', borderRadius: '12px', background: 'rgba(255,255,255,0.08)', color: 'var(--grey-blue)', fontWeight: 600 }}>Tidak Dijawab</span>
+                        ) : ans.is_correct ? (
+                          <span style={{ fontSize: '0.75rem', padding: '3px 10px', borderRadius: '12px', background: 'rgba(0,200,83,0.12)', color: '#00C853', fontWeight: 600 }}>Benar</span>
+                        ) : (
+                          <span style={{ fontSize: '0.75rem', padding: '3px 10px', borderRadius: '12px', background: 'rgba(255,82,82,0.12)', color: '#FF5252', fontWeight: 600 }}>Salah</span>
+                        )}
                       </h4>
                     </div>
                   </div>
@@ -1061,17 +1103,27 @@ function QuizPageInner() {
                 const matchedAttempt = studentRekapList.find((att: any) => att.uuid_attempt === match.uuid_attempt);
                 if (matchedAttempt && matchedAttempt.answers) {
                   const answers: any[] = matchedAttempt.answers;
-                  const computedBenar = answers.filter((a: any) => a.is_correct).length;
-                  const computedSalah = answers.filter((a: any) => !a.is_correct).length;
+                  let computedBenar = 0;
+                  let computedSalah = 0;
+                  let computedKosong = 0;
+                  answers.forEach((a: any) => {
+                    const noAns = checkIsAnswerEmpty(a.submitted_answer);
+                    if (noAns) {
+                      computedKosong++;
+                    } else {
+                      if (a.is_correct) computedBenar++; else computedSalah++;
+                    }
+                  });
                   setAttemptResult({
                     ...matchedAttempt,
                     detail_jawaban: answers
                   });
-                  // Update rekap with actual benar/salah counts derived from detailed answers
+                  // Update rekap with actual benar/salah/kosong counts derived from detailed answers
                   setRekap(prev => prev ? {
                     ...prev,
                     benar: computedBenar,
-                    salah: computedSalah
+                    salah: computedSalah,
+                    kosong: computedKosong
                   } : prev);
                 }
               }
@@ -1221,39 +1273,112 @@ function QuizPageInner() {
       const auth = getAuthHeaders();
       const res = await apiPost<any>(`/api/quiz/${quizId}/submit`, payload, { token: auth.token, headers: auth.headers });
       const d = res.data || res;
+      
+      const answersList = d.answers || d.detail_jawaban || [];
+      let benarCount = d.benar;
+      let salahCount = d.salah;
+      let kosongCount = d.kosong;
+
+      if (Array.isArray(answersList) && answersList.length > 0) {
+        let b = 0;
+        let s = 0;
+        let k = 0;
+        answersList.forEach((ans: any) => {
+          const noAns = checkIsAnswerEmpty(ans.submitted_answer);
+          if (noAns) {
+            k++;
+          } else {
+            if (ans.is_correct) b++; else s++;
+          }
+        });
+        benarCount = b;
+        salahCount = s;
+        kosongCount = k;
+      }
+
+      if (benarCount === undefined || benarCount === null || salahCount === undefined || salahCount === null || kosongCount === undefined || kosongCount === null) {
+        let b = 0;
+        let s = 0;
+        let k = 0;
+        targetDetail.questions.forEach(q => {
+          const ans = targetAnswers[q.uuid_question];
+          const noAns = checkIsAnswerEmpty(ans);
+          if (noAns) {
+            k++;
+          } else {
+            const correct = q.options.filter(o => o.is_correct).map(o => o.id);
+            let isCorrect = false;
+            if (q.type === 'Checkbox') {
+              const sel = (ans as string[]) || [];
+              isCorrect = correct.length === sel.length && correct.every(id => sel.includes(id));
+            } else {
+              isCorrect = correct.includes(ans as string);
+            }
+            if (isCorrect) b++; else s++;
+          }
+        });
+        if (benarCount === undefined || benarCount === null) benarCount = b;
+        if (salahCount === undefined || salahCount === null) salahCount = s;
+        if (kosongCount === undefined || kosongCount === null) kosongCount = k;
+      }
+
+      const score = d.skor ?? d.score ?? Math.round((benarCount / targetDetail.questions.length) * 100);
+
       setResult({
-        benar: d.benar ?? 0,
-        salah: d.salah ?? 0,
-        skor: d.skor ?? 0,
-        detail_jawaban: d.detail_jawaban
+        benar: benarCount,
+        salah: salahCount,
+        kosong: kosongCount,
+        skor: score,
+        detail_jawaban: answersList
       });
       setRekap({
         uuid_quiz: quizId,
-        benar: d.benar ?? 0,
-        salah: d.salah ?? 0,
-        skor: d.skor ?? 0,
-        detail_jawaban: d.detail_jawaban
+        benar: benarCount,
+        salah: salahCount,
+        kosong: kosongCount,
+        skor: score,
+        detail_jawaban: answersList
       });
     } catch (err) {
       console.warn('Server submit failed, computing locally:', err);
       // Fallback: compute client-side
       let benar = 0;
       let salah = 0;
+      let kosong = 0;
+      const detailJawabanList: AnswerDetail[] = [];
       targetDetail.questions.forEach(q => {
         const ans = targetAnswers[q.uuid_question];
-        const correct = q.options.filter(o => o.is_correct).map(o => o.id);
+        const noAns = checkIsAnswerEmpty(ans);
+        
         let isCorrect = false;
-        if (q.type === 'Checkbox') {
-          const sel = (ans as string[]) || [];
-          isCorrect = correct.length === sel.length && correct.every(id => sel.includes(id));
+        if (noAns) {
+          kosong++;
         } else {
-          isCorrect = correct.includes(ans as string);
+          const correct = q.options.filter(o => o.is_correct).map(o => o.id);
+          if (q.type === 'Checkbox') {
+            const sel = (ans as string[]) || [];
+            isCorrect = correct.length === sel.length && correct.every(id => sel.includes(id));
+          } else {
+            isCorrect = ans ? correct.includes(ans as string) : false;
+          }
+          if (isCorrect) benar++; else salah++;
         }
-        if (isCorrect) benar++; else salah++;
+
+        detailJawabanList.push({
+          uuid_question: q.uuid_question,
+          question_text: q.question_text,
+          description: q.description,
+          image_url: q.image_url,
+          type: q.type,
+          submitted_answer: (q.type === 'Checkbox' ? (ans || []) : (ans || '')) as string,
+          is_correct: isCorrect,
+          correct_answer: q.options.filter(o => o.is_correct),
+          explanation: q.explanation
+        });
       });
       const skor = Math.round((benar / targetDetail.questions.length) * 100);
-      setResult({ benar, salah, skor });
-      setRekap({ uuid_quiz: quizId, benar, salah, skor });
+      setResult({ benar, salah, kosong, skor, detail_jawaban: detailJawabanList });
+      setRekap({ uuid_quiz: quizId, benar, salah, kosong, skor, detail_jawaban: detailJawabanList });
     } finally {
       setSubmitting(false);
       setView('result');
