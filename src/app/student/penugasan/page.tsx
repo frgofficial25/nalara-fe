@@ -455,6 +455,7 @@ export default function PenugasanPage() {
   const [uploadTask, setUploadTask]   = useState<UrgentTask | null>(null);
   const [ipynbFile, setIpynbFile]     = useState<File | null>(null);
   const [pdfFile, setPdfFile]         = useState<File | null>(null);
+  const [linkUrl, setLinkUrl]         = useState<string>('');
   const [notes, setNotes]             = useState('');
   const [submitting, setSubmitting]   = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -586,7 +587,12 @@ export default function PenugasanPage() {
   // ── Submit Study Case ──────────────────────────────────────────────────────
   const handleSubmitSc = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!uploadTask || !ipynbFile || !pdfFile) return;
+    if (!uploadTask) return;
+    
+    const isLink = uploadTask.submission_type === 'LINK';
+    if (isLink && !linkUrl) return;
+    if (!isLink && (!ipynbFile || !pdfFile)) return;
+
     setSubmitting(true); setSubmitError(null);
     try {
       const auth = getAuthHeaders();
@@ -595,13 +601,21 @@ export default function PenugasanPage() {
       const headers: Record<string, string> = { ...auth.headers };
       if (token) headers['Authorization'] = `Bearer ${token}`;
 
-      const fd = new FormData();
-      fd.append('ipynb', ipynbFile);
-      fd.append('pdf', pdfFile);
-      if (notes) fd.append('student_notes', notes);
+      let body: FormData | URLSearchParams;
+      if (isLink) {
+        headers['Content-Type'] = 'application/x-www-form-urlencoded';
+        body = new URLSearchParams();
+        body.append('link_url', linkUrl);
+        if (notes) body.append('student_notes', notes);
+      } else {
+        body = new FormData();
+        body.append('ipynb', ipynbFile!);
+        body.append('pdf', pdfFile!);
+        if (notes) body.append('student_notes', notes);
+      }
 
       const res = await fetch(`${API_BASE}/api/study-case-submissions/${uploadTask.id_tugas}`, {
-        method: 'POST', headers, body: fd,
+        method: 'POST', headers, body,
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.message || 'Gagal mengirimkan tugas.');
@@ -827,7 +841,7 @@ export default function PenugasanPage() {
                       )}
                     </div>
                     {canSubmit && !noGroupAssigned ? (
-                      <button onClick={() => { setUploadTask(task); setIpynbFile(null); setPdfFile(null); setNotes(''); setSubmitError(null); setSubmitSuccess(false); }} style={s.btnUpload}>
+                      <button onClick={() => { setUploadTask(task); setIpynbFile(null); setPdfFile(null); setLinkUrl(''); setNotes(''); setSubmitError(null); setSubmitSuccess(false); }} style={s.btnUpload}>
                         <Upload size={14} /><span>Kumpulkan Tugas</span>
                       </button>
                     ) : noGroupAssigned ? (
@@ -1042,85 +1056,101 @@ export default function PenugasanPage() {
                 </div>
               ) : (
                 <form onSubmit={handleSubmitSc} style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-                  <div style={s.fg}>
-                    <label style={s.label}>1. File Jupyter Notebook (.ipynb) <span style={{ color: '#FF5252' }}>*</span></label>
-                    <div style={{
-                      position: 'relative',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '12px',
-                      background: ipynbFile ? 'rgba(6, 113, 224, 0.08)' : '#18181b',
-                      border: ipynbFile ? '1px solid var(--azure)' : '1px dashed var(--border-color)',
-                      borderRadius: '10px',
-                      padding: '14px 16px',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s',
-                    }}>
-                      <FileText size={20} color={ipynbFile ? 'var(--azure)' : 'var(--grey-blue)'} />
+                  {uploadTask?.submission_type === 'LINK' ? (
+                    <div style={s.fg}>
+                      <label style={s.label}>Link Google Drive <span style={{ color: '#FF5252' }}>*</span></label>
                       <input 
-                        type="file" 
+                        type="url" 
                         required 
-                        accept=".ipynb" 
-                        onChange={e => setIpynbFile(e.target.files?.[0] || null)} 
-                        style={{
-                          position: 'absolute',
-                          inset: 0,
-                          width: '100%',
-                          height: '100%',
-                          opacity: 0,
-                          cursor: 'pointer',
-                          zIndex: 10
-                        }} 
+                        value={linkUrl}
+                        onChange={e => setLinkUrl(e.target.value)} 
+                        placeholder="https://drive.google.com/..."
+                        style={s.input} 
                       />
-                      <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
-                        <span style={{ fontSize: '0.88rem', fontWeight: 600, color: ipynbFile ? '#fff' : 'var(--grey-blue)' }}>
-                          {ipynbFile ? ipynbFile.name : 'Klik atau seret file .ipynb di sini'}
-                        </span>
-                        {ipynbFile && <span style={{ fontSize: '0.74rem', color: 'var(--azure)', marginTop: 2 }}>{Math.round(ipynbFile.size / 1024)} KB</span>}
-                      </div>
-                      <Upload size={16} color="var(--grey-blue)" />
                     </div>
-                  </div>
+                  ) : (
+                    <>
+                      <div style={s.fg}>
+                        <label style={s.label}>1. File Jupyter Notebook (.ipynb) <span style={{ color: '#FF5252' }}>*</span></label>
+                        <div style={{
+                          position: 'relative',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '12px',
+                          background: ipynbFile ? 'rgba(6, 113, 224, 0.08)' : '#18181b',
+                          border: ipynbFile ? '1px solid var(--azure)' : '1px dashed var(--border-color)',
+                          borderRadius: '10px',
+                          padding: '14px 16px',
+                          cursor: 'pointer',
+                          transition: 'all 0.2s',
+                        }}>
+                          <FileText size={20} color={ipynbFile ? 'var(--azure)' : 'var(--grey-blue)'} />
+                          <input 
+                            type="file" 
+                            required 
+                            accept=".ipynb" 
+                            onChange={e => setIpynbFile(e.target.files?.[0] || null)} 
+                            style={{
+                              position: 'absolute',
+                              inset: 0,
+                              width: '100%',
+                              height: '100%',
+                              opacity: 0,
+                              cursor: 'pointer',
+                              zIndex: 10
+                            }} 
+                          />
+                          <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
+                            <span style={{ fontSize: '0.88rem', fontWeight: 600, color: ipynbFile ? '#fff' : 'var(--grey-blue)' }}>
+                              {ipynbFile ? ipynbFile.name : 'Klik atau seret file .ipynb di sini'}
+                            </span>
+                            {ipynbFile && <span style={{ fontSize: '0.74rem', color: 'var(--azure)', marginTop: 2 }}>{Math.round(ipynbFile.size / 1024)} KB</span>}
+                          </div>
+                          <Upload size={16} color="var(--grey-blue)" />
+                        </div>
+                      </div>
 
-                  <div style={s.fg}>
-                    <label style={s.label}>2. File Laporan (.pdf) <span style={{ color: '#FF5252' }}>*</span></label>
-                    <div style={{
-                      position: 'relative',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '12px',
-                      background: pdfFile ? 'rgba(6, 113, 224, 0.08)' : '#18181b',
-                      border: pdfFile ? '1px solid var(--azure)' : '1px dashed var(--border-color)',
-                      borderRadius: '10px',
-                      padding: '14px 16px',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s',
-                    }}>
-                      <FileText size={20} color={pdfFile ? 'var(--azure)' : 'var(--grey-blue)'} />
-                      <input 
-                        type="file" 
-                        required 
-                        accept=".pdf" 
-                        onChange={e => setPdfFile(e.target.files?.[0] || null)} 
-                        style={{
-                          position: 'absolute',
-                          inset: 0,
-                          width: '100%',
-                          height: '100%',
-                          opacity: 0,
+                      <div style={s.fg}>
+                        <label style={s.label}>2. File Laporan (.pdf) <span style={{ color: '#FF5252' }}>*</span></label>
+                        <div style={{
+                          position: 'relative',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '12px',
+                          background: pdfFile ? 'rgba(6, 113, 224, 0.08)' : '#18181b',
+                          border: pdfFile ? '1px solid var(--azure)' : '1px dashed var(--border-color)',
+                          borderRadius: '10px',
+                          padding: '14px 16px',
                           cursor: 'pointer',
-                          zIndex: 10
-                        }} 
-                      />
-                      <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
-                        <span style={{ fontSize: '0.88rem', fontWeight: 600, color: pdfFile ? '#fff' : 'var(--grey-blue)' }}>
-                          {pdfFile ? pdfFile.name : 'Klik atau seret file .pdf di sini'}
-                        </span>
-                        {pdfFile && <span style={{ fontSize: '0.74rem', color: 'var(--azure)', marginTop: 2 }}>{Math.round(pdfFile.size / 1024)} KB</span>}
+                          transition: 'all 0.2s',
+                        }}>
+                          <FileText size={20} color={pdfFile ? 'var(--azure)' : 'var(--grey-blue)'} />
+                          <input 
+                            type="file" 
+                            required 
+                            accept=".pdf" 
+                            onChange={e => setPdfFile(e.target.files?.[0] || null)} 
+                            style={{
+                              position: 'absolute',
+                              inset: 0,
+                              width: '100%',
+                              height: '100%',
+                              opacity: 0,
+                              cursor: 'pointer',
+                              zIndex: 10
+                            }} 
+                          />
+                          <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
+                            <span style={{ fontSize: '0.88rem', fontWeight: 600, color: pdfFile ? '#fff' : 'var(--grey-blue)' }}>
+                              {pdfFile ? pdfFile.name : 'Klik atau seret file .pdf di sini'}
+                            </span>
+                            {pdfFile && <span style={{ fontSize: '0.74rem', color: 'var(--azure)', marginTop: 2 }}>{Math.round(pdfFile.size / 1024)} KB</span>}
+                          </div>
+                          <Upload size={16} color="var(--grey-blue)" />
+                        </div>
                       </div>
-                      <Upload size={16} color="var(--grey-blue)" />
-                    </div>
-                  </div>
+                    </>
+                  )}
 
                   <div style={s.fg}>
                     <label style={s.label}>Catatan Tambahan (Opsional)</label>
@@ -1261,12 +1291,21 @@ export default function PenugasanPage() {
                   </div>
                 )}
 
-                {/* File Uploaded Links */}
+                {/* File / Link Uploaded */}
                 <div>
                   <span style={{ fontSize: '0.78rem', color: 'var(--grey-blue)', fontWeight: 600, display: 'block', marginBottom: 8 }}>
-                    File Terlampir:
+                    Terlampir:
                   </span>
                   <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                    {selectedSub.link_url && (
+                      <button
+                        type="button"
+                        onClick={() => window.open(selectedSub.link_url, '_blank')}
+                        style={s.attachLink}
+                      >
+                        <Eye size={14} /><span>Buka Link Drive</span>
+                      </button>
+                    )}
                     {selectedSub.ipynb_url && (
                       <button
                         type="button"

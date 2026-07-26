@@ -762,8 +762,13 @@ export default function PenilaianPage() {
                       </div>
                     )}
 
-                    {/* File links */}
+                    {/* File / Link links */}
                     <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                      {sub.link_url && (
+                        <a href={sub.link_url} target="_blank" rel="noopener noreferrer" style={s.fileLink}>
+                          <FileText size={12} /><span>Link Google Drive</span>
+                        </a>
+                      )}
                       {sub.ipynb_url && (
                         <a href={sub.ipynb_url} target="_blank" rel="noopener noreferrer" style={s.fileLink}>
                           <FileText size={12} /><span>Notebook (.ipynb)</span>

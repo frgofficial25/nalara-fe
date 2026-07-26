@@ -71,7 +71,7 @@ export default function EvaluasiPage() {
     youtube_link: '', content_text: '',
     uuid_pembelajaran: '', uuid_modul: '',
     file: null as File | null, is_group_project: false, group_count: '' as number | '',
-    published_at: '', deadline_at: '',
+    published_at: '', deadline_at: '', submission_type: 'FILE' as 'FILE' | 'LINK'
   });
   const [submitting, setSubmitting] = useState(false);
 
@@ -204,7 +204,7 @@ export default function EvaluasiPage() {
   useEffect(() => { if (selectedCourse) fetchModulesForCourse(selectedCourse); }, [selectedCourse]);
 
   // ── Study Case CRUD ──────────────────────────────────────────────────────
-  const resetForm = () => setForm({ title: '', type: 'CaseStudy', youtube_link: '', content_text: '', uuid_pembelajaran: '', uuid_modul: '', file: null, is_group_project: false, group_count: '', published_at: '', deadline_at: '' });
+  const resetForm = () => setForm({ title: '', type: 'CaseStudy', youtube_link: '', content_text: '', uuid_pembelajaran: '', uuid_modul: '', file: null, is_group_project: false, group_count: '', published_at: '', deadline_at: '', submission_type: 'FILE' });
   const getFormModules = () => form.uuid_pembelajaran ? modules.filter(m => m.uuid_pembelajaran === form.uuid_pembelajaran) : modules;
 
   const handleCreate = async (e: React.FormEvent) => {
@@ -231,6 +231,7 @@ export default function EvaluasiPage() {
         if (form.is_group_project && form.group_count) {
           payloadForm.append('group_count', String(form.group_count));
         }
+        payloadForm.append('submission_type', form.submission_type);
         if (form.file) {
           payloadForm.append('file', form.file);
         }
@@ -261,8 +262,11 @@ export default function EvaluasiPage() {
       if ((form.type === 'Reading' || form.type === 'CaseStudy') && form.content_text) {
         payloadForm.append('content', form.content_text);
       }
-      if (form.type === 'CaseStudy' && form.file) {
-        payloadForm.append('file', form.file);
+      if (form.type === 'CaseStudy') {
+        payloadForm.append('submission_type', form.submission_type);
+        if (form.file) {
+          payloadForm.append('file', form.file);
+        }
       }
 
       await apiUpload(`/api/tugas/${currentTugas.id}`, payloadForm, { token: auth.token, headers: auth.headers });
@@ -319,6 +323,7 @@ export default function EvaluasiPage() {
       group_count: (tugas as any).group_count || '',
       published_at: toDatetimeLocal((tugas as any).published_at),
       deadline_at: toDatetimeLocal((tugas as any).deadline_at),
+      submission_type: (tugas as any).submission_type || 'FILE',
     });
     setShowEditModal(true);
   };
@@ -755,6 +760,17 @@ export default function EvaluasiPage() {
                   )}
                   {form.type === 'CaseStudy' && (
                     <>
+                      <div style={s.fg}>
+                        <label style={s.label}>Tipe Pengumpulan *</label>
+                        <select
+                          value={form.submission_type}
+                          onChange={e => setForm({ ...form, submission_type: e.target.value as 'FILE' | 'LINK' })}
+                          style={s.input}
+                        >
+                          <option value="FILE">Unggah File (.pdf / .ipynb)</option>
+                          <option value="LINK">Link Google Drive</option>
+                        </select>
+                      </div>
                       <div style={s.fg}>
                         <label style={s.label}>{showCreateModal ? 'File Soal Tambahan (Opsional - PDF/IPYNB)' : 'Update File Soal (Opsional - PDF/IPYNB)'}</label>
                         <input

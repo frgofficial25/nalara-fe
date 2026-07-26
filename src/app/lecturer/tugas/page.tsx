@@ -53,6 +53,7 @@ export default function TugasPage() {
     uuid_modul: '',
     published_at: '',
     deadline_at: '',
+    submission_type: 'FILE' as 'FILE' | 'LINK',
   });
   const [submitting, setSubmitting] = useState(false);
 
@@ -331,6 +332,7 @@ export default function TugasPage() {
         uuid_modul: form.uuid_modul || null,
         published_at: form.published_at || null,
         deadline_at: form.deadline_at || null,
+        submission_type: form.type === 'CaseStudy' ? form.submission_type : undefined,
       };
       if (form.type === 'Video' && form.youtube_link) {
         payload.youtube_link = form.youtube_link;
@@ -369,6 +371,7 @@ export default function TugasPage() {
         type: form.type,
         published_at: form.published_at || null,
         deadline_at: form.deadline_at || null,
+        submission_type: form.type === 'CaseStudy' ? form.submission_type : undefined,
       };
       if (form.type === 'Video') {
         payload.youtube_link = form.youtube_link;
@@ -448,6 +451,7 @@ export default function TugasPage() {
       uuid_modul: '',
       published_at: '',
       deadline_at: '',
+      submission_type: 'FILE',
     });
   };
 
@@ -484,6 +488,7 @@ export default function TugasPage() {
       uuid_modul: tugas.uuid_modul || '',
       published_at: toDatetimeLocal((tugas as any).published_at),
       deadline_at: toDatetimeLocal((tugas as any).deadline_at),
+      submission_type: (tugas as any).submission_type || 'FILE',
     });
     setShowEditModal(true);
   };
@@ -719,6 +724,12 @@ export default function TugasPage() {
 
                   {/* Attachment links */}
                   <div style={{ display: 'flex', gap: 10, marginTop: 10 }}>
+                    {sub.link_url && (
+                      <a href={sub.link_url} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.75rem', color: 'var(--azure)' }}>
+                        <FileText size={12} />
+                        <span>Link Drive</span>
+                      </a>
+                    )}
                     {sub.ipynb_url && (
                       <a href={sub.ipynb_url} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.75rem', color: 'var(--azure)' }}>
                         <FileText size={12} />
@@ -846,6 +857,19 @@ export default function TugasPage() {
                     />
                   </div>
                 )}
+                {form.type === 'CaseStudy' && (
+                  <div style={s.formGroup}>
+                    <label style={s.label}>Tipe Pengumpulan *</label>
+                    <select
+                      value={form.submission_type}
+                      onChange={e => setForm({ ...form, submission_type: e.target.value as 'FILE' | 'LINK' })}
+                      style={s.input}
+                    >
+                      <option value="FILE">Unggah File (.pdf / .ipynb)</option>
+                      <option value="LINK">Link Google Drive</option>
+                    </select>
+                  </div>
+                )}
                 {(form.type === 'Reading' || form.type === 'CaseStudy') && (
                   <div style={s.formGroup}>
                     <label style={s.label}>{form.type === 'CaseStudy' ? 'Soal / Deskripsi Tugas' : 'Content'}</label>
@@ -921,6 +945,19 @@ export default function TugasPage() {
                       onChange={(e) => setForm({ ...form, youtube_link: e.target.value })}
                       style={s.input}
                     />
+                  </div>
+                )}
+                {form.type === 'CaseStudy' && (
+                  <div style={s.formGroup}>
+                    <label style={s.label}>Tipe Pengumpulan *</label>
+                    <select
+                      value={form.submission_type}
+                      onChange={e => setForm({ ...form, submission_type: e.target.value as 'FILE' | 'LINK' })}
+                      style={s.input}
+                    >
+                      <option value="FILE">Unggah File (.pdf / .ipynb)</option>
+                      <option value="LINK">Link Google Drive</option>
+                    </select>
                   </div>
                 )}
                 {(form.type === 'Reading' || form.type === 'CaseStudy') && (
