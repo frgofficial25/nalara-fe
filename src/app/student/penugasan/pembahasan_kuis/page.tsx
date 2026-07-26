@@ -192,7 +192,7 @@ function AnswerCard({ item, questions }: { item: AnswerDetail; questions: Questi
           {noAnswer ? <AlertCircle size={16} /> : item.is_correct ? '✓' : '✗'}
         </div>
         <p style={{ flex: 1, margin: 0, fontSize: '1rem', color: '#E2E8F0', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>
-          {item.question_text}
+          {item.question_text || originalQ?.question_text || ''}
         </p>
         <span style={{
           flexShrink: 0, fontSize: '0.75rem', padding: '4px 12px', borderRadius: 20, fontWeight: 700,
@@ -203,15 +203,15 @@ function AnswerCard({ item, questions }: { item: AnswerDetail; questions: Questi
         </span>
       </div>
 
-      {item.description && (
+      {(item.description || originalQ?.description) && (
         <div style={{ background: 'rgba(255,255,255,0.05)', padding: '10px 14px', borderRadius: 8, fontSize: '0.9rem', color: '#CBD5E0', whiteSpace: 'pre-wrap', fontFamily: 'inherit' }}>
-          {item.description}
+          {item.description || originalQ?.description}
         </div>
       )}
 
-      {item.image_url && (
+      {(item.image_url || originalQ?.image_url) && (
         <div style={{ display: 'flex' }}>
-          <img src={item.image_url} alt="Gambar Soal" style={{ maxWidth: '100%', maxHeight: 220, borderRadius: 8, objectFit: 'contain' }} />
+          <img src={item.image_url || originalQ?.image_url} alt="Gambar Soal" style={{ maxWidth: '100%', maxHeight: 220, borderRadius: 8, objectFit: 'contain' }} />
         </div>
       )}
 
