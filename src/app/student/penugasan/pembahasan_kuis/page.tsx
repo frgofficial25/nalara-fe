@@ -321,9 +321,10 @@ function PembahasanKuisContent() {
           const rekapRes = await apiGet<any>(`/api/students/${studentId}/quiz-rekap`, { token: auth.token, headers: auth.headers });
           const rekapList: any[] = Array.isArray(rekapRes) ? rekapRes : (rekapRes?.data || []);
 
-          // Match by attemptId, or fallback to matching quiz_title with the detailObj.title
+          // Match by attemptId, uuid_quiz, quiz_id, or fallback to matching quiz_title with the detailObj.title
           const match = rekapList.find((att: any) =>
             (attemptId && att.uuid_attempt === attemptId) ||
+            ((att.uuid_quiz || att.quiz_id) === quizId) ||
             (att.quiz_title && att.quiz_title.trim().toLowerCase() === detailObj.title.trim().toLowerCase())
           );
 

@@ -55,6 +55,7 @@ interface StudyCaseSubmission {
   released_score?: number;
   released_reason?: string;
   is_released: boolean;
+  link_url?: string;
   submitted_at?: string;
 }
 

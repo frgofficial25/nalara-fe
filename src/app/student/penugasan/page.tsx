@@ -30,6 +30,7 @@ interface UrgentTask {
     group_name: string;
     is_leader: boolean;
   } | null;
+  submission_type?: 'FILE' | 'LINK';
 }
 
 interface Submission {
@@ -38,6 +39,7 @@ interface Submission {
   tugas?: { title: string; type: string; pembelajaran?: { title: string }; modul?: { title: string } };
   ipynb_url?: string;
   pdf_url?: string;
+  link_url?: string;
   student_notes?: string;
   ai_score?: number;
   ai_reason?: string;
@@ -707,8 +709,8 @@ export default function PenugasanPage() {
     finally { setSubmittingQuiz(false); }
   };
 
-  // Match attempt to quiz by uuid_quiz (backend now includes uuid_quiz in rekap response)
-  const getAttempt = (quizId: string) => myQuizRekap.find((r: any) => r.uuid_quiz === quizId);
+  // Match attempt to quiz by uuid_quiz or quiz_id
+  const getAttempt = (quizId: string) => myQuizRekap.find((r: any) => (r.uuid_quiz || r.quiz_id) === quizId);
 
   // ═══════════════════════════════════════════════════════════════════════════
   return (

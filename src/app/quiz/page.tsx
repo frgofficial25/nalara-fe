@@ -1080,8 +1080,8 @@ function QuizPageInner() {
         try {
           const rekapRes = await apiGet<any>('/api/quiz/rekap', { token: auth.token, headers: auth.headers });
           const rekapList: any[] = Array.isArray(rekapRes) ? rekapRes : (rekapRes?.data || []);
-          // Match by uuid_quiz (backend fix ensures this field is present)
-          const match = rekapList.find((r: any) => r.uuid_quiz === quizId);
+          // Match by uuid_quiz or quiz_id
+          const match = rekapList.find((r: any) => (r.uuid_quiz || r.quiz_id) === quizId);
           if (match) {
             setRekap({
               uuid_quiz: match.uuid_quiz,
