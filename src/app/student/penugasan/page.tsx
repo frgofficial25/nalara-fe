@@ -1077,9 +1077,7 @@ export default function PenugasanPage() {
                     </div>
                   </div>
                 )}
-                {uploadTask && (
-                  <TaskQuestionCard task={uploadTask} onOpenPreview={(url, title) => setTaskPreviewModal({ taskId: uploadTask.id_tugas, url, title })} />
-                )}
+
                 {submitSuccess ? (
                   <div style={s.successBox}>
                     <CheckCircle2 size={44} color="#00C853" />
@@ -1122,11 +1120,11 @@ export default function PenugasanPage() {
                             display: 'flex', alignItems: 'center', gap: 10,
                             background: linkUrl
                               ? (linkUrl.includes('drive.google.com') || linkUrl.includes('docs.google.com')
-                                  ? 'rgba(0, 200, 83, 0.06)' : 'rgba(239, 68, 68, 0.06)')
+                                ? 'rgba(0, 200, 83, 0.06)' : 'rgba(239, 68, 68, 0.06)')
                               : 'rgba(255,255,255,0.02)',
                             border: `1px solid ${linkUrl
                               ? (linkUrl.includes('drive.google.com') || linkUrl.includes('docs.google.com')
-                                  ? 'rgba(0,200,83,0.35)' : 'rgba(239,68,68,0.35)')
+                                ? 'rgba(0,200,83,0.35)' : 'rgba(239,68,68,0.35)')
                               : 'rgba(255,255,255,0.1)'}`,
                             borderRadius: 10, padding: '4px 12px 4px 4px',
                             transition: 'all 0.25s'
@@ -1136,12 +1134,12 @@ export default function PenugasanPage() {
                               display: 'flex', alignItems: 'center', justifyContent: 'center',
                               background: linkUrl
                                 ? (linkUrl.includes('drive.google.com') || linkUrl.includes('docs.google.com')
-                                    ? 'rgba(0,200,83,0.12)' : 'rgba(239,68,68,0.12)')
+                                  ? 'rgba(0,200,83,0.12)' : 'rgba(239,68,68,0.12)')
                                 : 'rgba(99,102,241,0.1)'
                             }}>
                               <Link size={16} color={linkUrl
                                 ? (linkUrl.includes('drive.google.com') || linkUrl.includes('docs.google.com')
-                                    ? '#00C853' : '#f87171')
+                                  ? '#00C853' : '#f87171')
                                 : '#a5b4fc'} />
                             </div>
                             <input
@@ -1281,7 +1279,7 @@ export default function PenugasanPage() {
                     <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12, borderTop: '1px solid var(--border-color)', paddingTop: 18, marginTop: 6 }}>
                       <button type="button" onClick={() => setUploadTask(null)} style={s.btnGhost}>Batal</button>
                       <button type="submit" disabled={submitting} style={s.btnPrimary}>
-                        {submitting ? <><Loader2 size={15} style={{ animation: 'spin 1s linear infinite' }} /><span>Mengirim & Menilai AI...</span></> : <><Upload size={15} /><span>Kirim Sekarang</span></>}
+                        {submitting ? <><Loader2 size={15} style={{ animation: 'spin 1s linear infinite' }} /><span>Mengirim...</span></> : <><Upload size={15} /><span>Kirim Sekarang</span></>}
                       </button>
                     </div>
                   </form>
@@ -1418,10 +1416,10 @@ export default function PenugasanPage() {
                     Terlampir:
                   </span>
                   <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-                    {selectedSub.link_url && (
+                    {(selectedSub as any).link_url && (
                       <button
                         type="button"
-                        onClick={() => window.open(selectedSub.link_url, '_blank')}
+                        onClick={() => window.open((selectedSub as any).link_url, '_blank')}
                         style={s.attachLink}
                       >
                         <Eye size={14} /><span>Buka Link Drive</span>

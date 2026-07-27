@@ -453,7 +453,3 @@ export default function PembahasanKuisPage() {
     </Suspense>
   );
 }
-<PembahasanKuisContent />
-    </Suspense >
-  );
-}
