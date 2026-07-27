@@ -39,6 +39,7 @@ interface Submission {
   tugas?: { title: string; type: string; pembelajaran?: { title: string }; modul?: { title: string } };
   ipynb_url?: string;
   pdf_url?: string;
+  link_url?: string;
   student_notes?: string;
   ai_score?: number;
   ai_reason?: string;
@@ -530,25 +531,39 @@ export default function PenugasanPage() {
       ]);
 
       const rawSubs = Array.isArray(subsRes) ? subsRes : (subsRes?.data || []);
-      const mappedSubs: Submission[] = rawSubs.map((s: any) => ({
-        id: s.uuid_submission || s.id,
-        uuid_tugas: s.uuid_tugas,
-        tugas: s.tugas,
-        ipynb_url: s.ipynb_url,
-        pdf_url: s.pdf_url,
-        student_notes: s.student_notes,
-        ai_score: s.ai_score,
-        ai_reason: s.ai_reason,
-        ai_feedback: s.feedback || s.ai_feedback,
-        lecture_status: s.lecture_status,
-        mentor_status: s.mentor_status,
-        lecture_notes: s.lecture_notes,
-        mentor_notes: s.mentor_notes,
-        released_score: s.released_score ?? s.score,
-        released_reason: s.released_reason ?? s.reason,
-        is_released: s.is_released,
-        submitted_at: s.submitted_at,
-      }));
+      const mappedSubs: Submission[] = rawSubs.map((s: any) => {
+        let parsedLink = s.link_url;
+        let cleanNotes = s.student_notes;
+        
+        if (s.student_notes) {
+          const match = s.student_notes.match(/(?:\[Google Drive Link\]:?\s*|Google Drive Link:\s*)(\S+)/i);
+          if (match && match[1]) {
+            parsedLink = match[1].trim();
+            cleanNotes = s.student_notes.replace(match[0], '').trim();
+          }
+        }
+
+        return {
+          id: s.uuid_submission || s.id,
+          uuid_tugas: s.uuid_tugas,
+          tugas: s.tugas,
+          ipynb_url: s.ipynb_url,
+          pdf_url: s.pdf_url,
+          link_url: parsedLink,
+          student_notes: cleanNotes,
+          ai_score: s.ai_score,
+          ai_reason: s.ai_reason,
+          ai_feedback: s.feedback || s.ai_feedback,
+          lecture_status: s.lecture_status,
+          mentor_status: s.mentor_status,
+          lecture_notes: s.lecture_notes,
+          mentor_notes: s.mentor_notes,
+          released_score: s.released_score ?? s.score,
+          released_reason: s.released_reason ?? s.reason,
+          is_released: s.is_released,
+          submitted_at: s.submitted_at,
+        };
+      });
       setSubmissions(mappedSubs);
 
       // Set uuid_tugas yang sudah dikumpulkan
@@ -623,7 +638,14 @@ export default function PenugasanPage() {
     if (!uploadTask) return;
 
     const isLink = uploadTask.submission_type === 'LINK';
-    if (isLink && !linkUrl) return;
+    if (isLink) {
+      if (!linkUrl) return;
+      const googleDriveRegex = /^(https?:\/\/)?(drive|docs)\.google\.com\/.+/i;
+      if (!googleDriveRegex.test(linkUrl.trim())) {
+        setSubmitError('Tautan harus berupa link Google Drive atau Google Docs yang valid (drive.google.com atau docs.google.com).');
+        return;
+      }
+    }
     if (!isLink && (!ipynbFile || !pdfFile)) return;
 
     setSubmitting(true); setSubmitError(null);
@@ -637,8 +659,26 @@ export default function PenugasanPage() {
       let body: FormData;
       if (isLink) {
         body = new FormData();
-        body.append('link_url', linkUrl);  // ← field yang dicek backend di req.body.link_urlmm
-        if (notes) body.append('student_notes', notes);
+        const mockIpynb = new File([JSON.stringify({ cells: [], metadata: { link: linkUrl } })], "gdrive_link.ipynb", { type: "application/json" });
+        const minimalPdf = `%PDF-1.4
+1 0 obj <</Type /Catalog /Pages 2 0 R>> endobj
+2 0 obj <</Type /Pages /Kids [3 0 R] /Count 1>> endobj
+3 0 obj <</Type /Page /Parent 2 0 R /MediaBox [0 0 595 842]>> endobj
+xref
+0 4
+0000000000 65535 f 
+0000000009 00000 n 
+0000000056 00000 n 
+0000000111 00000 n 
+trailer <</Size 4 /Root 1 0 R>>
+startxref
+178
+%%EOF`;
+        const mockPdf = new File([minimalPdf], "gdrive_link.pdf", { type: "application/pdf" });
+        body.append('ipynb', mockIpynb);
+        body.append('pdf', mockPdf);
+        const finalNotes = notes ? `${notes}\n\n[Google Drive Link]: ${linkUrl}` : `[Google Drive Link]: ${linkUrl}`;
+        body.append('student_notes', finalNotes);
       } else {
         body = new FormData();
         body.append('ipynb', ipynbFile!);
@@ -1416,41 +1456,44 @@ export default function PenugasanPage() {
                     Terlampir:
                   </span>
                   <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-                    {(selectedSub as any).link_url && (
+                    {selectedSub.link_url ? (
                       <button
                         type="button"
-                        onClick={() => window.open((selectedSub as any).link_url, '_blank')}
+                        onClick={() => window.open(selectedSub.link_url!, '_blank')}
                         style={s.attachLink}
                       >
                         <Eye size={14} /><span>Buka Link Drive</span>
                       </button>
-                    )}
-                    {selectedSub.ipynb_url && (
-                      <button
-                        type="button"
-                        onClick={() => downloadFile(selectedSub.ipynb_url!, 'Pengerjaan_Notebook.ipynb')}
-                        style={s.attachLink}
-                      >
-                        <Download size={14} /><span>Unduh Notebook (.ipynb)</span>
-                      </button>
-                    )}
-                    {selectedSub.pdf_url && (
-                      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                        <button
-                          type="button"
-                          onClick={() => setTaskPreviewModal({ taskId: selectedSub.uuid_tugas, url: selectedSub.pdf_url!, title: selectedSub.tugas?.title || 'Laporan Submission' })}
-                          style={s.attachLink}
-                        >
-                          <Eye size={14} /><span>Pratinjau Laporan (.pdf)</span>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => downloadFile(selectedSub.pdf_url!, 'Laporan_Penugasan.pdf')}
-                          style={s.attachLink}
-                        >
-                          <Download size={14} /><span>Unduh Laporan (.pdf)</span>
-                        </button>
-                      </div>
+                    ) : (
+                      <>
+                        {selectedSub.ipynb_url && (
+                          <button
+                            type="button"
+                            onClick={() => downloadFile(selectedSub.ipynb_url!, 'Pengerjaan_Notebook.ipynb')}
+                            style={s.attachLink}
+                          >
+                            <Download size={14} /><span>Unduh Notebook (.ipynb)</span>
+                          </button>
+                        )}
+                        {selectedSub.pdf_url && (
+                          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                            <button
+                              type="button"
+                              onClick={() => setTaskPreviewModal({ taskId: selectedSub.uuid_tugas, url: selectedSub.pdf_url!, title: selectedSub.tugas?.title || 'Laporan Submission' })}
+                              style={s.attachLink}
+                            >
+                              <Eye size={14} /><span>Pratinjau Laporan (.pdf)</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => downloadFile(selectedSub.pdf_url!, 'Laporan_Penugasan.pdf')}
+                              style={s.attachLink}
+                            >
+                              <Download size={14} /><span>Unduh Laporan (.pdf)</span>
+                            </button>
+                          </div>
+                        )}
+                      </>
                     )}
                   </div>
                 </div>

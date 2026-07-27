@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import {
   TrendingUp, Award, Search, BookOpen, Brain,
   CheckCircle2, Loader2, X, RefreshCw,
-  FileText, AlertCircle, ChevronRight, PenLine, Star, Layers, ArrowLeft,
+  FileText, AlertCircle, ChevronRight, PenLine, Star, Layers, ArrowLeft, Link as LinkIcon,
 } from 'lucide-react';
 import { apiGet, apiPost, apiPatch } from '@/lib/api';
 import { getStoredToken } from '@/services/auth';
@@ -41,6 +41,7 @@ interface StudyCaseSubmission {
   student_notes?: string;
   ipynb_url?: string;
   pdf_url?: string;
+  link_url?: string;
   ai_score?: number;
   ai_reason?: string;
   ai_feedback?: {
@@ -56,6 +57,8 @@ interface StudyCaseSubmission {
   released_reason?: string;
   is_released: boolean;
   submitted_at?: string;
+  lecture_verifier?: { full_name: string };
+  mentor_verifier?: { full_name: string };
 }
 
 // ─── Auth helper ──────────────────────────────────────────────────────────────
@@ -72,7 +75,7 @@ function getAuth() {
 export default function PenilaianPage() {
   const router = useRouter();
   // ── Tab state ────────────────────────────────────────────────────────────
-  const [tab, setTab] = useState<'quiz' | 'studycase' | 'recap'>('quiz');
+  const [tab, setTab] = useState<'quiz' | 'studycase' | 'studycase_recap' | 'recap'>('quiz');
 
   // Toast state
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
@@ -326,6 +329,11 @@ export default function PenilaianPage() {
   // AI feedback expanded
   const [expandedAI, setExpandedAI] = useState<string | null>(null);
 
+  // Graded list states (Nilai Studi Kasus)
+  const [gradedSubmissions, setGradedSubmissions] = useState<StudyCaseSubmission[]>([]);
+  const [gradedSearch, setGradedSearch] = useState('');
+  const [gradedSelectedCourse, setGradedSelectedCourse] = useState('all');
+
   const fetchQueue = async () => {
     setSubLoading(true);
     setSubError(null);
@@ -339,29 +347,53 @@ export default function PenilaianPage() {
       setCourses(fetchedCourses);
 
       const raw: any[] = Array.isArray(sRes) ? sRes : (sRes?.data ?? []);
-      setSubmissions(raw.map(s => ({
-        id: s.uuid_submission,
-        student: s.student ?? { full_name: 'Unknown', email: '-' },
-        tugas: s.tugas ?? { title: '-' },
-        pembelajaran: s.tugas?.pembelajaran ?? s.pembelajaran,
-        modul: s.tugas?.modul ?? s.modul,
-        student_notes: s.student_notes,
-        ipynb_url: s.ipynb_url,
-        pdf_url: s.pdf_url,
-        ai_score: s.ai_score,
-        ai_reason: s.ai_reason,
-        ai_feedback: s.ai_feedback,
-        lecture_status: s.lecture_status ?? 'Pending',
-        mentor_status: s.mentor_status ?? 'Pending',
-        lecture_notes: s.lecture_notes,
-        mentor_notes: s.mentor_notes,
-        released_score: s.released_score,
-        released_reason: s.released_reason,
-        is_released: !!s.is_released,
-        submitted_at: s.submitted_at,
-      })));
+      const mapped = raw.map(s => {
+        let parsedLink = s.link_url;
+        let cleanNotes = s.student_notes;
+        
+        if (s.student_notes) {
+          const match = s.student_notes.match(/(?:\[Google Drive Link\]:?\s*|Google Drive Link:\s*)(\S+)/i);
+          if (match && match[1]) {
+            parsedLink = match[1].trim();
+            cleanNotes = s.student_notes.replace(match[0], '').trim();
+          }
+        }
+
+        return {
+          id: s.uuid_submission,
+          student: s.student ?? { full_name: 'Unknown', email: '-' },
+          tugas: s.tugas ?? { title: '-' },
+          pembelajaran: s.tugas?.pembelajaran ?? s.pembelajaran,
+          modul: s.tugas?.modul ?? s.modul,
+          student_notes: cleanNotes,
+          ipynb_url: s.ipynb_url,
+          pdf_url: s.pdf_url,
+          link_url: parsedLink,
+          ai_score: s.ai_score,
+          ai_reason: s.ai_reason,
+          ai_feedback: s.ai_feedback,
+          lecture_status: s.lecture_status ?? 'Pending',
+          mentor_status: s.mentor_status ?? 'Pending',
+          lecture_notes: s.lecture_notes,
+          mentor_notes: s.mentor_notes,
+          released_score: s.released_score,
+          released_reason: s.released_reason,
+          is_released: !!s.is_released,
+          submitted_at: s.submitted_at,
+          lecture_verifier: s.lecture_verifier,
+          mentor_verifier: s.mentor_verifier,
+        };
+      });
+
+      const isMentor = userRole === 'Mentor';
+      const pendingQueue = mapped.filter(s => !s.is_released && (isMentor ? s.mentor_status !== 'Verified' : s.lecture_status !== 'Verified'));
+      setSubmissions(pendingQueue);
+
+      const gradedList = mapped.filter(s => s.is_released || s.lecture_status === 'Verified' || s.mentor_status === 'Verified');
+      setGradedSubmissions(gradedList);
+
     } catch (e: any) {
-      setSubError(e.message || 'Gagal memuat antrian review studi kasus.');
+      setSubError(e.message || 'Gagal memuat data review studi kasus.');
     } finally {
       setSubLoading(false);
       setRefreshing(false);
@@ -416,11 +448,11 @@ export default function PenilaianPage() {
     if ((tab === 'quiz' || tab === 'recap') && !fetchedTabs.current.has('quiz')) {
       fetchedTabs.current.add('quiz');
       fetchQuiz();
-    } else if (tab === 'studycase' && !fetchedTabs.current.has('studycase')) {
+    } else if ((tab === 'studycase' || tab === 'studycase_recap') && !fetchedTabs.current.has('studycase')) {
       fetchedTabs.current.add('studycase');
       fetchQueue();
     }
-  }, [tab]);
+  }, [tab, userRole]);
 
   // ── Quiz derived data & filter ───────────────────────────────────────────
   const graded = grades.filter(g => g.completedCount > 0);
@@ -480,6 +512,26 @@ export default function PenilaianPage() {
     return nameMatch && courseMatch && statusMatch;
   });
 
+  const filteredGradedSubmissions = gradedSubmissions.filter(sub => {
+    // 1. Search filter
+    const q = gradedSearch.toLowerCase().trim();
+    const nameMatch = !q ||
+      (sub.student?.full_name || '').toLowerCase().includes(q) ||
+      (sub.student?.email || '').toLowerCase().includes(q) ||
+      (sub.tugas?.title || '').toLowerCase().includes(q);
+
+    // 2. Course filter
+    let courseMatch = true;
+    if (gradedSelectedCourse !== 'all') {
+      const subCourseId = sub.pembelajaran?.uuid_pembelajaran || sub.tugas?.uuid_pembelajaran || sub.modul?.uuid_pembelajaran;
+      const subCourseTitle = sub.pembelajaran?.title;
+      const courseObj = courses.find((c: any) => (c.uuid_pembelajaran || c.id) === gradedSelectedCourse);
+      courseMatch = subCourseId === gradedSelectedCourse || (courseObj && subCourseTitle === (courseObj.title || courseObj.nama_pembelajaran));
+    }
+
+    return nameMatch && courseMatch;
+  });
+
   // Grade letter thresholds
   const getLetter = (s: number) =>
     s >= 85 ? 'A' : s >= 80 ? 'B+' : s >= 70 ? 'B' : s >= 65 ? 'C+' : s >= 55 ? 'C' : s >= 45 ? 'D' : s > 0 ? 'E' : '-';
@@ -523,7 +575,7 @@ export default function PenilaianPage() {
             if (tab === 'quiz' || tab === 'recap') {
               fetchedTabs.current.delete('quiz');
               fetchQuiz();
-            } else if (tab === 'studycase') {
+            } else if (tab === 'studycase' || tab === 'studycase_recap') {
               fetchedTabs.current.delete('studycase');
               fetchQueue();
             }
@@ -541,11 +593,13 @@ export default function PenilaianPage() {
         {(userRole === 'Mentor'
           ? [
             { key: 'studycase', label: 'Verifikasi Studi Kasus', icon: <FileText size={15} /> },
+            { key: 'studycase_recap', label: 'Nilai Studi Kasus', icon: <BookOpen size={15} /> },
             { key: 'recap', label: 'Rekap Nilai Kelas', icon: <Award size={15} /> },
           ]
           : [
             { key: 'quiz', label: 'Nilai Kuis', icon: <Brain size={15} /> },
             { key: 'studycase', label: 'Verifikasi Studi Kasus', icon: <FileText size={15} /> },
+            { key: 'studycase_recap', label: 'Nilai Studi Kasus', icon: <BookOpen size={15} /> },
             { key: 'recap', label: 'Rekap Nilai Kelas', icon: <Award size={15} /> },
           ]
         ).map(t => (
@@ -777,20 +831,23 @@ export default function PenilaianPage() {
                     )}
 
                     <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-                      {(sub as any).link_url && (
-                        <a href={(sub as any).link_url} target="_blank" rel="noopener noreferrer" style={s.fileLink}>
-                          <FileText size={12} /><span>Link Google Drive</span>
+                      {sub.link_url ? (
+                        <a href={sub.link_url} target="_blank" rel="noopener noreferrer" style={s.fileLink}>
+                          <LinkIcon size={12} /><span>Link Google Drive</span>
                         </a>
-                      )}
-                      {sub.ipynb_url && (
-                        <a href={sub.ipynb_url} target="_blank" rel="noopener noreferrer" style={s.fileLink}>
-                          <FileText size={12} /><span>Notebook (.ipynb)</span>
-                        </a>
-                      )}
-                      {sub.pdf_url && (
-                        <a href={sub.pdf_url} target="_blank" rel="noopener noreferrer" style={s.fileLink}>
-                          <FileText size={12} /><span>Laporan (.pdf)</span>
-                        </a>
+                      ) : (
+                        <>
+                          {sub.ipynb_url && (
+                            <a href={sub.ipynb_url} target="_blank" rel="noopener noreferrer" style={s.fileLink}>
+                              <FileText size={12} /><span>Notebook (.ipynb)</span>
+                            </a>
+                          )}
+                          {sub.pdf_url && (
+                            <a href={sub.pdf_url} target="_blank" rel="noopener noreferrer" style={s.fileLink}>
+                              <FileText size={12} /><span>Laporan (.pdf)</span>
+                            </a>
+                          )}
+                        </>
                       )}
                     </div>
 
@@ -872,6 +929,142 @@ export default function PenilaianPage() {
               })}
             </div>
           )}
+        </>
+      )}
+
+      {/* ═══════════════════════════════════════════════
+          TAB: STUDY CASE GRADES RECAP (NILAI STUDI KASUS)
+      ═══════════════════════════════════════════════ */}
+      {tab === 'studycase_recap' && (
+            <>
+              {/* Info badge */}
+              <div style={{ marginBottom: 16, display: 'flex', alignItems: 'center', gap: 10, fontSize: '0.82rem', color: 'var(--azure)' }}>
+                <TrendingUp size={15} />
+                <span>Rekapitulasi nilai studi kasus mahasiswa yang telah dinilai/dirilis.</span>
+              </div>
+
+              {/* Filters for Graded Submissions */}
+              <div className="glass-panel" style={s.filterRow}>
+                <div style={s.searchWrap}>
+                  <Search size={15} color="var(--grey)" />
+                  <input
+                    type="text"
+                    placeholder="Cari nama, email, atau judul studi kasus..."
+                    value={gradedSearch}
+                    onChange={e => setGradedSearch(e.target.value)}
+                    style={s.searchInput}
+                  />
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <BookOpen size={15} color="var(--grey-blue)" />
+                    <select value={gradedSelectedCourse} onChange={e => setGradedSelectedCourse(e.target.value)} style={s.select}>
+                      <option value="all">Semua Kelas</option>
+                      {courses.map((c: any) => (
+                        <option key={c.uuid_pembelajaran || c.id} value={c.uuid_pembelajaran || c.id}>
+                          {c.title || c.nama_pembelajaran}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              {subError && <div style={s.errBanner}><AlertCircle size={16} /><span>{subError}</span></div>}
+
+              {subLoading ? (
+                <div style={s.centered}><Loader2 size={32} style={{ animation: 'spin 1s linear infinite' }} /><p>Memuat data nilai studi kasus...</p></div>
+              ) : filteredGradedSubmissions.length === 0 ? (
+                <div style={s.empty}>
+                  <CheckCircle2 size={48} color="#00C853" />
+                  <h3>Tidak Ada Data</h3>
+                  <p>Tidak ada data penilaian studi kasus yang cocok dengan filter yang dipilih.</p>
+                </div>
+              ) : (
+                <div className="glass-panel" style={{ borderRadius: 12, overflow: 'hidden' }}>
+                  <table style={s.table}>
+                    <thead>
+                      <tr>
+                        {['Siswa', 'Studi Kasus', 'Nilai', 'Verifikasi Dosen', 'Verifikasi Tentor', ''].map(h => (
+                          <th key={h} style={{ ...s.th, ...(h === '' ? { textAlign: 'right' } : {}) }}>{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredGradedSubmissions.map((sub, i) => {
+                        const finalScore = sub.released_score ?? sub.ai_score ?? 0;
+                        return (
+                          <tr key={i} style={s.tr}>
+                            {/* 1. Student Info */}
+                            <td style={s.td}>
+                              <strong style={{ color: '#fff', fontSize: '0.9rem' }}>{sub.student.full_name}</strong>
+                              <span style={{ display: 'block', fontSize: '0.76rem', color: 'var(--grey-blue)' }}>{sub.student.email}</span>
+                            </td>
+
+                            {/* 2. Study Case Title & Class */}
+                            <td style={s.td}>
+                              <strong style={{ color: '#fff', fontSize: '0.85rem' }}>{sub.tugas.title}</strong>
+                              <span style={{ display: 'block', fontSize: '0.74rem', color: 'var(--grey-blue)' }}>
+                                {sub.pembelajaran?.title || 'Kelas'} {sub.modul?.title ? `• Modul: ${sub.modul.title}` : ''}
+                              </span>
+                              {sub.link_url && (
+                                <a 
+                                  href={sub.link_url} 
+                                  target="_blank" 
+                                  rel="noopener noreferrer" 
+                                  style={{ display: 'inline-flex', alignItems: 'center', gap: 4, marginTop: 4, fontSize: '0.75rem', color: 'var(--azure)', textDecoration: 'underline' }}
+                                >
+                                  <LinkIcon size={11} />
+                                  <span>link</span>
+                                </a>
+                              )}
+                            </td>
+
+                            {/* 3. Score */}
+                            <td style={s.td}>
+                              <strong style={{ fontSize: '1rem', color: 'var(--azure)' }}>{finalScore}/100</strong>
+                            </td>
+
+                            {/* 4. Dosen Verifier */}
+                            <td style={s.td}>
+                              {sub.lecture_status === 'Verified' ? (
+                                <span style={s.pillGreen}>
+                                  Selesai {sub.lecture_verifier?.full_name ? `(${sub.lecture_verifier.full_name})` : ''}
+                                </span>
+                              ) : (
+                                <span style={s.pillGrey}>Belum</span>
+                              )}
+                            </td>
+
+                            {/* 5. Tentor Verifier */}
+                            <td style={s.td}>
+                              {sub.mentor_status === 'Verified' ? (
+                                <span style={s.pillGreen}>
+                                  Selesai {sub.mentor_verifier?.full_name ? `(${sub.mentor_verifier.full_name})` : ''}
+                                </span>
+                              ) : (
+                                <span style={s.pillGrey}>Belum</span>
+                              )}
+                            </td>
+
+                            {/* 6. Action Button */}
+                            <td style={{ ...s.td, textAlign: 'right' }}>
+                              <button
+                                onClick={() => openModal(sub)}
+                                style={s.btnView}
+                              >
+                                <span>Detail & Ubah Nilai</span><ChevronRight size={14} />
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </>
+          )}
 
           {/* Verify Modal */}
           {modal && (
@@ -894,6 +1087,36 @@ export default function PenilaianPage() {
                       Nilai AI bawaan: <strong style={{ color: 'var(--lemon)' }}>{modal.ai_score ?? '-'}</strong>.
                       Jika Anda memasukkan nilai baru, nilai tersebut akan dipasang sebagai <em>released_score</em> untuk siswa.
                     </div>
+
+                    {/* Submission Attachment Links inside Modal */}
+                    {modal.link_url ? (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 6, background: 'rgba(255,255,255,0.02)', padding: 10, borderRadius: 6 }}>
+                        <span style={{ fontSize: '0.78rem', color: 'var(--grey-blue)', fontWeight: 600 }}>Tugas Terlampir:</span>
+                        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 2 }}>
+                          <a href={modal.link_url} target="_blank" rel="noopener noreferrer" style={s.fileLink}>
+                            <LinkIcon size={12} /><span>Link Google Drive</span>
+                          </a>
+                        </div>
+                      </div>
+                    ) : (
+                      (modal.ipynb_url || modal.pdf_url) && (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 6, background: 'rgba(255,255,255,0.02)', padding: 10, borderRadius: 6 }}>
+                          <span style={{ fontSize: '0.78rem', color: 'var(--grey-blue)', fontWeight: 600 }}>Tugas Terlampir:</span>
+                          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 2 }}>
+                            {modal.ipynb_url && (
+                              <a href={modal.ipynb_url} target="_blank" rel="noopener noreferrer" style={s.fileLink}>
+                                <FileText size={12} /><span>Notebook (.ipynb)</span>
+                              </a>
+                            )}
+                            {modal.pdf_url && (
+                              <a href={modal.pdf_url} target="_blank" rel="noopener noreferrer" style={s.fileLink}>
+                                <FileText size={12} /><span>Laporan (.pdf)</span>
+                              </a>
+                            )}
+                          </div>
+                        </div>
+                      )
+                    )}
 
                     <div>
                       <label style={s.label}>Catatan Verifikasi ({userRole})</label>
@@ -942,8 +1165,6 @@ export default function PenilaianPage() {
               </div>
             </Portal>
           )}
-        </>
-      )}
 
       {/* ═══════════════════════════════════════════════
           TAB 3: REKAP NILAI KELAS
