@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import {
   ClipboardList, Upload, CheckCircle2, AlertCircle, Loader2,
   FileText, Brain, X, Info, Calendar, ChevronRight,
-  ExternalLink, Clock, Play, Check, Users, Lock, Crown, Eye, Download, Award
+  ExternalLink, Clock, Play, Check, Users, Lock, Crown, Eye, Download, Award, Link, FolderOpen
 } from 'lucide-react';
 import { apiGet, apiPost } from '@/lib/api';
 import { getStoredToken } from '@/services/auth';
@@ -637,12 +637,8 @@ export default function PenugasanPage() {
       let body: FormData;
       if (isLink) {
         body = new FormData();
-        const mockIpynb = new File([JSON.stringify({ cells: [], metadata: { link: linkUrl } })], "gdrive_link.ipynb", { type: "application/json" });
-        const mockPdf = new File(["%PDF-1.4 ... Google Drive Link: " + linkUrl], "gdrive_link.pdf", { type: "application/pdf" });
-        body.append('ipynb', mockIpynb);
-        body.append('pdf', mockPdf);
-        const finalNotes = notes ? `${notes}\n\n[Google Drive Link]: ${linkUrl}` : `[Google Drive Link]: ${linkUrl}`;
-        body.append('student_notes', finalNotes);
+        body.append('link_url', linkUrl);  // ← field yang dicek backend di req.body.link_url
+        if (notes) body.append('student_notes', notes);
       } else {
         body = new FormData();
         body.append('ipynb', ipynbFile!);
@@ -1088,21 +1084,110 @@ export default function PenugasanPage() {
                   <div style={s.successBox}>
                     <CheckCircle2 size={44} color="#00C853" />
                     <strong style={{ color: '#fff', marginTop: 12, fontSize: '1.05rem' }}>Berhasil Dikumpulkan!</strong>
-                    <span style={{ fontSize: '0.84rem', color: 'var(--grey-blue)', marginTop: 4 }}>Sistem sedang menganalisis & menilai kode notebook Anda dengan AI...</span>
+                    <span style={{ fontSize: '0.84rem', color: 'var(--grey-blue)', marginTop: 4 }}>
+                      {uploadTask?.submission_type === 'LINK'
+                        ? 'Link Drive berhasil dikumpulkan. Dosen akan menilai secara manual.'
+                        : 'Sistem sedang menganalisis & menilai kode notebook Anda dengan AI...'}
+                    </span>
                   </div>
                 ) : (
                   <form onSubmit={handleSubmitSc} style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
                     {uploadTask?.submission_type === 'LINK' ? (
-                      <div style={s.fg}>
-                        <label style={s.label}>Link Google Drive <span style={{ color: '#FF5252' }}>*</span></label>
-                        <input
-                          type="url"
-                          required
-                          value={linkUrl}
-                          onChange={e => setLinkUrl(e.target.value)}
-                          placeholder="https://drive.google.com/..."
-                          style={s.input}
-                        />
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+
+                        {/* Info steps banner */}
+                        <div style={{
+                          display: 'flex', alignItems: 'flex-start', gap: 12,
+                          padding: '12px 14px', borderRadius: 10,
+                          background: 'rgba(6, 113, 224, 0.06)',
+                          border: '1px solid rgba(6, 113, 224, 0.2)'
+                        }}>
+                          <FolderOpen size={18} color="#60a5fa" style={{ flexShrink: 0, marginTop: 2 }} />
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                            <span style={{ fontSize: '0.82rem', fontWeight: 700, color: '#93c5fd' }}>Cara mengumpulkan via Google Drive:</span>
+                            <ol style={{ margin: 0, paddingLeft: 16, fontSize: '0.76rem', color: '#94a3b8', lineHeight: 1.7 }}>
+                              <li>Buka file di Google Drive kamu</li>
+                              <li>Klik kanan → <strong style={{ color: '#cbd5e1' }}>"Bagikan"</strong> → ubah akses ke <strong style={{ color: '#cbd5e1' }}>"Siapa saja yang memiliki link"</strong></li>
+                              <li>Salin link dan tempel di bawah</li>
+                            </ol>
+                          </div>
+                        </div>
+
+                        {/* URL input with live validation */}
+                        <div style={s.fg}>
+                          <label style={s.label}>
+                            Link Google Drive&nbsp;<span style={{ color: '#FF5252' }}>*</span>
+                          </label>
+                          <div style={{
+                            display: 'flex', alignItems: 'center', gap: 10,
+                            background: linkUrl
+                              ? (linkUrl.includes('drive.google.com') || linkUrl.includes('docs.google.com')
+                                  ? 'rgba(0, 200, 83, 0.06)' : 'rgba(239, 68, 68, 0.06)')
+                              : 'rgba(255,255,255,0.02)',
+                            border: `1px solid ${linkUrl
+                              ? (linkUrl.includes('drive.google.com') || linkUrl.includes('docs.google.com')
+                                  ? 'rgba(0,200,83,0.35)' : 'rgba(239,68,68,0.35)')
+                              : 'rgba(255,255,255,0.1)'}`,
+                            borderRadius: 10, padding: '4px 12px 4px 4px',
+                            transition: 'all 0.25s'
+                          }}>
+                            <div style={{
+                              width: 38, height: 38, borderRadius: 8, flexShrink: 0,
+                              display: 'flex', alignItems: 'center', justifyContent: 'center',
+                              background: linkUrl
+                                ? (linkUrl.includes('drive.google.com') || linkUrl.includes('docs.google.com')
+                                    ? 'rgba(0,200,83,0.12)' : 'rgba(239,68,68,0.12)')
+                                : 'rgba(99,102,241,0.1)'
+                            }}>
+                              <Link size={16} color={linkUrl
+                                ? (linkUrl.includes('drive.google.com') || linkUrl.includes('docs.google.com')
+                                    ? '#00C853' : '#f87171')
+                                : '#a5b4fc'} />
+                            </div>
+                            <input
+                              type="url"
+                              required
+                              value={linkUrl}
+                              onChange={e => setLinkUrl(e.target.value)}
+                              placeholder="https://drive.google.com/file/d/..."
+                              style={{
+                                ...s.input,
+                                flex: 1, border: 'none', background: 'transparent',
+                                padding: '8px 4px', outline: 'none'
+                              }}
+                            />
+                            {linkUrl && (
+                              <button
+                                type="button"
+                                onClick={() => window.open(linkUrl, '_blank')}
+                                title="Buka link di tab baru"
+                                style={{
+                                  display: 'flex', alignItems: 'center', gap: 4,
+                                  padding: '5px 10px', borderRadius: 7, flexShrink: 0,
+                                  background: 'rgba(99,102,241,0.1)',
+                                  border: '1px solid rgba(99,102,241,0.25)',
+                                  color: '#a5b4fc', cursor: 'pointer', fontSize: '0.74rem', fontWeight: 600
+                                }}
+                              >
+                                <ExternalLink size={12} /> Cek
+                              </button>
+                            )}
+                          </div>
+
+                          {/* Validation hint */}
+                          {linkUrl && !linkUrl.includes('drive.google.com') && !linkUrl.includes('docs.google.com') && (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 6, fontSize: '0.75rem', color: '#fca5a5' }}>
+                              <AlertCircle size={12} />
+                              <span>Pastikan link berasal dari Google Drive atau Google Docs</span>
+                            </div>
+                          )}
+                          {linkUrl && (linkUrl.includes('drive.google.com') || linkUrl.includes('docs.google.com')) && (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 6, fontSize: '0.75rem', color: '#86efac' }}>
+                              <CheckCircle2 size={12} />
+                              <span>Link Google Drive terdeteksi ✓</span>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     ) : (
                       <>
