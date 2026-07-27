@@ -642,7 +642,7 @@ export default function TugasPage() {
                               border: '1px solid rgba(16, 185, 129, 0.2)'
                             }}>
                               <Calendar size={10} />
-                              {new Date((tugas as any).published_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
+                              {new Date((tugas as any).published_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })} {new Date((tugas as any).published_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}
                             </span>
                           )}
                           {(tugas as any).deadline_at && (
@@ -653,7 +653,7 @@ export default function TugasPage() {
                               border: '1px solid rgba(239, 68, 68, 0.2)'
                             }}>
                               <Clock size={10} />
-                              {new Date((tugas as any).deadline_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
+                              {new Date((tugas as any).deadline_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })} {new Date((tugas as any).deadline_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}
                             </span>
                           )}
                         </div>

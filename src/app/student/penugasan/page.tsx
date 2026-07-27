@@ -26,11 +26,11 @@ interface UrgentTask {
   youtube_link?: string | null;
   published_at?: string | null;
   deadline_at?: string | null;
+  submission_type?: 'FILE' | 'LINK';
   group_info?: {
     group_name: string;
     is_leader: boolean;
   } | null;
-  submission_type?: 'FILE' | 'LINK';
 }
 
 interface Submission {
@@ -39,7 +39,6 @@ interface Submission {
   tugas?: { title: string; type: string; pembelajaran?: { title: string }; modul?: { title: string } };
   ipynb_url?: string;
   pdf_url?: string;
-  link_url?: string;
   student_notes?: string;
   ai_score?: number;
   ai_reason?: string;
@@ -138,6 +137,48 @@ function renderContent(content: any): React.ReactNode {
     });
   }
   return <span style={{ whiteSpace: 'pre-wrap', fontSize: '0.85rem' }}>{JSON.stringify(content, null, 2)}</span>;
+}
+
+function DeadlineCountdown({ deadline }: { deadline: string }) {
+  const [timeLeft, setTimeLeft] = useState<{
+    days: number;
+    hours: number;
+    minutes: number;
+    seconds: number;
+  } | null>(null);
+
+  useEffect(() => {
+    const targetDate = new Date(deadline).getTime();
+    if (isNaN(targetDate)) return;
+
+    const interval = setInterval(() => {
+      const now = new Date().getTime();
+      const difference = targetDate - now;
+
+      if (difference <= 0) {
+        setTimeLeft(null);
+        clearInterval(interval);
+        return;
+      }
+
+      const d = Math.floor(difference / (1000 * 60 * 60 * 24));
+      const h = Math.floor((difference % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+      const m = Math.floor((difference % (1000 * 60 * 60)) / (1000 * 60));
+      const s = Math.floor((difference % (1000 * 60)) / 1000);
+
+      setTimeLeft({ days: d, hours: h, minutes: m, seconds: s });
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [deadline]);
+
+  if (!timeLeft) return null;
+
+  return (
+    <span style={{ fontSize: '0.75rem', color: '#ffb240', fontWeight: 600, marginLeft: 6 }}>
+      ({timeLeft.days > 0 ? `${timeLeft.days}h ` : ''}{timeLeft.hours}j {timeLeft.minutes}m {timeLeft.seconds}d)
+    </span>
+  );
 }
 
 function TaskQuestionCard({
@@ -248,20 +289,7 @@ function TaskQuestionCard({
 
               <button
                 type="button"
-                onClick={() => openInNewTab(fileUrl, task.nama_tugas || 'Soal', urlExt)}
-                style={{
-                  display: 'inline-flex', alignItems: 'center', gap: 6,
-                  padding: '8px 16px', borderRadius: 10, fontSize: '0.8rem', fontWeight: 600,
-                  background: 'rgba(6, 113, 224, 0.15)', color: '#60a5fa',
-                  border: '1px solid rgba(6, 113, 224, 0.3)', cursor: 'pointer'
-                }}
-              >
-                <ExternalLink size={14} /> Tab Baru
-              </button>
-
-              <button
-                type="button"
-                onClick={() => downloadFile(fileUrl, task.nama_tugas || 'Soal')}
+                onClick={() => downloadFile(fileUrl, `${task.nama_tugas || 'Soal'}.${urlExt.toLowerCase()}`)}
                 style={{
                   display: 'inline-flex', alignItems: 'center', gap: 6,
                   padding: '8px 16px', borderRadius: 10, fontSize: '0.8rem', fontWeight: 600,
@@ -318,7 +346,7 @@ function TaskFileViewerModal({
           borderRadius: '20px', display: 'flex', flexDirection: 'column',
           boxShadow: '0 25px 60px rgba(0,0,0,0.7)', overflow: 'hidden'
         }} className="glass-panel" onClick={e => e.stopPropagation()}>
-          
+
           <div style={{
             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
             padding: '16px 24px', background: 'rgba(15, 23, 42, 0.95)',
@@ -356,20 +384,9 @@ function TaskFileViewerModal({
                 </button>
               )}
 
-              <button
-                onClick={() => openInNewTab(finalUrl, title, ext)}
-                style={{
-                  display: 'inline-flex', alignItems: 'center', gap: 5,
-                  padding: '6px 14px', borderRadius: 8, fontSize: '0.78rem', fontWeight: 600,
-                  background: 'rgba(99, 102, 241, 0.18)', color: '#a5b4fc',
-                  border: '1px solid rgba(99, 102, 241, 0.35)', cursor: 'pointer'
-                }}
-              >
-                <ExternalLink size={13} /> Tab Baru
-              </button>
 
               <button
-                onClick={() => downloadFile(finalUrl, title)}
+                onClick={() => downloadFile(finalUrl, `${title}.${ext.toLowerCase() || 'pdf'}`)}
                 style={{
                   display: 'inline-flex', alignItems: 'center', gap: 5,
                   padding: '6px 14px', borderRadius: 8, fontSize: '0.78rem', fontWeight: 600,
@@ -447,38 +464,52 @@ export default function PenugasanPage() {
   };
 
   // ── Study Case state ───────────────────────────────────────────────────────
-  const [scTab, setScTab]             = useState<'pending' | 'submitted'>('pending');
-  const [tasks, setTasks]             = useState<UrgentTask[]>([]);
+  const [scTab, setScTab] = useState<'pending' | 'submitted'>('pending');
+  const [tasks, setTasks] = useState<UrgentTask[]>([]);
   const [submissions, setSubmissions] = useState<Submission[]>([]);
-  const [loadingSc, setLoadingSc]     = useState(true);
-  const [scError, setScError]         = useState<string | null>(null);
+  const [loadingSc, setLoadingSc] = useState(true);
+  const [scError, setScError] = useState<string | null>(null);
 
   // Submit modal
-  const [uploadTask, setUploadTask]   = useState<UrgentTask | null>(null);
-  const [ipynbFile, setIpynbFile]     = useState<File | null>(null);
-  const [pdfFile, setPdfFile]         = useState<File | null>(null);
-  const [linkUrl, setLinkUrl]         = useState<string>('');
-  const [notes, setNotes]             = useState('');
-  const [submitting, setSubmitting]   = useState(false);
+  const [uploadTask, setUploadTask] = useState<UrgentTask | null>(null);
+  const [ipynbFile, setIpynbFile] = useState<File | null>(null);
+  const [pdfFile, setPdfFile] = useState<File | null>(null);
+  const [linkUrl, setLinkUrl] = useState<string>('');
+  const [notes, setNotes] = useState('');
+  const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitSuccess, setSubmitSuccess] = useState(false);
+
+  const handleOpenUploadModal = (task: UrgentTask) => {
+    const detectedSubmissionType = task.nama_tugas?.endsWith('[LINK]') ? 'LINK' : 'FILE';
+    setUploadTask({
+      ...task,
+      submission_type: detectedSubmissionType
+    });
+    setIpynbFile(null);
+    setPdfFile(null);
+    setLinkUrl('');
+    setNotes('');
+    setSubmitError(null);
+    setSubmitSuccess(false);
+  };
 
   // Detail modal
   const [selectedSub, setSelectedSub] = useState<Submission | null>(null);
 
   // ── Quiz state ─────────────────────────────────────────────────────────────
-  const [quizzes, setQuizzes]           = useState<QuizListItem[]>([]);
-  const [loadingQuiz, setLoadingQuiz]   = useState(false);
-  const [quizError, setQuizError]       = useState<string | null>(null);
-  const [quizTab, setQuizTab]           = useState<'pending' | 'submitted'>('pending');
+  const [quizzes, setQuizzes] = useState<QuizListItem[]>([]);
+  const [loadingQuiz, setLoadingQuiz] = useState(false);
+  const [quizError, setQuizError] = useState<string | null>(null);
+  const [quizTab, setQuizTab] = useState<'pending' | 'submitted'>('pending');
 
   // Quiz session
-  const [activeQuiz, setActiveQuiz]         = useState<QuizDetail | null>(null);
+  const [activeQuiz, setActiveQuiz] = useState<QuizDetail | null>(null);
   const [loadingQuizDetail, setLoadingQuizDetail] = useState(false);
-  const [answers, setAnswers]               = useState<Record<string, string | string[]>>({});
-  const [quizResult, setQuizResult]         = useState<QuizResult | null>(null);
+  const [answers, setAnswers] = useState<Record<string, string | string[]>>({});
+  const [quizResult, setQuizResult] = useState<QuizResult | null>(null);
   const [submittingQuiz, setSubmittingQuiz] = useState(false);
-  const [timeLeft, setTimeLeft]             = useState<number | null>(null);
+  const [timeLeft, setTimeLeft] = useState<number | null>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
   // Rekap my quizzes
@@ -590,7 +621,7 @@ export default function PenugasanPage() {
   const handleSubmitSc = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!uploadTask) return;
-    
+
     const isLink = uploadTask.submission_type === 'LINK';
     if (isLink && !linkUrl) return;
     if (!isLink && (!ipynbFile || !pdfFile)) return;
@@ -603,12 +634,15 @@ export default function PenugasanPage() {
       const headers: Record<string, string> = { ...auth.headers };
       if (token) headers['Authorization'] = `Bearer ${token}`;
 
-      let body: FormData | URLSearchParams;
+      let body: FormData;
       if (isLink) {
-        headers['Content-Type'] = 'application/x-www-form-urlencoded';
-        body = new URLSearchParams();
-        body.append('link_url', linkUrl);
-        if (notes) body.append('student_notes', notes);
+        body = new FormData();
+        const mockIpynb = new File([JSON.stringify({ cells: [], metadata: { link: linkUrl } })], "gdrive_link.ipynb", { type: "application/json" });
+        const mockPdf = new File(["%PDF-1.4 ... Google Drive Link: " + linkUrl], "gdrive_link.pdf", { type: "application/pdf" });
+        body.append('ipynb', mockIpynb);
+        body.append('pdf', mockPdf);
+        const finalNotes = notes ? `${notes}\n\n[Google Drive Link]: ${linkUrl}` : `[Google Drive Link]: ${linkUrl}`;
+        body.append('student_notes', finalNotes);
       } else {
         body = new FormData();
         body.append('ipynb', ipynbFile!);
@@ -703,14 +737,14 @@ export default function PenugasanPage() {
       setTimeLeft(null);
       showToast('Kuis berhasil dikirim!', 'success');
       fetchQuizData(); // refresh rekap
-    } catch (e: any) { 
-      showToast(e.message || 'Gagal submit kuis.', 'error'); 
+    } catch (e: any) {
+      showToast(e.message || 'Gagal submit kuis.', 'error');
     }
     finally { setSubmittingQuiz(false); }
   };
 
-  // Match attempt to quiz by uuid_quiz or quiz_id
-  const getAttempt = (quizId: string) => myQuizRekap.find((r: any) => (r.uuid_quiz || r.quiz_id) === quizId);
+  // Match attempt to quiz by uuid_quiz (backend now includes uuid_quiz in rekap response)
+  const getAttempt = (quizId: string) => myQuizRekap.find((r: any) => r.uuid_quiz === quizId);
 
   // ═══════════════════════════════════════════════════════════════════════════
   return (
@@ -761,101 +795,100 @@ export default function PenugasanPage() {
                   const noGroupAssigned = isGroupTask && !task.group_info;
 
                   return (
-                  <div key={task.id_tugas} className="glass-panel" style={s.taskCard}>
-                    <div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8, flexWrap: 'wrap' }}>
-                        <span style={s.typeBadge}>{task.tipe}</span>
-                        <span style={s.courseLabel}>{task.nama_pembelajaran}</span>
-                        {isGroupTask && (
-                          <span style={{
-                            display: 'inline-flex', alignItems: 'center', gap: 4,
-                            padding: '2px 8px', borderRadius: 12, fontSize: '0.72rem',
-                            background: 'rgba(123, 97, 255, 0.12)', color: '#7B61FF',
-                            border: '1px solid rgba(123, 97, 255, 0.2)'
-                          }}>
-                            <Users size={10} /> Kelompok
-                          </span>
-                        )}
-                        {isGroupTask && task.group_info && (
-                          <span style={{
-                            display: 'inline-flex', alignItems: 'center', gap: 4,
-                            padding: '2px 8px', borderRadius: 12, fontSize: '0.72rem',
-                            background: isLeader ? 'rgba(255,193,7,0.12)' : 'rgba(255,255,255,0.06)',
-                            color: isLeader ? '#FFC107' : 'var(--grey-blue)',
-                            border: `1px solid ${isLeader ? 'rgba(255,193,7,0.2)' : 'rgba(255,255,255,0.1)'}`
-                          }}>
-                            {isLeader ? <Crown size={10} /> : <Users size={10} />}
-                            {task.group_info.group_name} {isLeader ? '(Ketua)' : '(Anggota)'}
-                          </span>
-                        )}
-                      </div>
-                      <h3 style={s.taskTitle}>{task.nama_tugas}</h3>
-                      <p style={s.taskMeta}>Modul: {task.nama_modul}</p>
-                      {/* Tanggal Publish & Deadline */}
-                      {(task.published_at || task.deadline_at) && (
-                        <div style={{ display: 'flex', gap: 12, marginTop: 8, flexWrap: 'wrap' }}>
-                          {task.published_at && (
-                            <div style={{
-                              display: 'inline-flex', alignItems: 'center', gap: 6,
-                              padding: '5px 12px', borderRadius: 10, fontSize: '0.75rem', fontWeight: 600,
-                              background: 'rgba(16, 185, 129, 0.1)', color: '#34d399',
-                              border: '1px solid rgba(16, 185, 129, 0.25)'
+                    <div key={task.id_tugas} className="glass-panel" style={s.taskCard}>
+                      <div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8, flexWrap: 'wrap' }}>
+                          <span style={s.typeBadge}>{task.tipe}</span>
+                          <span style={s.courseLabel}>{task.nama_pembelajaran}</span>
+                          {isGroupTask && (
+                            <span style={{
+                              display: 'inline-flex', alignItems: 'center', gap: 4,
+                              padding: '2px 8px', borderRadius: 12, fontSize: '0.72rem',
+                              background: 'rgba(123, 97, 255, 0.12)', color: '#7B61FF',
+                              border: '1px solid rgba(123, 97, 255, 0.2)'
                             }}>
-                              <Calendar size={11} />
-                              <span>Mulai: {new Date(task.published_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
-                            </div>
+                              <Users size={10} /> Kelompok
+                            </span>
                           )}
-                          {task.deadline_at && (() => {
-                            const now = new Date();
-                            const dl = new Date(task.deadline_at!);
-                            const diffMs = dl.getTime() - now.getTime();
-                            const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
-                            const isExpired = diffMs < 0;
-                            const isUrgent = !isExpired && diffDays <= 3;
-                            return (
+                          {isGroupTask && task.group_info && (
+                            <span style={{
+                              display: 'inline-flex', alignItems: 'center', gap: 4,
+                              padding: '2px 8px', borderRadius: 12, fontSize: '0.72rem',
+                              background: isLeader ? 'rgba(255,193,7,0.12)' : 'rgba(255,255,255,0.06)',
+                              color: isLeader ? '#FFC107' : 'var(--grey-blue)',
+                              border: `1px solid ${isLeader ? 'rgba(255,193,7,0.2)' : 'rgba(255,255,255,0.1)'}`
+                            }}>
+                              {isLeader ? <Crown size={10} /> : <Users size={10} />}
+                              {task.group_info.group_name} {isLeader ? '(Ketua)' : '(Anggota)'}
+                            </span>
+                          )}
+                        </div>
+                        <h3 style={s.taskTitle}>{task.nama_tugas.replace(/ \[(LINK|FILE)\]$/, '')}</h3>
+                        {/* Tanggal Publish & Deadline */}
+                        {(task.published_at || task.deadline_at) && (
+                          <div style={{ display: 'flex', gap: 12, marginTop: 8, flexWrap: 'wrap' }}>
+                            {task.published_at && (
                               <div style={{
                                 display: 'inline-flex', alignItems: 'center', gap: 6,
                                 padding: '5px 12px', borderRadius: 10, fontSize: '0.75rem', fontWeight: 600,
-                                background: isExpired ? 'rgba(239, 68, 68, 0.08)' : isUrgent ? 'rgba(245, 158, 11, 0.1)' : 'rgba(239, 68, 68, 0.1)',
-                                color: isExpired ? '#f87171' : isUrgent ? '#fbbf24' : '#fca5a5',
-                                border: `1px solid ${isExpired ? 'rgba(239,68,68,0.2)' : isUrgent ? 'rgba(245,158,11,0.25)' : 'rgba(239,68,68,0.2)'}`,
+                                background: 'rgba(16, 185, 129, 0.1)', color: '#34d399',
+                                border: '1px solid rgba(16, 185, 129, 0.25)'
                               }}>
-                                <Clock size={11} />
-                                <span>
-                                  Deadline: {dl.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
-                                  {isExpired ? ' (Kedaluwarsa)' : isUrgent ? ` (${diffDays} hari lagi)` : ''}
-                                </span>
+                                <Calendar size={11} />
+                                <span>Mulai: {new Date(task.published_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })} {new Date(task.published_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}</span>
                               </div>
-                            );
-                          })()}
-                        </div>
-                      )}
-                      <TaskQuestionCard task={task} onOpenPreview={(url, title) => setTaskPreviewModal({ taskId: task.id_tugas, url, title })} />
-                      {isGroupTask && !task.group_info && (
-                        <p style={{ fontSize: '0.78rem', color: '#FFB240', marginTop: 6, display: 'flex', alignItems: 'center', gap: 4 }}>
-                          <AlertCircle size={12} /> Anda belum ditugaskan ke kelompok manapun untuk tugas ini.
-                        </p>
-                      )}
-                      {isGroupTask && task.group_info && !isLeader && (
-                        <p style={{ fontSize: '0.78rem', color: 'var(--grey-blue)', marginTop: 6, display: 'flex', alignItems: 'center', gap: 4 }}>
-                          <Lock size={12} /> Hanya ketua kelompok yang dapat mengumpulkan tugas ini.
-                        </p>
+                            )}
+                            {task.deadline_at && (() => {
+                              const now = new Date();
+                              const dl = new Date(task.deadline_at!);
+                              const diffMs = dl.getTime() - now.getTime();
+                              const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+                              const isExpired = diffMs < 0;
+                              const isUrgent = !isExpired && diffDays <= 3;
+                              return (
+                                <div style={{
+                                  display: 'inline-flex', alignItems: 'center', gap: 6,
+                                  padding: '5px 12px', borderRadius: 10, fontSize: '0.75rem', fontWeight: 600,
+                                  background: isExpired ? 'rgba(239, 68, 68, 0.08)' : isUrgent ? 'rgba(245, 158, 11, 0.1)' : 'rgba(239, 68, 68, 0.1)',
+                                  color: isExpired ? '#f87171' : isUrgent ? '#fbbf24' : '#fca5a5',
+                                  border: `1px solid ${isExpired ? 'rgba(239,68,68,0.2)' : isUrgent ? 'rgba(245,158,11,0.25)' : 'rgba(239,68,68,0.2)'}`,
+                                }}>
+                                  <Clock size={11} />
+                                  <span>
+                                    Deadline: {dl.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })} {dl.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}
+                                    {isExpired ? ' (Kedaluwarsa)' : <DeadlineCountdown deadline={task.deadline_at!} />}
+                                  </span>
+                                </div>
+                              );
+                            })()}
+                          </div>
+                        )}
+                        <TaskQuestionCard task={task} onOpenPreview={(url, title) => setTaskPreviewModal({ taskId: task.id_tugas, url, title })} />
+                        {isGroupTask && !task.group_info && (
+                          <p style={{ fontSize: '0.78rem', color: '#FFB240', marginTop: 6, display: 'flex', alignItems: 'center', gap: 4 }}>
+                            <AlertCircle size={12} /> Anda belum ditugaskan ke kelompok manapun untuk tugas ini.
+                          </p>
+                        )}
+                        {isGroupTask && task.group_info && !isLeader && (
+                          <p style={{ fontSize: '0.78rem', color: 'var(--grey-blue)', marginTop: 6, display: 'flex', alignItems: 'center', gap: 4 }}>
+                            <Lock size={12} /> Hanya ketua kelompok yang dapat mengumpulkan tugas ini.
+                          </p>
+                        )}
+                      </div>
+                      {canSubmit && !noGroupAssigned ? (
+                        <button onClick={() => handleOpenUploadModal(task)} style={s.btnUpload}>
+                          <Upload size={14} /><span>Kumpulkan Tugas</span>
+                        </button>
+                      ) : noGroupAssigned ? (
+                        <button disabled style={{ ...s.btnUpload, opacity: 0.4, cursor: 'not-allowed', background: 'rgba(255,255,255,0.05)' }}>
+                          <AlertCircle size={14} /><span>Belum Ada Kelompok</span>
+                        </button>
+                      ) : (
+                        <button disabled style={{ ...s.btnUpload, opacity: 0.4, cursor: 'not-allowed', background: 'rgba(255,255,255,0.05)' }}>
+                          <Lock size={14} /><span>Hanya Ketua</span>
+                        </button>
                       )}
                     </div>
-                    {canSubmit && !noGroupAssigned ? (
-                      <button onClick={() => { setUploadTask(task); setIpynbFile(null); setPdfFile(null); setLinkUrl(''); setNotes(''); setSubmitError(null); setSubmitSuccess(false); }} style={s.btnUpload}>
-                        <Upload size={14} /><span>Kumpulkan Tugas</span>
-                      </button>
-                    ) : noGroupAssigned ? (
-                      <button disabled style={{ ...s.btnUpload, opacity: 0.4, cursor: 'not-allowed', background: 'rgba(255,255,255,0.05)' }}>
-                        <AlertCircle size={14} /><span>Belum Ada Kelompok</span>
-                      </button>
-                    ) : (
-                      <button disabled style={{ ...s.btnUpload, opacity: 0.4, cursor: 'not-allowed', background: 'rgba(255,255,255,0.05)' }}>
-                        <Lock size={14} /><span>Hanya Ketua</span>
-                      </button>
-                    )}
-                  </div>
                   );
                 })}
               </div>
@@ -940,14 +973,15 @@ export default function PenugasanPage() {
                           )}
                           {quiz.deadline && (
                             <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                              <Calendar size={12} /> {new Date(quiz.deadline).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
+                              <Calendar size={12} /> {new Date(quiz.deadline).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })} {new Date(quiz.deadline).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}
+                              <DeadlineCountdown deadline={quiz.deadline} />
                             </span>
                           )}
                         </div>
                       </div>
-                      <button 
-                        onClick={() => openQuiz(quiz)} 
-                        disabled={loadingQuizDetail || quiz.questionCount === 0 || isExpired} 
+                      <button
+                        onClick={() => openQuiz(quiz)}
+                        disabled={loadingQuizDetail || quiz.questionCount === 0 || isExpired}
                         style={{ ...s.btnStart, opacity: (loadingQuizDetail || quiz.questionCount === 0 || isExpired) ? 0.6 : 1, cursor: (loadingQuizDetail || quiz.questionCount === 0 || isExpired) ? 'not-allowed' : 'pointer' }}
                       >
                         <Play size={14} fill="var(--azure)" /><span>Mulai Kuis</span>
@@ -992,8 +1026,8 @@ export default function PenugasanPage() {
                         }}>
                           <Lock size={12} /> Terkunci (1x)
                         </div>
-                        <button 
-                          onClick={() => openQuiz(quiz)} 
+                        <button
+                          onClick={() => openQuiz(quiz)}
                           style={{
                             display: 'inline-flex', alignItems: 'center', gap: 6,
                             padding: '6px 14px', borderRadius: 10, fontSize: '0.78rem', fontWeight: 700,
@@ -1021,155 +1055,155 @@ export default function PenugasanPage() {
         <Portal>
           <div style={s.overlay}>
             <div style={{ ...s.modal, maxWidth: 540, padding: '24px', borderRadius: '16px', overflowY: 'auto' }} className="glass-panel">
-            <div style={{ ...s.modalHead, paddingBottom: 16, borderBottom: '1px solid var(--border-color)', marginBottom: 20 }}>
-              <div>
-                <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 700, color: '#fff' }}>Kumpulkan Tugas Studi Kasus</h3>
-                <p style={{ margin: '4px 0 0', fontSize: '0.82rem', color: 'var(--azure)' }}>{uploadTask.nama_tugas}</p>
+              <div style={{ ...s.modalHead, paddingBottom: 16, borderBottom: '1px solid var(--border-color)', marginBottom: 20 }}>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 700, color: '#fff' }}>Kumpulkan Tugas Studi Kasus</h3>
+                  <p style={{ margin: '4px 0 0', fontSize: '0.82rem', color: 'var(--azure)' }}>{uploadTask.nama_tugas}</p>
+                </div>
+                <button onClick={() => setUploadTask(null)} style={s.closeBtn}><X size={18} /></button>
               </div>
-              <button onClick={() => setUploadTask(null)} style={s.closeBtn}><X size={18} /></button>
-            </div>
-            <div>
-              {submitError && <div style={{ ...s.errorBanner, marginBottom: 16 }}><AlertCircle size={15} /><span>{submitError}</span></div>}
-              {!submitSuccess && uploadTask?.is_group_project && uploadTask.group_info?.is_leader && (
-                <div style={{
-                  display: 'flex', alignItems: 'flex-start', gap: 10,
-                  padding: '12px 16px', borderRadius: 10, marginBottom: 16,
-                  background: 'rgba(255,193,7,0.08)', border: '1px solid rgba(255,193,7,0.25)'
-                }}>
-                  <Crown size={18} color="#FFC107" style={{ flexShrink: 0, marginTop: 2 }} />
-                  <div>
-                    <p style={{ margin: 0, fontSize: '0.84rem', fontWeight: 700, color: '#FFC107' }}>
-                      Status: Ketua {uploadTask.group_info.group_name}
-                    </p>
-                    <p style={{ margin: '2px 0 0', fontSize: '0.78rem', color: 'var(--grey-blue)', lineHeight: 1.4 }}>
-                      File yang kamu kumpulkan akan diproses oleh AI dan nilainya otomatis didistribusikan ke seluruh anggota kelompok.
-                    </p>
-                  </div>
-                </div>
-              )}
-              {uploadTask && (
-                <TaskQuestionCard task={uploadTask} onOpenPreview={(url, title) => setTaskPreviewModal({ taskId: uploadTask.id_tugas, url, title })} />
-              )}
-              {submitSuccess ? (
-                <div style={s.successBox}>
-                  <CheckCircle2 size={44} color="#00C853" />
-                  <strong style={{ color: '#fff', marginTop: 12, fontSize: '1.05rem' }}>Berhasil Dikumpulkan!</strong>
-                  <span style={{ fontSize: '0.84rem', color: 'var(--grey-blue)', marginTop: 4 }}>Sistem sedang menganalisis & menilai kode notebook Anda dengan AI...</span>
-                </div>
-              ) : (
-                <form onSubmit={handleSubmitSc} style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-                  {uploadTask?.submission_type === 'LINK' ? (
-                    <div style={s.fg}>
-                      <label style={s.label}>Link Google Drive <span style={{ color: '#FF5252' }}>*</span></label>
-                      <input 
-                        type="url" 
-                        required 
-                        value={linkUrl}
-                        onChange={e => setLinkUrl(e.target.value)} 
-                        placeholder="https://drive.google.com/..."
-                        style={s.input} 
-                      />
+              <div>
+                {submitError && <div style={{ ...s.errorBanner, marginBottom: 16 }}><AlertCircle size={15} /><span>{submitError}</span></div>}
+                {!submitSuccess && uploadTask?.is_group_project && uploadTask.group_info?.is_leader && (
+                  <div style={{
+                    display: 'flex', alignItems: 'flex-start', gap: 10,
+                    padding: '12px 16px', borderRadius: 10, marginBottom: 16,
+                    background: 'rgba(255,193,7,0.08)', border: '1px solid rgba(255,193,7,0.25)'
+                  }}>
+                    <Crown size={18} color="#FFC107" style={{ flexShrink: 0, marginTop: 2 }} />
+                    <div>
+                      <p style={{ margin: 0, fontSize: '0.84rem', fontWeight: 700, color: '#FFC107' }}>
+                        Status: Ketua {uploadTask.group_info.group_name}
+                      </p>
+                      <p style={{ margin: '2px 0 0', fontSize: '0.78rem', color: 'var(--grey-blue)', lineHeight: 1.4 }}>
+                        File yang kamu kumpulkan akan diproses oleh AI dan nilainya otomatis didistribusikan ke seluruh anggota kelompok.
+                      </p>
                     </div>
-                  ) : (
-                    <>
-                      <div style={s.fg}>
-                        <label style={s.label}>1. File Jupyter Notebook (.ipynb) <span style={{ color: '#FF5252' }}>*</span></label>
-                        <div style={{
-                          position: 'relative',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '12px',
-                          background: ipynbFile ? 'rgba(6, 113, 224, 0.08)' : '#18181b',
-                          border: ipynbFile ? '1px solid var(--azure)' : '1px dashed var(--border-color)',
-                          borderRadius: '10px',
-                          padding: '14px 16px',
-                          cursor: 'pointer',
-                          transition: 'all 0.2s',
-                        }}>
-                          <FileText size={20} color={ipynbFile ? 'var(--azure)' : 'var(--grey-blue)'} />
-                          <input 
-                            type="file" 
-                            required 
-                            accept=".ipynb" 
-                            onChange={e => setIpynbFile(e.target.files?.[0] || null)} 
-                            style={{
-                              position: 'absolute',
-                              inset: 0,
-                              width: '100%',
-                              height: '100%',
-                              opacity: 0,
-                              cursor: 'pointer',
-                              zIndex: 10
-                            }} 
-                          />
-                          <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
-                            <span style={{ fontSize: '0.88rem', fontWeight: 600, color: ipynbFile ? '#fff' : 'var(--grey-blue)' }}>
-                              {ipynbFile ? ipynbFile.name : 'Klik atau seret file .ipynb di sini'}
-                            </span>
-                            {ipynbFile && <span style={{ fontSize: '0.74rem', color: 'var(--azure)', marginTop: 2 }}>{Math.round(ipynbFile.size / 1024)} KB</span>}
-                          </div>
-                          <Upload size={16} color="var(--grey-blue)" />
-                        </div>
-                      </div>
-
-                      <div style={s.fg}>
-                        <label style={s.label}>2. File Laporan (.pdf) <span style={{ color: '#FF5252' }}>*</span></label>
-                        <div style={{
-                          position: 'relative',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '12px',
-                          background: pdfFile ? 'rgba(6, 113, 224, 0.08)' : '#18181b',
-                          border: pdfFile ? '1px solid var(--azure)' : '1px dashed var(--border-color)',
-                          borderRadius: '10px',
-                          padding: '14px 16px',
-                          cursor: 'pointer',
-                          transition: 'all 0.2s',
-                        }}>
-                          <FileText size={20} color={pdfFile ? 'var(--azure)' : 'var(--grey-blue)'} />
-                          <input 
-                            type="file" 
-                            required 
-                            accept=".pdf" 
-                            onChange={e => setPdfFile(e.target.files?.[0] || null)} 
-                            style={{
-                              position: 'absolute',
-                              inset: 0,
-                              width: '100%',
-                              height: '100%',
-                              opacity: 0,
-                              cursor: 'pointer',
-                              zIndex: 10
-                            }} 
-                          />
-                          <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
-                            <span style={{ fontSize: '0.88rem', fontWeight: 600, color: pdfFile ? '#fff' : 'var(--grey-blue)' }}>
-                              {pdfFile ? pdfFile.name : 'Klik atau seret file .pdf di sini'}
-                            </span>
-                            {pdfFile && <span style={{ fontSize: '0.74rem', color: 'var(--azure)', marginTop: 2 }}>{Math.round(pdfFile.size / 1024)} KB</span>}
-                          </div>
-                          <Upload size={16} color="var(--grey-blue)" />
-                        </div>
-                      </div>
-                    </>
-                  )}
-
-                  <div style={s.fg}>
-                    <label style={s.label}>Catatan Tambahan (Opsional)</label>
-                    <textarea rows={3} value={notes} onChange={e => setNotes(e.target.value)} placeholder="Tuliskan catatan penjelasan pengerjaan..." style={s.textarea} />
                   </div>
-
-                  <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12, borderTop: '1px solid var(--border-color)', paddingTop: 18, marginTop: 6 }}>
-                    <button type="button" onClick={() => setUploadTask(null)} style={s.btnGhost}>Batal</button>
-                    <button type="submit" disabled={submitting} style={s.btnPrimary}>
-                      {submitting ? <><Loader2 size={15} style={{ animation: 'spin 1s linear infinite' }} /><span>Mengirim & Menilai AI...</span></> : <><Upload size={15} /><span>Kirim Sekarang</span></>}
-                    </button>
+                )}
+                {uploadTask && (
+                  <TaskQuestionCard task={uploadTask} onOpenPreview={(url, title) => setTaskPreviewModal({ taskId: uploadTask.id_tugas, url, title })} />
+                )}
+                {submitSuccess ? (
+                  <div style={s.successBox}>
+                    <CheckCircle2 size={44} color="#00C853" />
+                    <strong style={{ color: '#fff', marginTop: 12, fontSize: '1.05rem' }}>Berhasil Dikumpulkan!</strong>
+                    <span style={{ fontSize: '0.84rem', color: 'var(--grey-blue)', marginTop: 4 }}>Sistem sedang menganalisis & menilai kode notebook Anda dengan AI...</span>
                   </div>
-                </form>
-              )}
+                ) : (
+                  <form onSubmit={handleSubmitSc} style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+                    {uploadTask?.submission_type === 'LINK' ? (
+                      <div style={s.fg}>
+                        <label style={s.label}>Link Google Drive <span style={{ color: '#FF5252' }}>*</span></label>
+                        <input
+                          type="url"
+                          required
+                          value={linkUrl}
+                          onChange={e => setLinkUrl(e.target.value)}
+                          placeholder="https://drive.google.com/..."
+                          style={s.input}
+                        />
+                      </div>
+                    ) : (
+                      <>
+                        <div style={s.fg}>
+                          <label style={s.label}>1. File Jupyter Notebook (.ipynb) <span style={{ color: '#FF5252' }}>*</span></label>
+                          <div style={{
+                            position: 'relative',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '12px',
+                            background: ipynbFile ? 'rgba(6, 113, 224, 0.08)' : '#18181b',
+                            border: ipynbFile ? '1px solid var(--azure)' : '1px dashed var(--border-color)',
+                            borderRadius: '10px',
+                            padding: '14px 16px',
+                            cursor: 'pointer',
+                            transition: 'all 0.2s',
+                          }}>
+                            <FileText size={20} color={ipynbFile ? 'var(--azure)' : 'var(--grey-blue)'} />
+                            <input
+                              type="file"
+                              required
+                              accept=".ipynb"
+                              onChange={e => setIpynbFile(e.target.files?.[0] || null)}
+                              style={{
+                                position: 'absolute',
+                                inset: 0,
+                                width: '100%',
+                                height: '100%',
+                                opacity: 0,
+                                cursor: 'pointer',
+                                zIndex: 10
+                              }}
+                            />
+                            <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
+                              <span style={{ fontSize: '0.88rem', fontWeight: 600, color: ipynbFile ? '#fff' : 'var(--grey-blue)' }}>
+                                {ipynbFile ? ipynbFile.name : 'Klik atau seret file .ipynb di sini'}
+                              </span>
+                              {ipynbFile && <span style={{ fontSize: '0.74rem', color: 'var(--azure)', marginTop: 2 }}>{Math.round(ipynbFile.size / 1024)} KB</span>}
+                            </div>
+                            <Upload size={16} color="var(--grey-blue)" />
+                          </div>
+                        </div>
+
+                        <div style={s.fg}>
+                          <label style={s.label}>2. File Laporan (.pdf) <span style={{ color: '#FF5252' }}>*</span></label>
+                          <div style={{
+                            position: 'relative',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '12px',
+                            background: pdfFile ? 'rgba(6, 113, 224, 0.08)' : '#18181b',
+                            border: pdfFile ? '1px solid var(--azure)' : '1px dashed var(--border-color)',
+                            borderRadius: '10px',
+                            padding: '14px 16px',
+                            cursor: 'pointer',
+                            transition: 'all 0.2s',
+                          }}>
+                            <FileText size={20} color={pdfFile ? 'var(--azure)' : 'var(--grey-blue)'} />
+                            <input
+                              type="file"
+                              required
+                              accept=".pdf"
+                              onChange={e => setPdfFile(e.target.files?.[0] || null)}
+                              style={{
+                                position: 'absolute',
+                                inset: 0,
+                                width: '100%',
+                                height: '100%',
+                                opacity: 0,
+                                cursor: 'pointer',
+                                zIndex: 10
+                              }}
+                            />
+                            <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
+                              <span style={{ fontSize: '0.88rem', fontWeight: 600, color: pdfFile ? '#fff' : 'var(--grey-blue)' }}>
+                                {pdfFile ? pdfFile.name : 'Klik atau seret file .pdf di sini'}
+                              </span>
+                              {pdfFile && <span style={{ fontSize: '0.74rem', color: 'var(--azure)', marginTop: 2 }}>{Math.round(pdfFile.size / 1024)} KB</span>}
+                            </div>
+                            <Upload size={16} color="var(--grey-blue)" />
+                          </div>
+                        </div>
+                      </>
+                    )}
+
+                    <div style={s.fg}>
+                      <label style={s.label}>Catatan Tambahan (Opsional)</label>
+                      <textarea rows={3} value={notes} onChange={e => setNotes(e.target.value)} placeholder="Tuliskan catatan penjelasan pengerjaan..." style={s.textarea} />
+                    </div>
+
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12, borderTop: '1px solid var(--border-color)', paddingTop: 18, marginTop: 6 }}>
+                      <button type="button" onClick={() => setUploadTask(null)} style={s.btnGhost}>Batal</button>
+                      <button type="submit" disabled={submitting} style={s.btnPrimary}>
+                        {submitting ? <><Loader2 size={15} style={{ animation: 'spin 1s linear infinite' }} /><span>Mengirim & Menilai AI...</span></> : <><Upload size={15} /><span>Kirim Sekarang</span></>}
+                      </button>
+                    </div>
+                  </form>
+                )}
+              </div>
             </div>
           </div>
-        </div>
         </Portal>
       )}
 
@@ -1347,72 +1381,72 @@ export default function PenugasanPage() {
         <Portal>
           <div style={s.overlay}>
             <div style={{ ...s.modal, maxWidth: 780, maxHeight: '95vh' }} className="glass-panel">
-            <div style={s.modalHead}>
-              <div style={{ flex: 1 }}>
-                <h3 style={{ margin: 0, fontSize: '1.05rem' }}>{activeQuiz.title}</h3>
-                <p style={{ margin: '3px 0 0', fontSize: '0.78rem', color: 'var(--grey-blue)' }}>{activeQuiz.questions.length} soal</p>
+              <div style={s.modalHead}>
+                <div style={{ flex: 1 }}>
+                  <h3 style={{ margin: 0, fontSize: '1.05rem' }}>{activeQuiz.title}</h3>
+                  <p style={{ margin: '3px 0 0', fontSize: '0.78rem', color: 'var(--grey-blue)' }}>{activeQuiz.questions.length} soal</p>
+                </div>
+                {timeLeft !== null && (
+                  <div style={{ background: timeLeft < 60 ? 'rgba(255,82,82,0.15)' : 'rgba(6,113,224,0.1)', border: `1px solid ${timeLeft < 60 ? 'rgba(255,82,82,0.3)' : 'rgba(6,113,224,0.2)'}`, borderRadius: 8, padding: '6px 14px', display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <Clock size={14} color={timeLeft < 60 ? '#FF5252' : 'var(--azure)'} />
+                    <span style={{ fontWeight: 700, fontSize: '1rem', color: timeLeft < 60 ? '#FF5252' : 'var(--azure)' }}>{formatTime(timeLeft)}</span>
+                  </div>
+                )}
+                {quizResult && <button onClick={() => setActiveQuiz(null)} style={s.closeBtn}><X size={18} /></button>}
               </div>
-              {timeLeft !== null && (
-                <div style={{ background: timeLeft < 60 ? 'rgba(255,82,82,0.15)' : 'rgba(6,113,224,0.1)', border: `1px solid ${timeLeft < 60 ? 'rgba(255,82,82,0.3)' : 'rgba(6,113,224,0.2)'}`, borderRadius: 8, padding: '6px 14px', display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <Clock size={14} color={timeLeft < 60 ? '#FF5252' : 'var(--azure)'} />
-                  <span style={{ fontWeight: 700, fontSize: '1rem', color: timeLeft < 60 ? '#FF5252' : 'var(--azure)' }}>{formatTime(timeLeft)}</span>
-                </div>
-              )}
-              {quizResult && <button onClick={() => setActiveQuiz(null)} style={s.closeBtn}><X size={18} /></button>}
-            </div>
 
-            <div style={{ padding: '20px 24px', overflowY: 'auto', flex: 1 }}>
-              {quizResult ? (
-                /* Result Screen */
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 20, padding: '30px 0' }}>
-                  <div style={{ fontSize: '4rem' }}>{quizResult.isPassed ? '🎉' : '📚'}</div>
-                  <h2 style={{ margin: 0, color: quizResult.isPassed ? '#00C853' : '#FF5252' }}>
-                    {quizResult.isPassed ? 'Selamat, Kamu Lulus!' : 'Belum Lulus'}
-                  </h2>
-                  <div style={{ display: 'flex', gap: 24, textAlign: 'center' }}>
-                    <div><div style={{ fontSize: '2.5rem', fontWeight: 800, color: 'var(--azure)' }}>{quizResult.score}</div><div style={{ fontSize: '0.8rem', color: 'var(--grey-blue)' }}>Skor</div></div>
-                    <div><div style={{ fontSize: '2.5rem', fontWeight: 800, color: '#00C853' }}>{quizResult.correct}</div><div style={{ fontSize: '0.8rem', color: 'var(--grey-blue)' }}>Benar</div></div>
-                    <div><div style={{ fontSize: '2.5rem', fontWeight: 800, color: '#FF5252' }}>{quizResult.wrong}</div><div style={{ fontSize: '0.8rem', color: 'var(--grey-blue)' }}>Salah</div></div>
-                  </div>
-                  <div style={{ fontSize: '0.85rem', color: 'var(--grey-blue)' }}>Passing score: <strong>75</strong></div>
-                  <button onClick={() => setActiveQuiz(null)} style={s.btnPrimary}>Tutup</button>
-                </div>
-              ) : (
-                /* Question List */
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-                  {activeQuiz.questions.map((q, qi) => (
-                    <div key={q.uuid_question} style={{ padding: 16, background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 12 }}>
-                      <div style={{ display: 'flex', gap: 10, marginBottom: 12 }}>
-                        <span style={{ minWidth: 26, height: 26, borderRadius: 8, background: 'rgba(6,113,224,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.78rem', fontWeight: 700, color: 'var(--azure)' }}>{qi + 1}</span>
-                        <p style={{ margin: 0, fontSize: '0.92rem', color: '#E2E8F0', lineHeight: 1.6 }}>{q.question_text}</p>
-                      </div>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                        {q.options.map(opt => {
-                          const cur = answers[q.uuid_question];
-                          const selected = q.type === 'Checkbox' ? (Array.isArray(cur) && cur.includes(opt.id)) : cur === opt.id;
-                          return (
-                            <button key={opt.id} type="button" onClick={() => setAnswer(q.uuid_question, opt.id, q.type)} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', border: `1px solid ${selected ? 'var(--azure)' : 'rgba(255,255,255,0.1)'}`, borderRadius: 8, background: selected ? 'rgba(6,113,224,0.12)' : 'transparent', cursor: 'pointer', textAlign: 'left', color: '#E2E8F0', fontSize: '0.88rem', transition: 'all 0.15s' }}>
-                              <span style={{ width: 20, height: 20, borderRadius: q.type === 'Checkbox' ? 5 : '50%', border: `2px solid ${selected ? 'var(--azure)' : 'rgba(255,255,255,0.2)'}`, background: selected ? 'var(--azure)' : 'transparent', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                {selected && <Check size={11} color="#fff" />}
-                              </span>
-                              <span>{opt.text}</span>
-                            </button>
-                          );
-                        })}
-                      </div>
+              <div style={{ padding: '20px 24px', overflowY: 'auto', flex: 1 }}>
+                {quizResult ? (
+                  /* Result Screen */
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 20, padding: '30px 0' }}>
+                    <div style={{ fontSize: '4rem' }}>{quizResult.isPassed ? '🎉' : '📚'}</div>
+                    <h2 style={{ margin: 0, color: quizResult.isPassed ? '#00C853' : '#FF5252' }}>
+                      {quizResult.isPassed ? 'Selamat, Kamu Lulus!' : 'Belum Lulus'}
+                    </h2>
+                    <div style={{ display: 'flex', gap: 24, textAlign: 'center' }}>
+                      <div><div style={{ fontSize: '2.5rem', fontWeight: 800, color: 'var(--azure)' }}>{quizResult.score}</div><div style={{ fontSize: '0.8rem', color: 'var(--grey-blue)' }}>Skor</div></div>
+                      <div><div style={{ fontSize: '2.5rem', fontWeight: 800, color: '#00C853' }}>{quizResult.correct}</div><div style={{ fontSize: '0.8rem', color: 'var(--grey-blue)' }}>Benar</div></div>
+                      <div><div style={{ fontSize: '2.5rem', fontWeight: 800, color: '#FF5252' }}>{quizResult.wrong}</div><div style={{ fontSize: '0.8rem', color: 'var(--grey-blue)' }}>Salah</div></div>
                     </div>
-                  ))}
-                  <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, paddingTop: 8 }}>
-                    <button type="button" onClick={() => { if (confirm('Yakin ingin keluar dari kuis? Jawaban tidak akan tersimpan.')) { setActiveQuiz(null); setTimeLeft(null); } }} style={s.btnGhost}>Keluar</button>
-                    <button type="button" onClick={submitQuizAnswers} disabled={submittingQuiz} style={s.btnPrimary}>
-                      {submittingQuiz ? <><Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} /><span>Mengirim...</span></> : <><Check size={14} /><span>Submit Jawaban</span></>}
-                    </button>
+                    <div style={{ fontSize: '0.85rem', color: 'var(--grey-blue)' }}>Passing score: <strong>75</strong></div>
+                    <button onClick={() => setActiveQuiz(null)} style={s.btnPrimary}>Tutup</button>
                   </div>
-                </div>
-              )}
+                ) : (
+                  /* Question List */
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+                    {activeQuiz.questions.map((q, qi) => (
+                      <div key={q.uuid_question} style={{ padding: 16, background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 12 }}>
+                        <div style={{ display: 'flex', gap: 10, marginBottom: 12 }}>
+                          <span style={{ minWidth: 26, height: 26, borderRadius: 8, background: 'rgba(6,113,224,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.78rem', fontWeight: 700, color: 'var(--azure)' }}>{qi + 1}</span>
+                          <p style={{ margin: 0, fontSize: '0.92rem', color: '#E2E8F0', lineHeight: 1.6 }}>{q.question_text}</p>
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                          {q.options.map(opt => {
+                            const cur = answers[q.uuid_question];
+                            const selected = q.type === 'Checkbox' ? (Array.isArray(cur) && cur.includes(opt.id)) : cur === opt.id;
+                            return (
+                              <button key={opt.id} type="button" onClick={() => setAnswer(q.uuid_question, opt.id, q.type)} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', border: `1px solid ${selected ? 'var(--azure)' : 'rgba(255,255,255,0.1)'}`, borderRadius: 8, background: selected ? 'rgba(6,113,224,0.12)' : 'transparent', cursor: 'pointer', textAlign: 'left', color: '#E2E8F0', fontSize: '0.88rem', transition: 'all 0.15s' }}>
+                                <span style={{ width: 20, height: 20, borderRadius: q.type === 'Checkbox' ? 5 : '50%', border: `2px solid ${selected ? 'var(--azure)' : 'rgba(255,255,255,0.2)'}`, background: selected ? 'var(--azure)' : 'transparent', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                  {selected && <Check size={11} color="#fff" />}
+                                </span>
+                                <span>{opt.text}</span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ))}
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, paddingTop: 8 }}>
+                      <button type="button" onClick={() => { if (confirm('Yakin ingin keluar dari kuis? Jawaban tidak akan tersimpan.')) { setActiveQuiz(null); setTimeLeft(null); } }} style={s.btnGhost}>Keluar</button>
+                      <button type="button" onClick={submitQuizAnswers} disabled={submittingQuiz} style={s.btnPrimary}>
+                        {submittingQuiz ? <><Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} /><span>Mengirim...</span></> : <><Check size={14} /><span>Submit Jawaban</span></>}
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
-        </div>
         </Portal>
       )}
 
@@ -1493,12 +1527,12 @@ const s: Record<string, React.CSSProperties> = {
   successBox: { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, padding: '30px 0' },
   attachLink: { display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: '0.82rem', color: 'var(--azure)', textDecoration: 'none', padding: '6px 12px', background: 'rgba(6,113,224,0.08)', border: '1px solid rgba(6,113,224,0.15)', borderRadius: 7 },
   overlay: { position: 'fixed', inset: 0, background: 'rgba(0, 0, 0, 0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100, padding: 20 },
-  modal: { 
-    width: '100%', 
-    maxWidth: 540, 
-    maxHeight: '90vh', 
-    display: 'flex', 
-    flexDirection: 'column', 
+  modal: {
+    width: '100%',
+    maxWidth: 540,
+    maxHeight: '90vh',
+    display: 'flex',
+    flexDirection: 'column',
     borderRadius: 16,
     background: 'rgba(20, 20, 20, 0.85)',
     border: '1px solid rgba(255, 255, 255, 0.08)',

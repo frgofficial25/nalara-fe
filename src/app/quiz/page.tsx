@@ -353,20 +353,20 @@ function DetailQuizView({
                     return (
                       <div key={ans.uuid_question || idx} style={{
                         background: 'rgba(255,255,255,0.02)',
-                        border: noAnswer 
-                          ? '1px solid rgba(255,255,255,0.08)' 
+                        border: noAnswer
+                          ? '1px solid rgba(255,255,255,0.08)'
                           : `1px solid ${ans.is_correct ? 'rgba(0,200,83,0.3)' : 'rgba(255,82,82,0.3)'}`,
                         borderRadius: '16px', padding: '1.5rem'
                       }}>
                         <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start', marginBottom: '12px' }}>
                           <div style={{
                             width: '32px', height: '32px', borderRadius: '50%',
-                            background: noAnswer 
-                              ? 'rgba(255,255,255,0.08)' 
+                            background: noAnswer
+                              ? 'rgba(255,255,255,0.08)'
                               : ans.is_correct ? 'rgba(0,200,83,0.2)' : 'rgba(255,82,82,0.2)',
                             display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            color: noAnswer 
-                              ? 'var(--grey-blue)' 
+                            color: noAnswer
+                              ? 'var(--grey-blue)'
                               : ans.is_correct ? '#00E676' : '#FF5252',
                             flexShrink: 0
                           }}>
@@ -882,20 +882,20 @@ function ResultView({ result, quizTitle, questions, onBack }: { result: SubmitRe
               return (
                 <div key={ans.uuid_question || idx} style={{
                   background: 'rgba(255,255,255,0.02)',
-                  border: noAnswer 
-                    ? '1px solid rgba(255,255,255,0.08)' 
+                  border: noAnswer
+                    ? '1px solid rgba(255,255,255,0.08)'
                     : `1px solid ${ans.is_correct ? 'rgba(0,200,83,0.3)' : 'rgba(255,82,82,0.3)'}`,
                   borderRadius: '16px', padding: '1.5rem'
                 }}>
                   <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start', marginBottom: '12px' }}>
                     <div style={{
                       width: '32px', height: '32px', borderRadius: '50%',
-                      background: noAnswer 
-                        ? 'rgba(255,255,255,0.08)' 
+                      background: noAnswer
+                        ? 'rgba(255,255,255,0.08)'
                         : ans.is_correct ? 'rgba(0,200,83,0.2)' : 'rgba(255,82,82,0.2)',
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      color: noAnswer 
-                        ? 'var(--grey-blue)' 
+                      color: noAnswer
+                        ? 'var(--grey-blue)'
                         : ans.is_correct ? '#00E676' : '#FF5252',
                       flexShrink: 0
                     }}>
@@ -939,7 +939,7 @@ function ResultView({ result, quizTitle, questions, onBack }: { result: SubmitRe
                         let optBorder = '1px solid rgba(255,255,255,0.06)';
                         let optBg = 'rgba(255,255,255,0.01)';
                         let optColor = 'var(--grey-blue)';
-                        
+
                         if (isSubmitted) {
                           if (ans.is_correct) {
                             optBorder = '1px solid rgba(0,200,83,0.3)';
@@ -1019,7 +1019,7 @@ function QuizPageInner() {
   const [result, setResult] = useState<SubmitResult | null>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const autoSubmittedRef = useRef(false);
-  const handleSubmitRef = useRef<() => Promise<void>>(async () => {});
+  const handleSubmitRef = useRef<() => Promise<void>>(async () => { });
 
 
   /* ─── Role Check ─────────────────────────────────────────────────────── */
@@ -1080,8 +1080,8 @@ function QuizPageInner() {
         try {
           const rekapRes = await apiGet<any>('/api/quiz/rekap', { token: auth.token, headers: auth.headers });
           const rekapList: any[] = Array.isArray(rekapRes) ? rekapRes : (rekapRes?.data || []);
-          // Match by uuid_quiz or quiz_id
-          const match = rekapList.find((r: any) => (r.uuid_quiz || r.quiz_id) === quizId);
+          // Match by uuid_quiz (backend fix ensures this field is present)
+          const match = rekapList.find((r: any) => r.uuid_quiz === quizId);
           if (match) {
             setRekap({
               uuid_quiz: match.uuid_quiz,
@@ -1273,7 +1273,7 @@ function QuizPageInner() {
       const auth = getAuthHeaders();
       const res = await apiPost<any>(`/api/quiz/${quizId}/submit`, payload, { token: auth.token, headers: auth.headers });
       const d = res.data || res;
-      
+
       const answersList = d.answers || d.detail_jawaban || [];
       let benarCount = d.benar;
       let salahCount = d.salah;
@@ -1349,7 +1349,7 @@ function QuizPageInner() {
       targetDetail.questions.forEach(q => {
         const ans = targetAnswers[q.uuid_question];
         const noAns = checkIsAnswerEmpty(ans);
-        
+
         let isCorrect = false;
         if (noAns) {
           kosong++;

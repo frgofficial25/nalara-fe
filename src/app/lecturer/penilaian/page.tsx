@@ -55,7 +55,6 @@ interface StudyCaseSubmission {
   released_score?: number;
   released_reason?: string;
   is_released: boolean;
-  link_url?: string;
   submitted_at?: string;
 }
 
@@ -77,7 +76,7 @@ export default function PenilaianPage() {
 
   // Toast state
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
-  
+
   const showToast = (message: string, type: 'success' | 'error' = 'success') => {
     setToast({ message, type });
     setTimeout(() => setToast(null), 4000);
@@ -101,7 +100,7 @@ export default function PenilaianPage() {
       } else {
         setUserRole('Lecturer');
       }
-    } catch {}
+    } catch { }
   }, []);
 
   // Shared courses list across tabs
@@ -113,7 +112,7 @@ export default function PenilaianPage() {
   const [grades, setGrades] = useState<GradeRow[]>([]);
   const [quizLoading, setQuizLoading] = useState(false);
   const [quizError, setQuizError] = useState<string | null>(null);
-  
+
   // Tab 1 & Tab 3 Filters
   const [quizSearch, setQuizSearch] = useState('');
   const [selectedCourse, setSelectedCourse] = useState('all');
@@ -195,7 +194,7 @@ export default function PenilaianPage() {
     };
 
     loadStudentDetails();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedStudent, selectedCourse, selectedRecapCourse, courses.length]);
 
 
@@ -289,8 +288,8 @@ export default function PenilaianPage() {
               date: a.completed_at
                 ? new Date(a.completed_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })
                 : a.started_at
-                ? new Date(a.started_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })
-                : '-',
+                  ? new Date(a.started_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })
+                  : '-',
             };
           }),
         };
@@ -424,13 +423,13 @@ export default function PenilaianPage() {
     // 1. Search filter
     const q = quizSearch.toLowerCase().trim();
     const nameMatch = !q || g.studentName.toLowerCase().includes(q) || g.studentEmail.toLowerCase().includes(q);
-    
+
     // 2. Course filter
     let courseMatch = true;
     if (selectedCourse !== 'all') {
       const courseObj = courses.find((c: any) => (c.uuid_pembelajaran || c.id) === selectedCourse);
-      courseMatch = g.attempts.some((a: any) => 
-        a.courseId === selectedCourse || 
+      courseMatch = g.attempts.some((a: any) =>
+        a.courseId === selectedCourse ||
         (courseObj && (a.courseTitle === courseObj.title || a.courseTitle === courseObj.nama_pembelajaran))
       );
     }
@@ -448,8 +447,8 @@ export default function PenilaianPage() {
   const filteredSubmissions = submissions.filter(sub => {
     // 1. Search filter
     const q = subSearch.toLowerCase().trim();
-    const nameMatch = !q || 
-      (sub.student?.full_name || '').toLowerCase().includes(q) || 
+    const nameMatch = !q ||
+      (sub.student?.full_name || '').toLowerCase().includes(q) ||
       (sub.student?.email || '').toLowerCase().includes(q) ||
       (sub.tugas?.title || '').toLowerCase().includes(q);
 
@@ -504,15 +503,15 @@ export default function PenilaianPage() {
         <div>
           <h1 style={s.title}>Penilaian</h1>
           <p style={s.subtitle}>
-            {userRole === 'Mentor' 
-              ? 'Verifikasi & beri umpan balik tugas studi kasus siswa' 
+            {userRole === 'Mentor'
+              ? 'Verifikasi & beri umpan balik tugas studi kasus siswa'
               : 'Pantau nilai kuis & verifikasi studi kasus siswa'}
           </p>
         </div>
         <button
-          onClick={() => { 
-            setRefreshing(true); 
-            if (tab === 'quiz') fetchQuiz(); 
+          onClick={() => {
+            setRefreshing(true);
+            if (tab === 'quiz') fetchQuiz();
             else if (tab === 'studycase') fetchQueue();
           }}
           disabled={quizLoading || subLoading}
@@ -527,14 +526,14 @@ export default function PenilaianPage() {
       <div style={s.tabBar}>
         {(userRole === 'Mentor'
           ? [
-              { key: 'studycase', label: 'Verifikasi Studi Kasus', icon: <FileText size={15} /> },
-              { key: 'recap',     label: 'Rekap Nilai Kelas',      icon: <Award size={15} /> },
-            ]
+            { key: 'studycase', label: 'Verifikasi Studi Kasus', icon: <FileText size={15} /> },
+            { key: 'recap', label: 'Rekap Nilai Kelas', icon: <Award size={15} /> },
+          ]
           : [
-              { key: 'quiz',      label: 'Nilai Kuis',            icon: <Brain size={15} /> },
-              { key: 'studycase', label: 'Verifikasi Studi Kasus', icon: <FileText size={15} /> },
-              { key: 'recap',     label: 'Rekap Nilai Kelas',      icon: <Award size={15} /> },
-            ]
+            { key: 'quiz', label: 'Nilai Kuis', icon: <Brain size={15} /> },
+            { key: 'studycase', label: 'Verifikasi Studi Kasus', icon: <FileText size={15} /> },
+            { key: 'recap', label: 'Rekap Nilai Kelas', icon: <Award size={15} /> },
+          ]
         ).map(t => (
           <button key={t.key} onClick={() => setTab(t.key as any)} style={{ ...s.tabBtn, ...(tab === t.key ? s.tabActive : {}) }}>
             {t.icon}<span>{t.label}</span>
@@ -634,8 +633,8 @@ export default function PenilaianPage() {
                         {row.completedCount === 0
                           ? <span style={s.pillGrey}>Belum ada</span>
                           : row.status === 'Passed'
-                          ? <span style={s.pillGreen}>Lulus</span>
-                          : <span style={s.pillRed}>Tidak Lulus</span>}
+                            ? <span style={s.pillGreen}>Lulus</span>
+                            : <span style={s.pillRed}>Tidak Lulus</span>}
                       </td>
                       <td style={{ ...s.td, textAlign: 'right' }}>
                         <button
@@ -723,10 +722,10 @@ export default function PenilaianPage() {
                 const verifiedRoleLabel = sub.lecture_status === 'Verified' && sub.mentor_status === 'Verified'
                   ? 'Dosen & Tentor'
                   : sub.lecture_status === 'Verified'
-                  ? 'Dosen'
-                  : sub.mentor_status === 'Verified'
-                  ? 'Tentor'
-                  : 'Dirilis';
+                    ? 'Dosen'
+                    : sub.mentor_status === 'Verified'
+                      ? 'Tentor'
+                      : 'Dirilis';
 
                 return (
                   <div key={sub.id} className="glass-panel" style={s.subCard}>
@@ -1215,9 +1214,9 @@ export default function PenilaianPage() {
                 </div>
                 <button onClick={() => setSelectedStudent(null)} style={s.closeBtn}><X size={18} /></button>
               </div>
-              
+
               <div style={{ padding: '18px 24px', overflowY: 'auto', maxHeight: '70vh', display: 'flex', flexDirection: 'column', gap: 18 }}>
-                
+
                 {detailsLoading ? (
                   <div style={s.centered}>
                     <Loader2 size={24} style={{ animation: 'spin 1s linear infinite' }} />
@@ -1434,7 +1433,7 @@ export default function PenilaianPage() {
                               <span>Status: <strong style={{ color: selectedAttempt.is_passed ? '#00C853' : '#FF5252' }}>{selectedAttempt.is_passed ? 'Lulus' : 'Gagal'}</strong></span>
                             </div>
                           </div>
-                          
+
                           <div style={{ display: 'flex', flexDirection: 'column', gap: 16, marginTop: 4 }}>
                             {answersList.length === 0 ? (
                               <p style={{ fontSize: '0.85rem', color: 'var(--grey-blue)' }}>Detail jawaban tidak tersedia.</p>
@@ -1598,7 +1597,7 @@ export default function PenilaianPage() {
 
 function formatSubmittedAnswer(submitted: any, correct: any, isCorrect: boolean) {
   if (submitted === null || submitted === undefined) return 'Tidak dijawab';
-  
+
   if (isCorrect && correct) {
     if (Array.isArray(correct)) {
       return correct.map((c: any) => `${c.id}. ${c.text}`).join('; ');

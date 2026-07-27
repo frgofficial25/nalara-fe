@@ -120,11 +120,11 @@ function checkIsAnswerEmpty(submittedAnswer: any): boolean {
 
 function AnswerCard({ item, questions }: { item: AnswerDetail; questions: QuestionItem[] }) {
   const originalQ = questions.find(q => q.uuid_question === item.uuid_question);
-  
+
   const rawOptionsList = (item as any).options && (item as any).options.length > 0
     ? (item as any).options
     : (originalQ?.options || []);
-    
+
   // Sort options alphabetically by ID so they appear as A, B, C, D regardless of backend shuffling
   const optionsList: Option[] = [...rawOptionsList].sort((a, b) => {
     return String(a.id).localeCompare(String(b.id));
@@ -151,7 +151,7 @@ function AnswerCard({ item, questions }: { item: AnswerDetail; questions: Questi
         .map((o, idx) => ({ o, idx }))
         .filter(({ o }) => submittedIds.includes(String(o.id).trim().toLowerCase()));
       if (selectedIndices.length > 0) {
-        displaySubmitted = selectedIndices.map(({ o, idx }) => 
+        displaySubmitted = selectedIndices.map(({ o, idx }) =>
           originalQ?.type === 'TrueFalse' ? o.text : `${String.fromCharCode(65 + idx)}. ${o.text}`
         ).join('\n');
       } else {
@@ -166,7 +166,7 @@ function AnswerCard({ item, questions }: { item: AnswerDetail; questions: Questi
       .map((o, idx) => ({ o, idx }))
       .filter(({ o }) => correctIds.includes(String(o.id).trim().toLowerCase()));
     if (correctIndices.length > 0) {
-      displayCorrect = correctIndices.map(({ o, idx }) => 
+      displayCorrect = correctIndices.map(({ o, idx }) =>
         originalQ?.type === 'TrueFalse' ? o.text : `${String.fromCharCode(65 + idx)}. ${o.text}`
       ).join('\n');
     } else {
@@ -220,13 +220,13 @@ function AnswerCard({ item, questions }: { item: AnswerDetail; questions: Questi
           {optionsList.map(opt => {
             const optIdLower = String(opt.id).trim().toLowerCase();
             const isSubmittedOpt = submittedIds.includes(optIdLower);
-            
+
             // Hanya warnai hijau jika itu jawaban siswa dan benar, merah jika jawaban siswa dan salah.
             // Opsi lain yang benar tetapi tidak dipilih siswa tetap berwarna abu-abu biasa (tidak dibocorkan).
             let border = '1px solid rgba(255,255,255,0.06)';
             let bg = 'rgba(255,255,255,0.01)';
             let textColor = 'var(--grey-blue)';
-            
+
             if (isSubmittedOpt) {
               if (item.is_correct) {
                 border = '1px solid rgba(0,200,83,0.35)';
@@ -238,7 +238,7 @@ function AnswerCard({ item, questions }: { item: AnswerDetail; questions: Questi
                 textColor = '#FF5252';
               }
             }
-            
+
             return (
               <div key={opt.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '10px 14px', borderRadius: 10, border, background: bg, color: textColor }}>
                 <span style={{ width: 22, height: 22, borderRadius: '50%', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: isSubmittedOpt ? (item.is_correct ? '#00C853' : '#FF5252') : 'rgba(255,255,255,0.06)', color: isSubmittedOpt ? '#fff' : 'var(--grey-blue)', fontSize: '0.72rem', fontWeight: 800 }}>
@@ -321,10 +321,9 @@ function PembahasanKuisContent() {
           const rekapRes = await apiGet<any>(`/api/students/${studentId}/quiz-rekap`, { token: auth.token, headers: auth.headers });
           const rekapList: any[] = Array.isArray(rekapRes) ? rekapRes : (rekapRes?.data || []);
 
-          // Match by attemptId, uuid_quiz, quiz_id, or fallback to matching quiz_title with the detailObj.title
+          // Match by attemptId, or fallback to matching quiz_title with the detailObj.title
           const match = rekapList.find((att: any) =>
             (attemptId && att.uuid_attempt === attemptId) ||
-            ((att.uuid_quiz || att.quiz_id) === quizId) ||
             (att.quiz_title && att.quiz_title.trim().toLowerCase() === detailObj.title.trim().toLowerCase())
           );
 
@@ -452,5 +451,9 @@ export default function PembahasanKuisPage() {
     }>
       <PembahasanKuisContent />
     </Suspense>
+  );
+}
+<PembahasanKuisContent />
+    </Suspense >
   );
 }

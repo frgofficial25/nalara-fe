@@ -213,7 +213,8 @@ export default function EvaluasiPage() {
     try {
       const auth = getAuthHeaders();
       const payloadForm = new FormData();
-      payloadForm.append('title', form.title);
+      const finalTitle = form.type === 'CaseStudy' ? `${form.title} [${form.submission_type}]` : form.title;
+      payloadForm.append('title', finalTitle);
       payloadForm.append('type', form.type);
       payloadForm.append('uuid_pembelajaran', form.uuid_pembelajaran);
       if (form.uuid_modul) payloadForm.append('uuid_modul', form.uuid_modul);
@@ -249,7 +250,8 @@ export default function EvaluasiPage() {
     try {
       const auth = getAuthHeaders();
       const payloadForm = new FormData();
-      payloadForm.append('title', form.title);
+      const finalTitle = form.type === 'CaseStudy' ? `${form.title} [${form.submission_type}]` : form.title;
+      payloadForm.append('title', finalTitle);
       payloadForm.append('type', form.type);
       if (form.uuid_pembelajaran) payloadForm.append('uuid_pembelajaran', form.uuid_pembelajaran);
       if (form.uuid_modul) payloadForm.append('uuid_modul', form.uuid_modul);
@@ -311,8 +313,12 @@ export default function EvaluasiPage() {
       const pad = (n: number) => String(n).padStart(2, '0');
       return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
     };
+    const rawTitle = tugas.title || '';
+    const cleanTitle = rawTitle.replace(/ \[(LINK|FILE)\]$/, '');
+    const detectedType = rawTitle.endsWith('[LINK]') ? 'LINK' : 'FILE';
+
     setForm({
-      title: tugas.title,
+      title: cleanTitle,
       type: tugas.type,
       youtube_link: tugas.youtube_link || '',
       content_text: initialText,
@@ -323,7 +329,7 @@ export default function EvaluasiPage() {
       group_count: (tugas as any).group_count || '',
       published_at: toDatetimeLocal((tugas as any).published_at),
       deadline_at: toDatetimeLocal((tugas as any).deadline_at),
-      submission_type: (tugas as any).submission_type || 'FILE',
+      submission_type: detectedType,
     });
     setShowEditModal(true);
   };
@@ -640,7 +646,7 @@ export default function EvaluasiPage() {
                         <button onClick={() => handleDelete(tugas.id)} style={s.iconBtnDanger} title="Hapus"><Trash2 size={13} /></button>
                       </div>
                     </div>
-                    <h3 style={s.cardTitle}>{tugas.title}</h3>
+                    <h3 style={s.cardTitle}>{tugas.title.replace(/ \[(LINK|FILE)\]$/, '')}</h3>
                     <div style={s.cardMeta}>
                       {tugas.pembelajaran?.title && <span>📚 {tugas.pembelajaran.title}</span>}
                       {tugas.modul?.title && <span>📦 {tugas.modul.title}</span>}
@@ -656,7 +662,7 @@ export default function EvaluasiPage() {
                             border: '1px solid rgba(16, 185, 129, 0.2)'
                           }}>
                             <Calendar size={10} />
-                            {new Date((tugas as any).published_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
+                            {new Date((tugas as any).published_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })} {new Date((tugas as any).published_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}
                           </span>
                         )}
                         {(tugas as any).deadline_at && (
@@ -667,7 +673,7 @@ export default function EvaluasiPage() {
                             border: '1px solid rgba(239, 68, 68, 0.2)'
                           }}>
                             <Clock size={10} />
-                            {new Date((tugas as any).deadline_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
+                            {new Date((tugas as any).deadline_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })} {new Date((tugas as any).deadline_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}
                           </span>
                         )}
                       </div>
