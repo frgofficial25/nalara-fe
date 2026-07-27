@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   TrendingUp, Award, Search, BookOpen, Brain,
@@ -408,10 +408,18 @@ export default function PenilaianPage() {
     }
   };
 
+  // Track which tabs have been fetched to avoid redundant API calls
+  const fetchedTabs = useRef<Set<string>>(new Set());
+
   // ── Effects ──────────────────────────────────────────────────────────────
   useEffect(() => {
-    if (tab === 'quiz' || tab === 'recap') fetchQuiz();
-    else if (tab === 'studycase') fetchQueue();
+    if ((tab === 'quiz' || tab === 'recap') && !fetchedTabs.current.has('quiz')) {
+      fetchedTabs.current.add('quiz');
+      fetchQuiz();
+    } else if (tab === 'studycase' && !fetchedTabs.current.has('studycase')) {
+      fetchedTabs.current.add('studycase');
+      fetchQueue();
+    }
   }, [tab]);
 
   // ── Quiz derived data & filter ───────────────────────────────────────────
@@ -509,10 +517,16 @@ export default function PenilaianPage() {
           </p>
         </div>
         <button
-          onClick={() => {
+          onClick={() => { 
             setRefreshing(true);
-            if (tab === 'quiz') fetchQuiz();
-            else if (tab === 'studycase') fetchQueue();
+            // Clear cache for current tab so it re-fetches fresh data
+            if (tab === 'quiz' || tab === 'recap') {
+              fetchedTabs.current.delete('quiz');
+              fetchQuiz();
+            } else if (tab === 'studycase') {
+              fetchedTabs.current.delete('studycase');
+              fetchQueue();
+            }
           }}
           disabled={quizLoading || subLoading}
           style={s.btnGhost}
