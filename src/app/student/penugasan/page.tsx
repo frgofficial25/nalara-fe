@@ -637,7 +637,7 @@ export default function PenugasanPage() {
       let body: FormData;
       if (isLink) {
         body = new FormData();
-        body.append('link_url', linkUrl);  // ← field yang dicek backend di req.body.link_url
+        body.append('link_url', linkUrl);  // ← field yang dicek backend di req.body.link_urlmm
         if (notes) body.append('student_notes', notes);
       } else {
         body = new FormData();
