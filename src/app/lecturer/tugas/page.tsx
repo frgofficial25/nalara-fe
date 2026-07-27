@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   FileText, Plus, Trash2, Edit2, X, Loader2, AlertCircle,
   Video, BookOpenCheck, FlaskConical, PencilLine, Filter, Eye, CheckCircle2,
@@ -309,13 +309,18 @@ export default function TugasPage() {
     }
   }, []);
 
+  const hasFetchedSubs = useRef(false);
+
   useEffect(() => {
-    if (activeTab === 'submissions') {
+    if (activeTab === 'submissions' && !hasFetchedSubs.current) {
+      hasFetchedSubs.current = true;
       fetchSubmissions();
-    } else {
-      fetchTugas();
     }
-  }, [filterCourseId, filterModuleId, activeTab]);
+  }, [activeTab]);
+
+  useEffect(() => {
+    fetchTugas();
+  }, [filterCourseId, filterModuleId]);
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();

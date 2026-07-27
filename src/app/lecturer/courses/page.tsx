@@ -219,8 +219,11 @@ export default function CoursesPage() {
     } catch { /* ignore */ }
   }, []);
 
-  // Background schedule checker for courses
+  // Background schedule checker — only active when there are pending schedules
   useEffect(() => {
+    // Skip if no pending schedules to avoid unnecessary polling
+    if (Object.keys(courseSchedules).length === 0) return;
+
     const interval = setInterval(async () => {
       const now = new Date();
       const updated = { ...courseSchedules };
@@ -254,7 +257,7 @@ export default function CoursesPage() {
         setCourseSchedules(updated);
         localStorage.setItem('nalara_course_schedules', JSON.stringify(updated));
       }
-    }, 30000); // check every 30s
+    }, 60000); // check every 60s (reduced from 30s)
     return () => clearInterval(interval);
   }, [courseSchedules]);
 
