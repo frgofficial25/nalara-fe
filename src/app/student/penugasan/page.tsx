@@ -677,6 +677,7 @@ startxref
         const mockPdf = new File([minimalPdf], "gdrive_link.pdf", { type: "application/pdf" });
         body.append('ipynb', mockIpynb);
         body.append('pdf', mockPdf);
+        body.append('link_url', linkUrl); // <-- INI YANG KURANG SEBELUMNYA
         const finalNotes = notes ? `${notes}\n\n[Google Drive Link]: ${linkUrl}` : `[Google Drive Link]: ${linkUrl}`;
         body.append('student_notes', finalNotes);
       } else {
