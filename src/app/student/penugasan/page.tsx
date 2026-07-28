@@ -457,6 +457,35 @@ export default function PenugasanPage() {
   const [mainTab, setMainTab] = useState<'studycase' | 'quiz'>('studycase');
   const [taskPreviewModal, setTaskPreviewModal] = useState<{ taskId: string; url: string; title: string } | null>(null);
 
+  // Rules modal state
+  const [showRulesModal, setShowRulesModal] = useState(false);
+  const [dontShowAgain, setDontShowAgain] = useState(false);
+  const [rulesStep, setRulesStep] = useState(1);
+
+  useEffect(() => {
+    const hasSeen = localStorage.getItem('seen_study_case_rules');
+    if (!hasSeen) {
+      setRulesStep(1);
+      setShowRulesModal(true);
+    }
+  }, []);
+
+  const handleOpenRulesModal = () => {
+    const hasSeen = localStorage.getItem('seen_study_case_rules') === 'true';
+    setDontShowAgain(hasSeen);
+    setRulesStep(1);
+    setShowRulesModal(true);
+  };
+
+  const handleCloseRulesModal = () => {
+    if (dontShowAgain) {
+      localStorage.setItem('seen_study_case_rules', 'true');
+    } else {
+      localStorage.removeItem('seen_study_case_rules');
+    }
+    setShowRulesModal(false);
+  };
+
   // Toast state
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
   const showToast = (message: string, type: 'success' | 'error' | 'info' = 'success') => {
@@ -792,6 +821,25 @@ startxref
           <h1 style={s.pageTitle}>Penugasan</h1>
           <p style={s.pageSubtitle}>Kerjakan studi kasus dan kuis yang ditugaskan oleh dosen</p>
         </div>
+        <button
+          onClick={handleOpenRulesModal}
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 6,
+            padding: '8px 16px',
+            borderRadius: 10,
+            fontSize: '0.82rem',
+            fontWeight: 600,
+            background: 'rgba(99, 102, 241, 0.12)',
+            color: '#a5b4fc',
+            border: '1px solid rgba(99, 102, 241, 0.3)',
+            cursor: 'pointer',
+            transition: 'all 0.2s'
+          }}
+        >
+          <Info size={14} /> <span>Ketentuan Studi Kasus</span>
+        </button>
       </div>
 
       {/* Main Tabs */}
@@ -1572,6 +1620,188 @@ startxref
                   </div>
                 )}
               </div>
+            </div>
+          </div>
+        </Portal>
+      )}
+
+      {showRulesModal && (
+        <Portal>
+          <div style={s.overlay} onClick={handleCloseRulesModal}>
+            <div style={{ ...s.modal, maxWidth: 620, padding: '24px 28px', maxHeight: '90vh', overflowY: 'auto' }} className="glass-panel" onClick={e => e.stopPropagation()}>
+              
+              {/* Modal Head */}
+              <div style={{ ...s.modalHead, paddingBottom: 14, borderBottom: '1px solid rgba(255, 255, 255, 0.08)', marginBottom: 20 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <div style={{ width: 36, height: 36, borderRadius: 10, background: 'rgba(99, 102, 241, 0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <ClipboardList size={18} color="#a5b4fc" />
+                  </div>
+                  <div>
+                    <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700, color: '#fff', textTransform: 'uppercase', letterSpacing: '0.02em' }}>
+                      {rulesStep === 1 ? 'Ketentuan Studi Kasus' : 'Ketentuan Penggunaan AI (Artificial Intelligence)'}
+                    </h3>
+                    <p style={{ margin: '2px 0 0', fontSize: '0.78rem', color: '#94a3b8' }}>
+                      {rulesStep === 1 ? 'Langkah 1 dari 2: Ketentuan Umum & Eksplorasi' : 'Langkah 2 dari 2: Panduan & Batasan AI'}
+                    </p>
+                  </div>
+                </div>
+                <button onClick={handleCloseRulesModal} style={s.closeBtn}><X size={18} /></button>
+              </div>
+
+              {/* Modal Body */}
+              <div style={{ color: '#e2e8f0', fontSize: '0.88rem', lineHeight: 1.6 }}>
+                {rulesStep === 1 ? (
+                  /* STEP 1: KETENTUAN STUDI KASUS */
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                    <p style={{ margin: 0, color: '#cbd5e1', fontSize: '0.88rem' }}>
+                      Perlu diingat bahwa instruksi and requirements pipeline yang dijabarkan di dokumen studi kasus merupakan standar minimal yang harus Nalarians penuhi dalam penyelesaian study case Nalarians tidak diwajibkan untuk kaku dan mengikutinya secara absolut jika kalian memiliki pendekatan lain yang lebih baik.
+                    </p>
+                    
+                    <div style={{
+                      background: 'rgba(99, 102, 241, 0.05)',
+                      border: '1px solid rgba(99, 102, 241, 0.18)',
+                      borderRadius: 12,
+                      padding: '16px 18px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: 10
+                    }}>
+                      <span style={{ fontWeight: 700, color: '#a5b4fc', fontSize: '0.88rem' }}>
+                        Sebaliknya, kalian sangat didorong untuk bereksplorasi lebih jauh! Nalarians dibebaskan untuk:
+                      </span>
+                      <ol style={{ margin: 0, paddingLeft: 18, display: 'flex', flexDirection: 'column', gap: 8, color: '#cbd5e1' }}>
+                        <li>
+                          1. Menambahkan berbagai macam metode exploratory data analysis (EDA) dan teknik pra-pemrosesan atau pembersihan data (data cleaning) lain yang menurut kalian relevan.
+                        </li>
+                        <li>
+                          2. Mencoba berbagai kombinasi metode ekstraksi fitur yang lebih kompleks.
+                        </li>
+                        <li>
+                          3. Melakukan optimasi model seperti Hyperparameter Tuning (misalnya menggunakan GridSearchCV atau RandomizedSearchCV).
+                        </li>
+                        <li>
+                          4. Memodifikasi alur pipeline agar lebih efisien.
+                        </li>
+                      </ol>
+                    </div>
+
+                    <p style={{ margin: 0, color: '#cbd5e1', fontSize: '0.86rem', fontStyle: 'italic', background: 'rgba(255,255,255,0.02)', padding: '10px 14px', borderRadius: 8, borderLeft: '3px solid var(--azure)' }}>
+                      Selama metodologi yang Nalarians gunakan tetap berbasis pada kaidah Machine Learning yang benar, logis, dan argumen kalian dapat dipertanggungjawabkan di dalam laporan, setiap bentuk eksplorasi akan menjadi nilai tambah yang sangat baik.
+                    </p>
+                  </div>
+                ) : (
+                  /* STEP 2: KETENTUAN PENGGUNAAN AI */
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                    <div style={{ display: 'flex', gap: 12, background: 'rgba(255, 255, 255, 0.02)', padding: 14, borderRadius: 12, border: '1px solid rgba(255, 255, 255, 0.04)' }}>
+                      <span style={{ fontSize: '1.25rem', flexShrink: 0 }}></span>
+                      <div>
+                        <strong style={{ display: 'block', color: '#fff', fontSize: '0.92rem', marginBottom: 4 }}>1. Dilarang Keras Copy-Paste Mentah</strong>
+                        <span style={{ color: '#cbd5e1', fontSize: '0.82rem', display: 'block' }}>
+                          Nalarians dilarang menyerahkan kode atau narasi laporan hasil copy-paste langsung (plek-ketiplek) dari AI. Penilai dapat dengan mudah membedakan mana karya peserta yang benar-benar memahami logika pembuatan pipeline dan mana yang hanya meminta tolong kepada AI secara buta.
+                        </span>
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'flex', gap: 12, background: 'rgba(255, 255, 255, 0.02)', padding: 14, borderRadius: 12, border: '1px solid rgba(255, 255, 255, 0.04)' }}>
+                      <span style={{ fontSize: '1.25rem', flexShrink: 0 }}></span>
+                      <div>
+                        <strong style={{ display: 'block', color: '#fff', fontSize: '0.92rem', marginBottom: 4 }}>2. AI Sebagai Asisten, Bukan Pembuat Keputusan Utama</strong>
+                        <span style={{ color: '#cbd5e1', fontSize: '0.82rem', display: 'block' }}>
+                          Kami tidak melarang penggunaan AI sama sekali. Nalarians dipersilakan memanfaatkan AI sebagai alat bantu pendukung, misalnya untuk melakukan troubleshooting error pada kode, memahami dokumentasi pustaka (library), atau mencari referensi fungsi tertentu.
+                        </span>
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'flex', gap: 12, background: 'rgba(255, 255, 255, 0.02)', padding: 14, borderRadius: 12, border: '1px solid rgba(255, 255, 255, 0.04)' }}>
+                      <span style={{ fontSize: '1.25rem', flexShrink: 0 }}></span>
+                      <div>
+                        <strong style={{ display: 'block', color: '#fff', fontSize: '0.92rem', marginBottom: 4 }}>3. Pertanggungjawaban Penuh</strong>
+                        <span style={{ color: '#cbd5e1', fontSize: '0.82rem', display: 'block' }}>
+                          Apapun yang kalian cantumkan dalam pengumpulan tugas—baik source code di dalam Jupyter Notebook maupun argumen analitis di dalam laporan PDF—harus dapat dipertanggungjawabkan. Nalarians wajib benar-benar mengerti dan bisa menjelaskan bagaimana setiap proses di dalam pipeline tersebut beroperasi.
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Modal Footer */}
+              <div style={{
+                marginTop: 26,
+                paddingTop: 16,
+                borderTop: '1px solid rgba(255, 255, 255, 0.08)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                flexWrap: 'wrap',
+                gap: 12
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  {rulesStep === 2 ? (
+                    <button
+                      type="button"
+                      onClick={() => setRulesStep(1)}
+                      style={{
+                        ...s.btnGhost,
+                        padding: '8px 16px',
+                        borderRadius: 8,
+                        fontSize: '0.84rem'
+                      }}
+                    >
+                      Kembali
+                    </button>
+                  ) : (
+                    <span style={{ fontSize: '0.78rem', color: '#94a3b8' }}>Halaman 1 dari 2</span>
+                  )}
+                  {rulesStep === 2 && (
+                    <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: '0.8rem', color: '#94a3b8' }}>
+                      <input
+                        type="checkbox"
+                        checked={dontShowAgain}
+                        onChange={e => setDontShowAgain(e.target.checked)}
+                        style={{
+                          cursor: 'pointer',
+                          width: 15,
+                          height: 15,
+                          accentColor: 'var(--azure)'
+                        }}
+                      />
+                      <span>Jangan tampilkan lagi</span>
+                    </label>
+                  )}
+                </div>
+
+                <div>
+                  {rulesStep === 1 ? (
+                    <button
+                      type="button"
+                      onClick={() => setRulesStep(2)}
+                      style={{
+                        ...s.btnPrimary,
+                        padding: '8px 24px',
+                        borderRadius: 8,
+                        fontSize: '0.85rem'
+                      }}
+                    >
+                      Selanjutnya
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={handleCloseRulesModal}
+                      style={{
+                        ...s.btnPrimary,
+                        padding: '8px 24px',
+                        borderRadius: 8,
+                        fontSize: '0.85rem'
+                      }}
+                    >
+                      Saya Mengerti
+                    </button>
+                  )}
+                </div>
+              </div>
+
             </div>
           </div>
         </Portal>
