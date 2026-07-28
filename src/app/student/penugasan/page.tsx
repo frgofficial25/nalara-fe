@@ -960,19 +960,29 @@ startxref
                           </p>
                         )}
                       </div>
-                      {canSubmit && !noGroupAssigned ? (
-                        <button onClick={() => handleOpenUploadModal(task)} style={s.btnUpload}>
-                          <Upload size={14} /><span>Kumpulkan Tugas</span>
-                        </button>
-                      ) : noGroupAssigned ? (
-                        <button disabled style={{ ...s.btnUpload, opacity: 0.4, cursor: 'not-allowed', background: 'rgba(255,255,255,0.05)' }}>
-                          <AlertCircle size={14} /><span>Belum Ada Kelompok</span>
-                        </button>
-                      ) : (
-                        <button disabled style={{ ...s.btnUpload, opacity: 0.4, cursor: 'not-allowed', background: 'rgba(255,255,255,0.05)' }}>
-                          <Lock size={14} /><span>Hanya Ketua</span>
-                        </button>
-                      )}
+                      {(() => {
+                        const isExpiredTask = task.deadline_at ? new Date(task.deadline_at) < new Date() : false;
+                        if (isExpiredTask) {
+                          return (
+                            <button disabled style={{ ...s.btnUpload, opacity: 0.5, cursor: 'not-allowed', background: 'rgba(255, 82, 82, 0.08)', color: '#FF5252', border: '1px solid rgba(255, 82, 82, 0.2)' }}>
+                              <Clock size={14} /><span>Waktu Habis</span>
+                            </button>
+                          );
+                        }
+                        return canSubmit && !noGroupAssigned ? (
+                          <button onClick={() => handleOpenUploadModal(task)} style={s.btnUpload}>
+                            <Upload size={14} /><span>Kumpulkan Tugas</span>
+                          </button>
+                        ) : noGroupAssigned ? (
+                          <button disabled style={{ ...s.btnUpload, opacity: 0.4, cursor: 'not-allowed', background: 'rgba(255,255,255,0.05)' }}>
+                            <AlertCircle size={14} /><span>Belum Ada Kelompok</span>
+                          </button>
+                        ) : (
+                          <button disabled style={{ ...s.btnUpload, opacity: 0.4, cursor: 'not-allowed', background: 'rgba(255,255,255,0.05)' }}>
+                            <Lock size={14} /><span>Hanya Ketua</span>
+                          </button>
+                        );
+                      })()}
                     </div>
                   );
                 })}
