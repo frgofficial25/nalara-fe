@@ -23,6 +23,7 @@ interface Course {
   scheduled_at?: string | null;
   prerequisite_uuid?: string | null;
   prerequisite_name?: string | null;
+  total_meetings?: number;
 }
 
 interface Student {
@@ -119,6 +120,7 @@ export default function CourseManagement() {
         createdAt: c.tanggal_dibuat || c.createdAt || c.created_at,
         created_at: c.tanggal_dibuat || c.created_at || c.createdAt,
         scheduled_at: c.scheduled_at,
+        total_meetings: c.total_meetings || 0,
         prerequisite_uuid: c.prerequisite_uuid,
         prerequisite_name: c.prerequisite_name,
         status: c.is_published ? (c.scheduled_at && new Date(c.scheduled_at) > new Date() ? 'scheduled' : 'published') : 'draft'
@@ -275,17 +277,12 @@ export default function CourseManagement() {
         description: form.description,
         scheduled_at: form.scheduled_at || null,
         prerequisite_uuid: form.prerequisite_uuid || null,
+        total_meetings: form.total_meetings,
         uuid_user: userUuid
       }, {
         token: auth.token,
         headers: auth.headers
       });
-
-      // Simpan total pertemuan ke localStorage jika diisi
-      const newCourseId = result?.data?.uuid_pembelajaran || result?.uuid_pembelajaran;
-      if (newCourseId && form.total_meetings > 0) {
-        localStorage.setItem(`nalara_meetings_${newCourseId}`, String(form.total_meetings));
-      }
 
       setShowCreateModal(false);
       setForm({ title: '', description: '', scheduled_at: '', prerequisite_uuid: '', total_meetings: 0 });
@@ -320,16 +317,12 @@ export default function CourseManagement() {
           title: form.title,
           description: form.description,
           scheduled_at: form.scheduled_at || null,
-          prerequisite_uuid: form.prerequisite_uuid || null
+          prerequisite_uuid: form.prerequisite_uuid || null,
+          total_meetings: form.total_meetings
         })
       });
 
       if (!res.ok) throw new Error('Gagal memperbarui pembelajaran.');
-
-      // Simpan total pertemuan ke localStorage jika diisi
-      if (currentCourse.id && form.total_meetings > 0) {
-        localStorage.setItem(`nalara_meetings_${currentCourse.id}`, String(form.total_meetings));
-      }
 
       setShowEditModal(false);
       setCurrentCourse(null);
@@ -535,14 +528,12 @@ export default function CourseManagement() {
 
   const openEditModal = (course: Course) => {
     setCurrentCourse(course);
-    // Load existing total meetings dari localStorage jika ada
-    const savedMeetings = localStorage.getItem(`nalara_meetings_${course.id}`);
     setForm({ 
       title: course.title, 
       description: course.description || '',
       scheduled_at: course.scheduled_at ? new Date(course.scheduled_at).toISOString().slice(0, 16) : '',
       prerequisite_uuid: course.prerequisite_uuid || '',
-      total_meetings: savedMeetings ? (parseInt(savedMeetings) || 0) : 0
+      total_meetings: course.total_meetings || 0
     });
     setShowEditModal(true);
   };

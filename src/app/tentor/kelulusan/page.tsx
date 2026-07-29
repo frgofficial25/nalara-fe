@@ -173,13 +173,6 @@ export default function TentorKelulusanPage() {
         } catch { }
       }
 
-      // 4. Load verification metadata from localStorage
-      const localMeta = localStorage.getItem('nalara_kelulusan_meta');
-      if (localMeta) {
-        try {
-          setVerificationMeta(JSON.parse(localMeta));
-        } catch { }
-      }
 
     } catch (err) {
       console.error(err);
@@ -304,6 +297,9 @@ export default function TentorKelulusanPage() {
         updatedMap[uid] = { count: attendanceMap[uid].count, total: globalTotalMeetings };
       });
       setAttendanceMap(updatedMap);
+      
+      // Auto kalkulasi ulang semua nilai siswa karena total pertemuan berubah
+      handleCalculateAllGrades();
     } catch (err) {
       console.error('Failed to save total meetings:', err);
       showToast('Gagal menyimpan total pertemuan.', 'error');
@@ -328,6 +324,9 @@ export default function TentorKelulusanPage() {
       
       showToast(`Kehadiran ${attendanceStudent.full_name} berhasil disimpan.`, 'success');
       setShowAttendanceModal(false);
+      
+      // Auto kalkulasi ulang nilai siswa ini karena kehadirannya berubah
+      handleCalculateGrade(attendanceStudent.id);
     } catch (err) {
       console.error('Failed to save attendance:', err);
       showToast('Gagal menyimpan data kehadiran.', 'error');
