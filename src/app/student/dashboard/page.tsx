@@ -3,7 +3,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import {
   GraduationCap, BookOpen, Clock, Flame,
-  RefreshCw, ShieldAlert, ChevronRight, Play, Award, XCircle
+  RefreshCw, ShieldAlert, ChevronRight, Play, Award, XCircle, Bell
 } from 'lucide-react';
 import AgendaSection from '@/components/dashboard/AgendaSection';
 import { apiGet } from '@/lib/api';
@@ -539,7 +539,6 @@ export default function StudentDashboard() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 24 }}>
           {graduationStatuses.map((status, idx) => {
             const isPassed = status.is_passed;
-            const bd = status.scoreBreakdown;
             return (
               <div
                 key={idx}
@@ -581,9 +580,42 @@ export default function StudentDashboard() {
                     <p style={{ margin: 0, fontSize: '0.88rem', fontWeight: 600, color: '#fff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                       {status.title}
                     </p>
-                    {!isPassed && (
+                    {isPassed ? (
+                      <div style={{ marginTop: 8 }}>
+                        <a
+                          href="https://s.id/Top100NalariansOnly"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: 6,
+                            fontSize: '0.78rem',
+                            color: '#fff',
+                            background: '#00C853',
+                            padding: '6px 12px',
+                            borderRadius: 8,
+                            textDecoration: 'none',
+                            fontWeight: 600,
+                            boxShadow: '0 4px 12px rgba(0, 200, 83, 0.2)',
+                            transition: 'all 0.2s'
+                          }}
+                          onMouseOver={(e) => {
+                            e.currentTarget.style.background = '#00E676';
+                            e.currentTarget.style.transform = 'translateY(-1px)';
+                          }}
+                          onMouseOut={(e) => {
+                            e.currentTarget.style.background = '#00C853';
+                            e.currentTarget.style.transform = 'translateY(0)';
+                          }}
+                        >
+                          <span>Gabung Grup WhatsApp</span>
+                          <ChevronRight size={14} />
+                        </a>
+                      </div>
+                    ) : (
                       <p style={{ margin: '2px 0 0', fontSize: '0.76rem', color: 'var(--grey-blue)' }}>
-                        Terus tingkatkan nilai kuis, studi kasus, dan kehadiran kamu!
+                        Mohon maaf anda tidak lolos, Tetap Semangat!
                       </p>
                     )}
                   </div>
@@ -595,40 +627,6 @@ export default function StudentDashboard() {
                   </div>
                 </div>
 
-                {/* Breakdown nilai */}
-                {bd && (
-                  <div style={{
-                    display: 'grid', gridTemplateColumns: '1fr 1fr 1fr',
-                    borderTop: `1px solid ${isPassed ? 'rgba(0,200,83,0.12)' : 'rgba(255,82,82,0.12)'}`,
-                  }}>
-                    {/* Kehadiran 15% */}
-                    <div style={{ padding: '10px 16px', textAlign: 'center', borderRight: '1px solid rgba(255,255,255,0.06)' }}>
-                      <div style={{ fontSize: '0.65rem', color: 'var(--grey-blue)', marginBottom: 2 }}>KEHADIRAN (15%)</div>
-                      <div style={{ fontSize: '1.05rem', fontWeight: 800, color: bd.kehadiran >= 75 ? '#00C853' : bd.kehadiran >= 50 ? '#FFA826' : '#FF5252' }}>
-                        {bd.kehadiran.toFixed(1)}
-                      </div>
-                      <div style={{ fontSize: '0.68rem', color: 'var(--grey)', marginTop: 1 }}>
-                        {bd.total_pertemuan > 0 ? `${bd.hadir}/${bd.total_pertemuan} pertemuan` : 'Belum diset'}
-                      </div>
-                    </div>
-                    {/* Kuis 25% */}
-                    <div style={{ padding: '10px 16px', textAlign: 'center', borderRight: '1px solid rgba(255,255,255,0.06)' }}>
-                      <div style={{ fontSize: '0.65rem', color: 'var(--grey-blue)', marginBottom: 2 }}>KUIS (25%)</div>
-                      <div style={{ fontSize: '1.05rem', fontWeight: 800, color: bd.kuis >= 75 ? '#00C853' : bd.kuis >= 55 ? '#FFA826' : '#FF5252' }}>
-                        {bd.kuis > 0 ? bd.kuis.toFixed(1) : '—'}
-                      </div>
-                      <div style={{ fontSize: '0.68rem', color: 'var(--grey)', marginTop: 1 }}>Rata-rata kuis</div>
-                    </div>
-                    {/* Studi Kasus 60% */}
-                    <div style={{ padding: '10px 16px', textAlign: 'center' }}>
-                      <div style={{ fontSize: '0.65rem', color: 'var(--grey-blue)', marginBottom: 2 }}>STUDI KASUS (60%)</div>
-                      <div style={{ fontSize: '1.05rem', fontWeight: 800, color: bd.studi_kasus >= 75 ? '#00C853' : bd.studi_kasus >= 55 ? '#FFA826' : '#FF5252' }}>
-                        {bd.studi_kasus > 0 ? bd.studi_kasus.toFixed(1) : '—'}
-                      </div>
-                      <div style={{ fontSize: '0.68rem', color: 'var(--grey)', marginTop: 1 }}>Rata-rata studi kasus</div>
-                    </div>
-                  </div>
-                )}
               </div>
             );
           })}
