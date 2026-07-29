@@ -468,14 +468,26 @@ export default function TentorKelulusanPage() {
 
       for (let i = 0; i < attempts; i++) {
         try {
-          res = await apiPost<{ success: boolean; message: string; data?: any }>(
-            `/api/grades/set-grades/${selectedCourseId}`,
-            { grades: gradesToSubmit },
-            { token: auth.token, headers: auth.headers }
-          );
-          if (res?.success) {
-            success = true;
-            break;
+          // Send request directly to backend port 1000 to bypass proxy/middleware overhead entirely
+          const response = await fetch(`http://localhost:1000/api/grades/set-grades/${selectedCourseId}`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'x-api-key': auth.headers['x-api-key'] || ''
+            },
+            body: JSON.stringify({ grades: gradesToSubmit })
+          });
+          
+          if (response.ok) {
+            const data = await response.json();
+            if (data?.success) {
+              res = data;
+              success = true;
+              break;
+            }
+          } else {
+            const errData = await response.json().catch(() => ({}));
+            throw new Error(errData?.message || `HTTP ${response.status}`);
           }
         } catch (postErr) {
           console.warn(`Attempt ${i + 1} to finalize grades failed, retrying...`, postErr);

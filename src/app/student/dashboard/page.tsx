@@ -472,7 +472,7 @@ export default function StudentDashboard() {
 
       {/* Kartu Status Kelulusan */}
       {graduationStatuses.length > 0 && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 24 }}>
           {graduationStatuses.map((status, idx) => {
             const isPassed = status.is_passed;
             return (
