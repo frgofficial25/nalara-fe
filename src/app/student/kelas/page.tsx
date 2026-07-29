@@ -17,6 +17,9 @@ interface Course {
   description?: string;
   slug?: string;
   modulesCount?: number;
+  prerequisite_uuid?: string | null;
+  prerequisite_name?: string | null;
+  prerequisite_passed?: boolean | null; // null = no prerequisite, false = not passed, true = passed
 }
 interface Module {
   id: string;
@@ -99,6 +102,9 @@ function StudentKelasPageInner() {
         description: c.deskripsi || c.description || '',
         slug: c.slug,
         modulesCount: c.modulesCount || 0,
+        prerequisite_uuid: c.prerequisite_uuid ?? null,
+        prerequisite_name: c.prerequisite_name ?? null,
+        prerequisite_passed: c.prerequisite_passed ?? null,
       })));
     } catch (e: any) { setError(e.message || 'Gagal memuat kelas.'); }
     finally { setLoading(false); }
@@ -174,6 +180,9 @@ function StudentKelasPageInner() {
           description: c.deskripsi || c.description || '',
           slug: c.slug,
           modulesCount: c.modulesCount || 0,
+          prerequisite_uuid: c.prerequisite_uuid ?? null,
+          prerequisite_name: c.prerequisite_name ?? null,
+          prerequisite_passed: c.prerequisite_passed ?? null,
         }));
         setCourses(mappedCourses);
 
@@ -245,6 +254,8 @@ function StudentKelasPageInner() {
 
   // ── Navigation ─────────────────────────────────────────────────────────────
   const openCourse = (course: Course) => {
+    // Blokir akses jika prerequisite belum terpenuhi
+    if (course.prerequisite_passed === false) return;
     setSelectedCourse(course);
     setView('modules');
     fetchModules(course.id);
@@ -319,19 +330,55 @@ function StudentKelasPageInner() {
             <div style={s.grid}>
               {courses.length === 0 ? (
                 <div style={s.emptyState}><BookOpen size={48} color="var(--border-color)" /><h3>Belum ada kelas</h3><p>Anda belum terdaftar di kelas manapun.</p></div>
-              ) : courses.map(course => (
-                <div key={course.id} className="glass-panel" style={s.card} onClick={() => openCourse(course)}>
-                  <div style={s.cardIconWrap}>
-                    <BookOpen size={22} color="var(--azure)" />
+              ) : courses.map(course => {
+                const isLocked = course.prerequisite_passed === false;
+                return (
+                  <div
+                    key={course.id}
+                    className="glass-panel"
+                    style={{
+                      ...s.card,
+                      cursor: isLocked ? 'not-allowed' : 'pointer',
+                      opacity: isLocked ? 0.7 : 1,
+                      position: 'relative',
+                      overflow: 'hidden',
+                    }}
+                    onClick={() => openCourse(course)}
+                  >
+                    {/* Lock overlay badge */}
+                    {isLocked && (
+                      <div style={{
+                        position: 'absolute', top: 10, right: 10,
+                        background: 'rgba(239,68,68,0.15)',
+                        border: '1px solid rgba(239,68,68,0.35)',
+                        borderRadius: 6, padding: '3px 8px',
+                        display: 'flex', alignItems: 'center', gap: 4,
+                        fontSize: '0.65rem', fontWeight: 700, color: '#FF5252',
+                        letterSpacing: '0.04em'
+                      }}>
+                        🔒 TERKUNCI
+                      </div>
+                    )}
+                    <div style={s.cardIconWrap}>
+                      <BookOpen size={22} color={isLocked ? '#888' : 'var(--azure)'} />
+                    </div>
+                    <h3 style={{ ...s.cardTitle, color: isLocked ? 'var(--grey-blue)' : undefined }}>{course.title}</h3>
+                    {isLocked ? (
+                      <p style={{ ...s.cardDesc, color: '#FF5252', fontSize: '0.8rem' }}>
+                        ⚠️ Selesaikan dan lulus <strong>{course.prerequisite_name || 'kelas sebelumnya'}</strong> terlebih dahulu untuk membuka kelas ini.
+                      </p>
+                    ) : (
+                      <p style={s.cardDesc}>{course.description || 'Klik untuk melihat modul dan materi.'}</p>
+                    )}
+                    <div style={s.cardFooter}>
+                      <span style={{ ...s.footerText, color: isLocked ? '#888' : undefined }}>
+                        {isLocked ? '🔒 Perlu Lulus Prasyarat' : <><Layers size={13} /> Lihat Modul</>}
+                      </span>
+                      {!isLocked && <ChevronRight size={16} color="var(--azure)" />}
+                    </div>
                   </div>
-                  <h3 style={s.cardTitle}>{course.title}</h3>
-                  <p style={s.cardDesc}>{course.description || 'Klik untuk melihat modul dan materi.'}</p>
-                  <div style={s.cardFooter}>
-                    <span style={s.footerText}><Layers size={13} /> Lihat Modul</span>
-                    <ChevronRight size={16} color="var(--azure)" />
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
 
