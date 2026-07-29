@@ -345,18 +345,65 @@ export default function StudentDashboard() {
 
                 // Hanya tampilkan pengumuman jika Nilai Akhir sudah ada di database (sudah dikalkulasi/finalisasi tentor)
                 if (finalGradeObj) {
+                  const assessData = assessRes?.data;
+
+                  // 1. Quiz avg — sama dengan kelulusan (quiz tidak dikerjakan = 0, pembagi = total quiz kelas)
+                  const totalCourseQuizzes: number = assessData?.totalCourseQuizzes || 0;
+                  const totalCourseStudyCases: number = assessData?.totalCourseStudyCases || 0;
+
+                  const quizMaxMap: Record<string, number> = {};
+                  (assessData?.quizzes || []).forEach((q: any) => {
+                    const qid = q.uuid_quiz || q.quiz?.uuid_quiz;
+                    if (!qid) return;
+                    const existing = quizMaxMap[qid] || 0;
+                    if (q.score > existing) quizMaxMap[qid] = q.score;
+                  });
+                  const sumQuiz = Object.values(quizMaxMap).reduce((a: number, b: number) => a + b, 0);
+                  const quizAvg = totalCourseQuizzes > 0 ? sumQuiz / totalCourseQuizzes : 0;
+
+                  // 2. Study case avg — sama dengan kelulusan
+                  const scMaxMap: Record<string, number> = {};
+                  (assessData?.studyCases || []).forEach((sc: any) => {
+                    const tid = sc.uuid_tugas;
+                    if (!tid) return;
+                    const score = sc.released_score ?? sc.ai_score ?? 0;
+                    const existing = scMaxMap[tid] || 0;
+                    if (score > existing) scMaxMap[tid] = score;
+                  });
+                  const sumSC = Object.values(scMaxMap).reduce((a: number, b: number) => a + b, 0);
+                  const scAvg = totalCourseStudyCases > 0 ? sumSC / totalCourseStudyCases : 0;
+
+                  // 3. Kehadiran — fetch dari endpoint attendance
+                  let attendancePct = 0;
+                  let hadirCount = 0;
+                  let totalMeetings = 0;
+                  try {
+                    const attRes = await apiGet<{ success: boolean; data: { total_meetings: number; attendances: any[] } }>(
+                      `/api/grades/attendance/${pid}`,
+                      { token: token || undefined, headers }
+                    );
+                    totalMeetings = attRes?.data?.total_meetings || 0;
+                    const myAttendance = (attRes?.data?.attendances || []).find((a: any) => a.uuid_user === userId);
+                    hadirCount = myAttendance?.attendance_count || 0;
+                    attendancePct = totalMeetings > 0 ? Math.min((hadirCount / totalMeetings) * 100, 100) : 0;
+                  } catch { /* skip jika belum ada data attendance */ }
+
+                  // 4. Weighted final score — rumus sama dengan backend dan halaman kelulusan
+                  const computedFinalScore = parseFloat(((attendancePct * 0.15) + (quizAvg * 0.25) + (scAvg * 0.60)).toFixed(1));
+                  const computedIsPassed = computedFinalScore >= 75;
+
                   statuses.push({
-                    final_score: finalGradeObj.final_score,
-                    is_passed: finalGradeObj.is_passed,
+                    final_score: computedFinalScore,
+                    is_passed: computedIsPassed,
                     title: course.nama_pembelajaran || course.title || 'Kelas',
                     created_at: finalGradeObj.created_at || new Date().toISOString(),
                     courseId: pid,
                     scoreBreakdown: {
-                      kehadiran: 0,
-                      kuis: 0,
-                      studi_kasus: 0,
-                      hadir: 0,
-                      total_pertemuan: 0,
+                      kehadiran: attendancePct,
+                      kuis: quizAvg,
+                      studi_kasus: scAvg,
+                      hadir: hadirCount,
+                      total_pertemuan: totalMeetings,
                     }
                   });
                 }
@@ -582,6 +629,41 @@ export default function StudentDashboard() {
                   </div>
                 </div>
 
+                {/* Score Breakdown — sama dengan halaman kelulusan */}
+                {status.scoreBreakdown && (
+                  <div style={{ padding: '0 16px 14px 16px', display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
+                    {/* Kehadiran */}
+                    <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 8, padding: '8px 10px', textAlign: 'center' }}>
+                      <div style={{ fontSize: '0.58rem', color: 'var(--grey-blue)', marginBottom: 2, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Hadir (15%)</div>
+                      <div style={{ fontSize: '0.95rem', fontWeight: 700, color: '#60a5fa' }}>
+                        {(status.scoreBreakdown.kehadiran * 0.15).toFixed(1)}
+                      </div>
+                      <div style={{ fontSize: '0.58rem', color: 'var(--grey)', marginTop: 1 }}>
+                        {status.scoreBreakdown.hadir}/{status.scoreBreakdown.total_pertemuan}x
+                      </div>
+                    </div>
+                    {/* Quiz */}
+                    <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 8, padding: '8px 10px', textAlign: 'center' }}>
+                      <div style={{ fontSize: '0.58rem', color: 'var(--grey-blue)', marginBottom: 2, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Quiz (25%)</div>
+                      <div style={{ fontSize: '0.95rem', fontWeight: 700, color: '#a78bfa' }}>
+                        {(status.scoreBreakdown.kuis * 0.25).toFixed(1)}
+                      </div>
+                      <div style={{ fontSize: '0.58rem', color: 'var(--grey)', marginTop: 1 }}>
+                        Avg {status.scoreBreakdown.kuis.toFixed(1)}
+                      </div>
+                    </div>
+                    {/* Studi Kasus */}
+                    <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 8, padding: '8px 10px', textAlign: 'center' }}>
+                      <div style={{ fontSize: '0.58rem', color: 'var(--grey-blue)', marginBottom: 2, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Studi Kasus (60%)</div>
+                      <div style={{ fontSize: '0.95rem', fontWeight: 700, color: '#c084fc' }}>
+                        {(status.scoreBreakdown.studi_kasus * 0.60).toFixed(1)}
+                      </div>
+                      <div style={{ fontSize: '0.58rem', color: 'var(--grey)', marginTop: 1 }}>
+                        Avg {status.scoreBreakdown.studi_kasus.toFixed(1)}
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             );
           })}
