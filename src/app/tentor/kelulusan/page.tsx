@@ -51,7 +51,7 @@ export default function TentorKelulusanPage() {
   const [recapData, setRecapData] = useState<FinalGrade[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  
+
   // Searching & Pagination
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
@@ -85,6 +85,14 @@ export default function TentorKelulusanPage() {
   const [savingAttendance, setSavingAttendance] = useState(false);
   const [savingMeetings, setSavingMeetings] = useState(false);
   const [attendanceMap, setAttendanceMap] = useState<Record<string, { count: number; total: number }>>({});
+
+  // States for student grade details modal
+  const [showDetailModal, setShowDetailModal] = useState(false);
+  const [detailStudent, setDetailStudent] = useState<any | null>(null);
+  const [loadingDetail, setLoadingDetail] = useState(false);
+  const [studentQuizzes, setStudentQuizzes] = useState<any[]>([]);
+  const [studentStudyCases, setStudentStudyCases] = useState<any[]>([]);
+  const [studentFinalGrade, setStudentFinalGrade] = useState<any | null>(null);
 
   // Toast notifications
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
@@ -162,7 +170,7 @@ export default function TentorKelulusanPage() {
         if (localAttendance) {
           try {
             setAttendanceMap(JSON.parse(localAttendance));
-          } catch {}
+          } catch { }
         } else {
           setAttendanceMap({});
         }
@@ -174,7 +182,7 @@ export default function TentorKelulusanPage() {
         try {
           const userObj = JSON.parse(localUser);
           setVerifierName(userObj.nama_lengkap || userObj.name || userObj.username || 'Tentor');
-        } catch {}
+        } catch { }
       }
 
       // 4. Load verification metadata from localStorage
@@ -182,7 +190,7 @@ export default function TentorKelulusanPage() {
       if (localMeta) {
         try {
           setVerificationMeta(JSON.parse(localMeta));
-        } catch {}
+        } catch { }
       }
 
     } catch (err) {
@@ -225,7 +233,7 @@ export default function TentorKelulusanPage() {
       if (localAttendance) {
         try {
           setAttendanceMap(JSON.parse(localAttendance));
-        } catch {}
+        } catch { }
       } else {
         setAttendanceMap({});
       }
@@ -237,12 +245,12 @@ export default function TentorKelulusanPage() {
   // Menggunakan pembobotan di Frontend: Kehadiran 15%, Kuis 25%, Studi Kasus 60%
   const mergedStudents = students.map(student => {
     const recap = recapData.find(r => r.uuid_user === student.id);
-    
+
     // Ambil data kehadiran dari state lokal (localStorage)
     const attData = attendanceMap[student.id];
     const attendanceCountVal = attData?.count ?? 0;
     const totalMeetingsVal = globalTotalMeetings > 0 ? globalTotalMeetings : 0;
-    
+
     // Nilai Kehadiran = (Hadir / Total) * 100
     const attendanceScore = totalMeetingsVal > 0 ? (attendanceCountVal / totalMeetingsVal) * 100 : 0;
 
@@ -436,6 +444,64 @@ export default function TentorKelulusanPage() {
     }
   };
 
+  // Open Grade Detail Modal and fetch student's full grade details from ALL courses
+  const handleOpenDetailModal = async (student: any) => {
+    setDetailStudent(student);
+    setShowDetailModal(true);
+    setLoadingDetail(true);
+    setStudentQuizzes([]);
+    setStudentStudyCases([]);
+    setStudentFinalGrade(null);
+
+    try {
+      const auth = getAuthHeaders();
+      
+      // Fetch assessment dari SEMUA kelas yang ada, karena student bisa mengerjakan
+      // di kelas yang berbeda dari yang sedang ditampilkan tentor
+      const allCourseIds = courses.map(c => c.uuid_pembelajaran).filter(Boolean);
+      
+      const allResults = await Promise.allSettled(
+        allCourseIds.map(courseId =>
+          apiGet<{ success: boolean; data: { quizzes: any[]; studyCases: any[]; finalGrade: any } }>(
+            `/api/grades/assessment/${courseId}/${student.id}`,
+            { token: auth.token, headers: auth.headers }
+          )
+        )
+      );
+
+      // Gabungkan semua quiz dan studi kasus dari semua kelas
+      const allQuizzes: any[] = [];
+      const allStudyCases: any[] = [];
+      let latestFinalGrade: any = null;
+
+      allResults.forEach((result, idx) => {
+        if (result.status === 'fulfilled' && result.value?.success && result.value?.data) {
+          const data = result.value.data;
+          if (data.quizzes?.length) allQuizzes.push(...data.quizzes);
+          if (data.studyCases?.length) allStudyCases.push(...data.studyCases);
+          // Pakai finalGrade dari kelas yang dipilih tentor jika ada, atau ambil yang tersedia
+          if (data.finalGrade) {
+            if (allCourseIds[idx] === selectedCourseId) {
+              latestFinalGrade = data.finalGrade;
+            } else if (!latestFinalGrade) {
+              latestFinalGrade = data.finalGrade;
+            }
+          }
+        }
+      });
+
+      setStudentQuizzes(allQuizzes);
+      setStudentStudyCases(allStudyCases);
+      setStudentFinalGrade(latestFinalGrade);
+
+    } catch (err) {
+      console.error('Failed to fetch student assessment details:', err);
+      showToast('Gagal memuat detail nilai siswa.', 'error');
+    } finally {
+      setLoadingDetail(false);
+    }
+  };
+
   // Submit Finalization
   const handleFinalize = async () => {
     if (!selectedCourseId) return;
@@ -477,7 +543,7 @@ export default function TentorKelulusanPage() {
             },
             body: JSON.stringify({ grades: gradesToSubmit })
           });
-          
+
           if (response.ok) {
             const data = await response.json();
             if (data?.success) {
@@ -598,37 +664,19 @@ export default function TentorKelulusanPage() {
           />
         </div>
 
-        {/* Total Pertemuan Global */}
+
+        {/* Info Total Pertemuan (read-only — diset oleh Lecturer saat buat/edit kelas) */}
         <div style={s.quotaInputWrap}>
           <span style={s.quotaLabel}>Total Pertemuan:</span>
-          <input
-            type="number"
-            min="0"
-            max="200"
-            value={globalTotalMeetings}
-            onChange={(e) => setGlobalTotalMeetings(Math.max(0, parseInt(e.target.value) || 0))}
-            style={s.quotaInput}
-            placeholder="0"
-          />
-          <button
-            onClick={handleSaveTotalMeetings}
-            disabled={savingMeetings || globalTotalMeetings <= 0 || !selectedCourseId}
-            style={{
-              ...s.verifyBtn,
-              background: 'rgba(99, 102, 241, 0.12)',
-              borderColor: 'rgba(99, 102, 241, 0.25)',
-              color: '#a5b4fc',
-              opacity: savingMeetings || globalTotalMeetings <= 0 ? 0.6 : 1,
-              cursor: savingMeetings || globalTotalMeetings <= 0 ? 'not-allowed' : 'pointer',
-              padding: '6px 12px',
-              fontSize: '0.78rem',
-              marginLeft: '8px'
-            }}
-          >
-            {savingMeetings ? <Loader2 size={12} style={{ animation: 'spin 1s linear infinite' }} /> : <Check size={12} />}
-            <span>Set</span>
-          </button>
+          <span style={{ fontSize: '0.92rem', fontWeight: 700, color: globalTotalMeetings > 0 ? '#a5b4fc' : 'var(--grey)', paddingLeft: 8 }}>
+            {globalTotalMeetings > 0 ? `${globalTotalMeetings} pertemuan` : '— belum diset'}
+          </span>
         </div>
+        {globalTotalMeetings === 0 && (
+          <div style={{ fontSize: '0.76rem', color: 'var(--grey)', padding: '4px 0 8px 0', lineHeight: 1.5 }}>
+            ⚠ Total pertemuan belum diset. Harap lecturer mengatur nilai ini di halaman <strong>Edit Kelas</strong>.
+          </div>
+        )}
 
         <div style={s.searchWrap}>
           <Search size={16} color="var(--grey)" />
@@ -707,8 +755,8 @@ export default function TentorKelulusanPage() {
                             background: student.verification_status === 'Lulus'
                               ? '#00C853'
                               : student.verification_status === 'Tidak Lulus'
-                              ? '#FF3D00'
-                              : 'rgba(180,180,200,0.5)',
+                                ? '#FF3D00'
+                                : 'rgba(180,180,200,0.5)',
                           }} />
                           <span style={{
                             fontSize: '0.8rem',
@@ -716,8 +764,8 @@ export default function TentorKelulusanPage() {
                             color: student.verification_status === 'Lulus'
                               ? '#00C853'
                               : student.verification_status === 'Tidak Lulus'
-                              ? '#FF3D00'
-                              : 'var(--grey-blue)',
+                                ? '#FF3D00'
+                                : 'var(--grey-blue)',
                             whiteSpace: 'nowrap',
                           }}>
                             {student.verification_status === 'Belum Diverifikasi' ? 'Pending' : student.verification_status}
@@ -730,6 +778,18 @@ export default function TentorKelulusanPage() {
                         </span>
                       </td>
                       <td style={{ ...s.td, textAlign: 'right', display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+                        <button
+                          onClick={() => handleOpenDetailModal(student)}
+                          style={{
+                            ...s.verifyBtn,
+                            background: 'rgba(0, 200, 83, 0.1)',
+                            borderColor: 'rgba(0, 200, 83, 0.25)',
+                            color: '#00C853'
+                          }}
+                        >
+                          <ClipboardList size={13} />
+                          <span>Detail Nilai</span>
+                        </button>
                         <button
                           onClick={() => handleCalculateGrade(student.id)}
                           disabled={calculatingUserIds[student.id]}
@@ -768,7 +828,7 @@ export default function TentorKelulusanPage() {
                         </button>
                       </td>
                     </tr>
-                    
+
                     {/* Quota limit line separator */}
                     {showBoundaryLine && globalIndex < filteredStudents.length && (
                       <tr>
@@ -1009,6 +1069,166 @@ export default function TentorKelulusanPage() {
                   <button type="button" onClick={handleSaveStatus} style={s.submitBtn}>Simpan Perubahan</button>
                 </div>
               </div>
+            </div>
+          </div>
+        </Portal>
+      )}
+
+      {/* Modal Detail Nilai Breakdown */}
+      {showDetailModal && detailStudent && (
+        <Portal>
+          <div style={s.modalOverlay} onClick={() => setShowDetailModal(false)}>
+            <div style={{ ...s.modalContent, maxWidth: '640px' }} className="glass-panel" onClick={e => e.stopPropagation()}>
+              <div style={s.modalHeader}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <div style={{ width: 36, height: 36, borderRadius: 10, background: 'rgba(0, 200, 83, 0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <GraduationCap size={18} color="#00C853" />
+                  </div>
+                  <div>
+                    <h3 style={s.modalTitle}>Detail Nilai Siswa</h3>
+                    <span style={s.modalSubtitle}>{detailStudent.full_name} • @{detailStudent.username}</span>
+                  </div>
+                </div>
+                <button onClick={() => setShowDetailModal(false)} style={s.closeBtn}>
+                  <X size={18} />
+                </button>
+              </div>
+
+              {loadingDetail ? (
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '40px 0' }}>
+                  <Loader2 size={32} color="#00C853" style={{ animation: 'spin 1s linear infinite' }} />
+                  <span style={{ marginTop: 12, fontSize: '0.88rem', color: 'var(--grey-blue)' }}>Memuat rincian nilai...</span>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+                  {/* KPI Summary Block */}
+                  {(() => {
+                    const attData = attendanceMap[detailStudent.id];
+                    const hadirCount = attData?.count ?? 0;
+                    const totalMeetings = globalTotalMeetings > 0 ? globalTotalMeetings : 0;
+                    const attendanceScore = totalMeetings > 0 ? (hadirCount / totalMeetings) * 100 : 0;
+
+                    // Kuis score calculation (skor tertinggi per kuis unik)
+                    // Data dari grade-center/students: {uuid_attempt, quiz: {uuid_quiz, title}, score, ...}
+                    const quizMaxMap: Record<string, number> = {};
+                    for (const q of studentQuizzes) {
+                      const qId = q.quiz?.uuid_quiz || q.uuid_quiz;
+                      if (qId) quizMaxMap[qId] = Math.max(quizMaxMap[qId] ?? 0, q.score ?? 0);
+                    }
+                    const quizScores = Object.values(quizMaxMap);
+                    const quizAvg = quizScores.length > 0
+                      ? quizScores.reduce((a, b) => a + b, 0) / quizScores.length
+                      : 0;
+
+                    // Studi kasus calculation (skor tertinggi per tugas unik)
+                    // Data dari review-queue: {uuid_tugas, tugas: {title, uuid_pembelajaran}, released_score, ai_score}
+                    const scMaxMap: Record<string, number> = {};
+                    for (const sc of studentStudyCases) {
+                      const scId = sc.uuid_tugas;
+                      const score = sc.released_score ?? sc.ai_score ?? 0;
+                      scMaxMap[scId] = Math.max(scMaxMap[scId] ?? 0, score);
+                    }
+                    const scScores = Object.values(scMaxMap);
+                    const scAvg = scScores.length > 0
+                      ? scScores.reduce((a, b) => a + b, 0) / scScores.length
+                      : 0;
+
+                    const weightedScore = Math.min(100, Math.round(
+                      (attendanceScore * 0.15) +
+                      (quizAvg * 0.25) +
+                      (scAvg * 0.60)
+                    ));
+
+                    return (
+                      <>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 10 }}>
+                          <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 10, padding: 12, textAlign: 'center' }}>
+                            <div style={{ fontSize: '0.65rem', color: 'var(--grey-blue)', marginBottom: 4 }}>KEHADIRAN (15%)</div>
+                            <strong style={{ fontSize: '1.2rem', color: '#a5b4fc' }}>{attendanceScore.toFixed(1)}</strong>
+                            <div style={{ fontSize: '0.65rem', color: 'var(--grey)', marginTop: 2 }}>{hadirCount}/{totalMeetings} pertemuan</div>
+                          </div>
+                          <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 10, padding: 12, textAlign: 'center' }}>
+                            <div style={{ fontSize: '0.65rem', color: 'var(--grey-blue)', marginBottom: 4 }}>KUIS (25%)</div>
+                            <strong style={{ fontSize: '1.2rem', color: '#38bdf8' }}>{quizAvg.toFixed(1)}</strong>
+                            <div style={{ fontSize: '0.65rem', color: 'var(--grey)', marginTop: 2 }}>{quizScores.length} Kuis diikuti</div>
+                          </div>
+                          <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 10, padding: 12, textAlign: 'center' }}>
+                            <div style={{ fontSize: '0.65rem', color: 'var(--grey-blue)', marginBottom: 4 }}>STUDI KASUS (60%)</div>
+                            <strong style={{ fontSize: '1.2rem', color: '#c084fc' }}>{scAvg.toFixed(1)}</strong>
+                            <div style={{ fontSize: '0.65rem', color: 'var(--grey)', marginTop: 2 }}>{scScores.length} Tugas dikumpulkan</div>
+                          </div>
+                          <div style={{ background: weightedScore >= 75 ? 'rgba(0, 200, 83, 0.08)' : 'rgba(239, 68, 68, 0.08)', border: `1px solid ${weightedScore >= 75 ? 'rgba(0, 200, 83, 0.2)' : 'rgba(239, 68, 68, 0.2)'}`, borderRadius: 10, padding: 12, textAlign: 'center' }}>
+                            <div style={{ fontSize: '0.65rem', color: weightedScore >= 75 ? '#00C853' : '#FF5252', fontWeight: 700, marginBottom: 4 }}>NILAI AKHIR</div>
+                            <strong style={{ fontSize: '1.4rem', color: weightedScore >= 75 ? '#00C853' : '#FF5252' }}>{weightedScore}</strong>
+                            <div style={{ fontSize: '0.65rem', color: weightedScore >= 75 ? '#00C853' : '#FF5252', fontWeight: 600, marginTop: 2 }}>
+                              {weightedScore >= 75 ? '✓ Lulus' : '✗ Belum Lulus'}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* List detail kuis */}
+                        <div>
+                          <h4 style={{ margin: '0 0 8px 0', fontSize: '0.85rem', color: '#fff', display: 'flex', alignItems: 'center', gap: 6 }}>
+                            <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#38bdf8' }} />
+                            Rincian Pengerjaan Kuis
+                          </h4>
+                          {studentQuizzes.length === 0 ? (
+                            <div style={{ background: 'rgba(255,255,255,0.01)', border: '1px dashed rgba(255,255,255,0.05)', borderRadius: 8, padding: '12px 14px', fontSize: '0.78rem', color: 'var(--grey-blue)' }}>
+                              Belum ada pengerjaan kuis.
+                            </div>
+                          ) : (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: '180px', overflowY: 'auto', paddingRight: 4 }}>
+                              {studentQuizzes.map((q, idx) => (
+                                <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', padding: '10px 14px', borderRadius: 8 }}>
+                                  <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                    <span style={{ fontSize: '0.82rem', fontWeight: 600, color: '#fff' }}>{q.quiz?.title || 'Kuis'}</span>
+                                    <span style={{ fontSize: '0.7rem', color: 'var(--grey)' }}>
+                                      {q.is_passed ? '✓ Lulus' : '✗ Belum Lulus'} • Selesai: {q.completed_at ? new Date(q.completed_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : '-'}
+                                    </span>
+                                  </div>
+                                  <strong style={{ fontSize: '0.9rem', color: (q.score ?? 0) >= 75 ? '#00C853' : '#FFA826' }}>{(q.score ?? 0).toFixed(1)}</strong>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* List detail studi kasus */}
+                        <div>
+                          <h4 style={{ margin: '0 0 8px 0', fontSize: '0.85rem', color: '#fff', display: 'flex', alignItems: 'center', gap: 6 }}>
+                            <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#c084fc' }} />
+                            Rincian Pengumpulan Studi Kasus
+                          </h4>
+                          {studentStudyCases.length === 0 ? (
+                            <div style={{ background: 'rgba(255,255,255,0.01)', border: '1px dashed rgba(255,255,255,0.05)', borderRadius: 8, padding: '12px 14px', fontSize: '0.78rem', color: 'var(--grey-blue)' }}>
+                              Belum ada pengumpulan studi kasus.
+                            </div>
+                          ) : (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: '180px', overflowY: 'auto', paddingRight: 4 }}>
+                              {studentStudyCases.map((sc, idx) => {
+                                const score = sc.released_score ?? sc.ai_score ?? 0;
+                                return (
+                                  <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', padding: '10px 14px', borderRadius: 8 }}>
+                                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                      <span style={{ fontSize: '0.82rem', fontWeight: 600, color: '#fff' }}>{sc.tugas?.title || 'Tugas Studi Kasus'}</span>
+                                      <span style={{ fontSize: '0.7rem', color: 'var(--grey)' }}>Status review: <strong style={{ color: sc.lecture_status === 'Approved' ? '#00C853' : '#FFA826' }}>{sc.lecture_status}</strong></span>
+                                    </div>
+                                    <strong style={{ fontSize: '0.9rem', color: score >= 75 ? '#00C853' : '#FFA826' }}>{score}</strong>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
+                      </>
+                    );
+                  })()}
+
+                  <div style={{ ...s.modalFooter, borderTop: 'none', paddingTop: 0 }}>
+                    <button type="button" onClick={() => setShowDetailModal(false)} style={s.cancelBtn}>Tutup</button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </Portal>

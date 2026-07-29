@@ -45,7 +45,7 @@ export default function CourseManagement() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [showAiModal, setShowAiModal] = useState(false);
   const [currentCourse, setCurrentCourse] = useState<Course | null>(null);
-  const [form, setForm] = useState({ title: '', description: '', scheduled_at: '', prerequisite_uuid: '' });
+  const [form, setForm] = useState({ title: '', description: '', scheduled_at: '', prerequisite_uuid: '', total_meetings: 0 });
 
   // Publish & Assign Modal State
   const [publishCourseId, setPublishCourseId] = useState<string | null>(null);
@@ -270,7 +270,7 @@ export default function CourseManagement() {
         } catch {}
       }
 
-      await apiPost('/api/pembelajaran', {
+      const result = await apiPost<any>('/api/pembelajaran', {
         title: form.title,
         description: form.description,
         scheduled_at: form.scheduled_at || null,
@@ -281,8 +281,14 @@ export default function CourseManagement() {
         headers: auth.headers
       });
 
+      // Simpan total pertemuan ke localStorage jika diisi
+      const newCourseId = result?.data?.uuid_pembelajaran || result?.uuid_pembelajaran;
+      if (newCourseId && form.total_meetings > 0) {
+        localStorage.setItem(`nalara_meetings_${newCourseId}`, String(form.total_meetings));
+      }
+
       setShowCreateModal(false);
-      setForm({ title: '', description: '', scheduled_at: '', prerequisite_uuid: '' });
+      setForm({ title: '', description: '', scheduled_at: '', prerequisite_uuid: '', total_meetings: 0 });
       fetchCourses();
       showToast('Kelas berhasil dibuat!');
     } catch (err) {
@@ -320,9 +326,14 @@ export default function CourseManagement() {
 
       if (!res.ok) throw new Error('Gagal memperbarui pembelajaran.');
 
+      // Simpan total pertemuan ke localStorage jika diisi
+      if (currentCourse.id && form.total_meetings > 0) {
+        localStorage.setItem(`nalara_meetings_${currentCourse.id}`, String(form.total_meetings));
+      }
+
       setShowEditModal(false);
       setCurrentCourse(null);
-      setForm({ title: '', description: '', scheduled_at: '', prerequisite_uuid: '' });
+      setForm({ title: '', description: '', scheduled_at: '', prerequisite_uuid: '', total_meetings: 0 });
       fetchCourses();
       showToast('Kelas berhasil diperbarui!');
     } catch (err) {
@@ -518,17 +529,20 @@ export default function CourseManagement() {
   };
 
   const openCreateModal = () => {
-    setForm({ title: '', description: '', scheduled_at: '', prerequisite_uuid: '' });
+    setForm({ title: '', description: '', scheduled_at: '', prerequisite_uuid: '', total_meetings: 0 });
     setShowCreateModal(true);
   };
 
   const openEditModal = (course: Course) => {
     setCurrentCourse(course);
+    // Load existing total meetings dari localStorage jika ada
+    const savedMeetings = localStorage.getItem(`nalara_meetings_${course.id}`);
     setForm({ 
       title: course.title, 
       description: course.description || '',
       scheduled_at: course.scheduled_at ? new Date(course.scheduled_at).toISOString().slice(0, 16) : '',
-      prerequisite_uuid: course.prerequisite_uuid || ''
+      prerequisite_uuid: course.prerequisite_uuid || '',
+      total_meetings: savedMeetings ? (parseInt(savedMeetings) || 0) : 0
     });
     setShowEditModal(true);
   };
@@ -782,6 +796,21 @@ export default function CourseManagement() {
                     ))}
                   </select>
                 </div>
+                <div style={s.formGroup}>
+                  <label style={s.label}>Total Pertemuan (Kehadiran)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    max="200"
+                    value={form.total_meetings}
+                    onChange={(e) => setForm({ ...form, total_meetings: Math.max(0, parseInt(e.target.value) || 0) })}
+                    placeholder="Contoh: 16"
+                    style={s.input}
+                  />
+                  <small style={{ color: '#64748b', marginTop: 4, display: 'block', fontSize: '0.78rem' }}>
+                    Jumlah total pertemuan kelas — digunakan sebagai dasar perhitungan nilai kehadiran siswa.
+                  </small>
+                </div>
                 <div style={s.modalFooter}>
                   <button type="button" onClick={() => setShowCreateModal(false)} style={s.cancelBtn}>Cancel</button>
                   <button type="submit" style={s.submitBtn}>Create Course</button>
@@ -844,6 +873,21 @@ export default function CourseManagement() {
                       <option key={c.id} value={c.id}>{c.title}</option>
                     ))}
                   </select>
+                </div>
+                <div style={s.formGroup}>
+                  <label style={s.label}>Total Pertemuan (Kehadiran)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    max="200"
+                    value={form.total_meetings}
+                    onChange={(e) => setForm({ ...form, total_meetings: Math.max(0, parseInt(e.target.value) || 0) })}
+                    placeholder="Contoh: 16"
+                    style={s.input}
+                  />
+                  <small style={{ color: '#64748b', marginTop: 4, display: 'block', fontSize: '0.78rem' }}>
+                    Jumlah total pertemuan kelas — digunakan sebagai dasar perhitungan nilai kehadiran siswa.
+                  </small>
                 </div>
                 <div style={s.modalFooter}>
                   <button type="button" onClick={() => {

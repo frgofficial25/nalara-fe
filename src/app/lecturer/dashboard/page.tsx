@@ -296,7 +296,7 @@ export default function LecturerDashboard() {
                   </div>
 
                   <button
-                    onClick={() => router.push(`/lecturer/tugas`)}
+                    onClick={() => router.push(`/lecturer/penilaian`)}
                     style={s.ctaButton}
                   >
                     Lanjutkan Pemberian Penilaian <ArrowRight size={16} />

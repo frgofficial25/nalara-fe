@@ -71,6 +71,14 @@ interface GraduationStatus {
   is_passed: boolean;
   title: string;
   created_at: string;
+  courseId: string;
+  scoreBreakdown?: {
+    kehadiran: number;    // skor mentah 0-100
+    kuis: number;        // skor mentah 0-100
+    studi_kasus: number; // skor mentah 0-100
+    hadir: number;       // jumlah hadir
+    total_pertemuan: number;
+  };
 }
 
 type StudentDashboardApiResponse = StudentDashboardResponse | { success: boolean; data: StudentDashboardResponse };
@@ -331,14 +339,70 @@ export default function StudentDashboard() {
                   `/api/grades/assessment/${pid}/${userId}`,
                   { token: token || undefined, headers }
                 );
-                
+
                 const finalGradeObj = statusRes?.data?.finalGrade;
-                if (finalGradeObj) {
+                const quizzesRaw: any[]    = statusRes?.data?.quizzes    || [];
+                const studyCasesRaw: any[] = statusRes?.data?.studyCases || [];
+
+                // Hitung rata-rata skor kuis (skor tertinggi per quiz unik)
+                const quizMaxMap: Record<string, number> = {};
+                for (const q of quizzesRaw) {
+                  const qId = q.uuid_quiz;
+                  const sc = q.score ?? 0;
+                  quizMaxMap[qId] = Math.max(quizMaxMap[qId] ?? 0, sc);
+                }
+                const quizScores = Object.values(quizMaxMap);
+                const quizAvg = quizScores.length > 0
+                  ? quizScores.reduce((a, b) => a + b, 0) / quizScores.length
+                  : 0;
+
+                // Hitung rata-rata skor studi kasus (skor tertinggi per tugas unik)
+                const scMaxMap: Record<string, number> = {};
+                for (const sc of studyCasesRaw) {
+                  const scId = sc.uuid_tugas;
+                  const score = sc.released_score ?? sc.ai_score ?? 0;
+                  scMaxMap[scId] = Math.max(scMaxMap[scId] ?? 0, score);
+                }
+                const scScores = Object.values(scMaxMap);
+                const scAvg = scScores.length > 0
+                  ? scScores.reduce((a, b) => a + b, 0) / scScores.length
+                  : 0;
+
+                // Ambil data kehadiran dari localStorage
+                const totalMeetings = parseInt(localStorage.getItem(`nalara_meetings_${pid}`) || '0') || 0;
+                let hadirCount = 0;
+                try {
+                  const attRaw = localStorage.getItem(`nalara_attendance_${pid}`);
+                  if (attRaw) {
+                    const attMap = JSON.parse(attRaw);
+                    hadirCount = attMap[userId]?.count ?? 0;
+                  }
+                } catch {}
+                const attendanceScore = totalMeetings > 0
+                  ? Math.min(100, (hadirCount / totalMeetings) * 100)
+                  : 0;
+
+                // Hitung nilai akhir tertimbang
+                const finalWeighted = Math.min(100, Math.round(
+                  (attendanceScore * 0.15) +
+                  (quizAvg         * 0.25) +
+                  (scAvg           * 0.60)
+                ));
+
+                if (finalGradeObj || quizScores.length > 0 || scScores.length > 0) {
                   statuses.push({
-                    final_score: finalGradeObj.final_score,
-                    is_passed: finalGradeObj.is_passed,
+                    final_score: finalGradeObj ? finalWeighted : finalWeighted,
+                    is_passed: finalWeighted >= 75,
                     title: course.nama_pembelajaran || course.title || 'Kelas',
-                    created_at: finalGradeObj.created_at
+                    created_at: finalGradeObj?.created_at || new Date().toISOString(),
+                    courseId: pid,
+                    scoreBreakdown: {
+                      kehadiran: Math.round(attendanceScore * 10) / 10,
+                      kuis: Math.round(quizAvg * 10) / 10,
+                      studi_kasus: Math.round(scAvg * 10) / 10,
+                      hadir: hadirCount,
+                      total_pertemuan: totalMeetings,
+                    }
                   });
                 }
               } catch {
@@ -475,68 +539,96 @@ export default function StudentDashboard() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 24 }}>
           {graduationStatuses.map((status, idx) => {
             const isPassed = status.is_passed;
+            const bd = status.scoreBreakdown;
             return (
               <div
                 key={idx}
                 className="glass-panel"
                 style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 16,
-                  padding: '16px 20px',
                   borderRadius: 14,
                   background: isPassed
                     ? 'linear-gradient(135deg, rgba(0,200,83,0.08) 0%, rgba(0,230,100,0.04) 100%)'
                     : 'linear-gradient(135deg, rgba(255,82,82,0.08) 0%, rgba(200,0,0,0.04) 100%)',
                   border: `1px solid ${isPassed ? 'rgba(0, 200, 83, 0.22)' : 'rgba(255, 82, 82, 0.22)'}`,
+                  overflow: 'hidden'
                 }}
               >
-                <div style={{
-                  width: 44,
-                  height: 44,
-                  borderRadius: 12,
-                  flexShrink: 0,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  background: isPassed ? 'rgba(0, 200, 83, 0.15)' : 'rgba(255, 82, 82, 0.15)'
-                }}>
-                  {isPassed
-                    ? <Award size={22} color="#00C853" />
-                    : <XCircle size={22} color="#FF5252" />
-                  }
-                </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 2 }}>
-                    <span style={{
-                      fontSize: '0.7rem',
-                      fontWeight: 700,
-                      letterSpacing: '0.06em',
-                      textTransform: 'uppercase',
-                      color: isPassed ? '#00C853' : '#FF5252',
-                      background: isPassed ? 'rgba(0,200,83,0.12)' : 'rgba(255,82,82,0.12)',
-                      padding: '2px 8px',
-                      borderRadius: 5,
-                      border: `1px solid ${isPassed ? 'rgba(0,200,83,0.25)' : 'rgba(255,82,82,0.25)'}`
-                    }}>
-                      {isPassed ? '✓ LULUS' : '✗ BELUM LULUS'}
-                    </span>
+                {/* Header row */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '16px 20px' }}>
+                  <div style={{
+                    width: 44, height: 44, borderRadius: 12, flexShrink: 0,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    background: isPassed ? 'rgba(0, 200, 83, 0.15)' : 'rgba(255, 82, 82, 0.15)'
+                  }}>
+                    {isPassed
+                      ? <Award size={22} color="#00C853" />
+                      : <XCircle size={22} color="#FF5252" />
+                    }
                   </div>
-                  <p style={{ margin: 0, fontSize: '0.88rem', fontWeight: 600, color: '#fff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                    {status.title}
-                  </p>
-                  {!isPassed && (
-                    <p style={{ margin: '2px 0 0', fontSize: '0.76rem', color: 'var(--grey-blue)' }}>
-                      Terus tingkatkan nilai kuis, studi kasus, dan kehadiran kamu!
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 2 }}>
+                      <span style={{
+                        fontSize: '0.7rem', fontWeight: 700, letterSpacing: '0.06em',
+                        textTransform: 'uppercase',
+                        color: isPassed ? '#00C853' : '#FF5252',
+                        background: isPassed ? 'rgba(0,200,83,0.12)' : 'rgba(255,82,82,0.12)',
+                        padding: '2px 8px', borderRadius: 5,
+                        border: `1px solid ${isPassed ? 'rgba(0,200,83,0.25)' : 'rgba(255,82,82,0.25)'}`
+                      }}>
+                        {isPassed ? '✓ LULUS' : '✗ BELUM LULUS'}
+                      </span>
+                    </div>
+                    <p style={{ margin: 0, fontSize: '0.88rem', fontWeight: 600, color: '#fff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {status.title}
                     </p>
-                  )}
-                </div>
-                <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                  <div style={{ fontSize: '1.5rem', fontWeight: 800, color: isPassed ? '#00C853' : '#FF5252', lineHeight: 1 }}>
-                    {status.final_score.toFixed(1)}
+                    {!isPassed && (
+                      <p style={{ margin: '2px 0 0', fontSize: '0.76rem', color: 'var(--grey-blue)' }}>
+                        Terus tingkatkan nilai kuis, studi kasus, dan kehadiran kamu!
+                      </p>
+                    )}
                   </div>
-                  <div style={{ fontSize: '0.7rem', color: 'var(--grey-blue)', marginTop: 2 }}>Nilai Akhir</div>
+                  <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                    <div style={{ fontSize: '1.5rem', fontWeight: 800, color: isPassed ? '#00C853' : '#FF5252', lineHeight: 1 }}>
+                      {status.final_score.toFixed(1)}
+                    </div>
+                    <div style={{ fontSize: '0.7rem', color: 'var(--grey-blue)', marginTop: 2 }}>Nilai Akhir</div>
+                  </div>
                 </div>
+
+                {/* Breakdown nilai */}
+                {bd && (
+                  <div style={{
+                    display: 'grid', gridTemplateColumns: '1fr 1fr 1fr',
+                    borderTop: `1px solid ${isPassed ? 'rgba(0,200,83,0.12)' : 'rgba(255,82,82,0.12)'}`,
+                  }}>
+                    {/* Kehadiran 15% */}
+                    <div style={{ padding: '10px 16px', textAlign: 'center', borderRight: '1px solid rgba(255,255,255,0.06)' }}>
+                      <div style={{ fontSize: '0.65rem', color: 'var(--grey-blue)', marginBottom: 2 }}>KEHADIRAN (15%)</div>
+                      <div style={{ fontSize: '1.05rem', fontWeight: 800, color: bd.kehadiran >= 75 ? '#00C853' : bd.kehadiran >= 50 ? '#FFA826' : '#FF5252' }}>
+                        {bd.kehadiran.toFixed(1)}
+                      </div>
+                      <div style={{ fontSize: '0.68rem', color: 'var(--grey)', marginTop: 1 }}>
+                        {bd.total_pertemuan > 0 ? `${bd.hadir}/${bd.total_pertemuan} pertemuan` : 'Belum diset'}
+                      </div>
+                    </div>
+                    {/* Kuis 25% */}
+                    <div style={{ padding: '10px 16px', textAlign: 'center', borderRight: '1px solid rgba(255,255,255,0.06)' }}>
+                      <div style={{ fontSize: '0.65rem', color: 'var(--grey-blue)', marginBottom: 2 }}>KUIS (25%)</div>
+                      <div style={{ fontSize: '1.05rem', fontWeight: 800, color: bd.kuis >= 75 ? '#00C853' : bd.kuis >= 55 ? '#FFA826' : '#FF5252' }}>
+                        {bd.kuis > 0 ? bd.kuis.toFixed(1) : '—'}
+                      </div>
+                      <div style={{ fontSize: '0.68rem', color: 'var(--grey)', marginTop: 1 }}>Rata-rata kuis</div>
+                    </div>
+                    {/* Studi Kasus 60% */}
+                    <div style={{ padding: '10px 16px', textAlign: 'center' }}>
+                      <div style={{ fontSize: '0.65rem', color: 'var(--grey-blue)', marginBottom: 2 }}>STUDI KASUS (60%)</div>
+                      <div style={{ fontSize: '1.05rem', fontWeight: 800, color: bd.studi_kasus >= 75 ? '#00C853' : bd.studi_kasus >= 55 ? '#FFA826' : '#FF5252' }}>
+                        {bd.studi_kasus > 0 ? bd.studi_kasus.toFixed(1) : '—'}
+                      </div>
+                      <div style={{ fontSize: '0.68rem', color: 'var(--grey)', marginTop: 1 }}>Rata-rata studi kasus</div>
+                    </div>
+                  </div>
+                )}
               </div>
             );
           })}
