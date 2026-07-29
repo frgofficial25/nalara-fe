@@ -6,7 +6,7 @@ import {
   RefreshCw, ShieldAlert, ChevronRight, Play, Award, XCircle, Bell
 } from 'lucide-react';
 import AgendaSection from '@/components/dashboard/AgendaSection';
-import { apiGet } from '@/lib/api';
+import { apiGet, apiPost } from '@/lib/api';
 import { getStoredToken } from '@/services/auth';
 import { useRouter } from 'next/navigation';
 
@@ -335,82 +335,28 @@ export default function StudentDashboard() {
               const pid = course.uuid_pembelajaran || course.id;
               if (!pid) return;
               try {
-                const statusRes = await apiGet<{ success: boolean; data: any }>(
+                // Fetch dari endpoint assessment student
+                const assessRes = await apiGet<{ success: boolean; data: any }>(
                   `/api/grades/assessment/${pid}/${userId}`,
                   { token: token || undefined, headers }
                 );
 
-                const finalGradeObj = statusRes?.data?.finalGrade;
-                const quizzesRaw: any[]    = statusRes?.data?.quizzes    || [];
-                const studyCasesRaw: any[] = statusRes?.data?.studyCases || [];
+                const finalGradeObj = assessRes?.data?.finalGrade;
 
-                // Hitung rata-rata skor kuis (skor tertinggi per quiz unik)
-                const quizMaxMap: Record<string, number> = {};
-                for (const q of quizzesRaw) {
-                  const qId = q.uuid_quiz;
-                  const sc = q.score ?? 0;
-                  quizMaxMap[qId] = Math.max(quizMaxMap[qId] ?? 0, sc);
-                }
-                const quizScores = Object.values(quizMaxMap);
-                const quizAvg = quizScores.length > 0
-                  ? quizScores.reduce((a, b) => a + b, 0) / quizScores.length
-                  : 0;
-
-                // Hitung rata-rata skor studi kasus (skor tertinggi per tugas unik)
-                const scMaxMap: Record<string, number> = {};
-                for (const sc of studyCasesRaw) {
-                  const scId = sc.uuid_tugas;
-                  const score = sc.released_score ?? sc.ai_score ?? 0;
-                  scMaxMap[scId] = Math.max(scMaxMap[scId] ?? 0, score);
-                }
-                const scScores = Object.values(scMaxMap);
-                const scAvg = scScores.length > 0
-                  ? scScores.reduce((a, b) => a + b, 0) / scScores.length
-                  : 0;
-
-                // Ambil data kehadiran dari localStorage
-                const totalMeetings = parseInt(localStorage.getItem(`nalara_meetings_${pid}`) || '0') || 0;
-                let hadirCount = 0;
-                try {
-                  const attRaw = localStorage.getItem(`nalara_attendance_${pid}`);
-                  if (attRaw) {
-                    const attMap = JSON.parse(attRaw);
-                    hadirCount = attMap[userId]?.count ?? 0;
-                  }
-                } catch {}
-                const attendanceScore = totalMeetings > 0
-                  ? Math.min(100, (hadirCount / totalMeetings) * 100)
-                  : 0;
-
-                // Hitung nilai akhir tertimbang
-                const finalWeighted = Math.min(100, Math.round(
-                  (attendanceScore * 0.15) +
-                  (quizAvg         * 0.25) +
-                  (scAvg           * 0.60)
-                ));
-
-                // Gunakan final_score dari database (FinalGrade) agar konsisten dengan tampilan tentor.
-                // Kalkulasi weighted hanya sebagai fallback jika belum ada data di database.
-                const displayScore = finalGradeObj
-                  ? finalGradeObj.final_score
-                  : finalWeighted;
-                const displayPassed = finalGradeObj
-                  ? finalGradeObj.is_passed
-                  : finalWeighted >= 75;
-
-                if (finalGradeObj || quizScores.length > 0 || scScores.length > 0) {
+                // Hanya tampilkan pengumuman jika Nilai Akhir sudah ada di database (sudah dikalkulasi/finalisasi tentor)
+                if (finalGradeObj) {
                   statuses.push({
-                    final_score: displayScore,
-                    is_passed: displayPassed,
+                    final_score: finalGradeObj.final_score,
+                    is_passed: finalGradeObj.is_passed,
                     title: course.nama_pembelajaran || course.title || 'Kelas',
-                    created_at: finalGradeObj?.created_at || new Date().toISOString(),
+                    created_at: finalGradeObj.created_at || new Date().toISOString(),
                     courseId: pid,
                     scoreBreakdown: {
-                      kehadiran: Math.round(attendanceScore * 10) / 10,
-                      kuis: Math.round(quizAvg * 10) / 10,
-                      studi_kasus: Math.round(scAvg * 10) / 10,
-                      hadir: hadirCount,
-                      total_pertemuan: totalMeetings,
+                      kehadiran: 0,
+                      kuis: 0,
+                      studi_kasus: 0,
+                      hadir: 0,
+                      total_pertemuan: 0,
                     }
                   });
                 }
