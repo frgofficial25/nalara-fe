@@ -156,24 +156,12 @@ export default function TentorKelulusanPage() {
       }
       setStudents(studentList);
 
-      // Load local attendance map & total meetings from localStorage
-      const activeCourseId = initialCourseId;
-      if (activeCourseId) {
-        const localMeetings = localStorage.getItem(`nalara_meetings_${activeCourseId}`);
-        if (localMeetings) {
-          setGlobalTotalMeetings(parseInt(localMeetings) || 0);
-        } else {
-          setGlobalTotalMeetings(0);
-        }
-
-        const localAttendance = localStorage.getItem(`nalara_attendance_${activeCourseId}`);
-        if (localAttendance) {
-          try {
-            setAttendanceMap(JSON.parse(localAttendance));
-          } catch { }
-        } else {
-          setAttendanceMap({});
-        }
+      // Load verification metadata from localStorage
+      const localMeta = localStorage.getItem('nalara_kelulusan_meta');
+      if (localMeta) {
+        try {
+          setVerificationMeta(JSON.parse(localMeta));
+        } catch { }
       }
 
       // 3. Fetch user session verifier info
@@ -210,6 +198,20 @@ export default function TentorKelulusanPage() {
         headers: auth.headers
       });
       setRecapData(recapRes?.data || []);
+
+      const attRes = await apiGet<{ success: boolean; data: { total_meetings: number, attendances: any[] } }>(`/api/grades/attendance/${selectedCourseId}`, {
+        token: auth.token,
+        headers: auth.headers
+      });
+      
+      if (attRes?.success && attRes.data) {
+        setGlobalTotalMeetings(attRes.data.total_meetings);
+        const newMap: Record<string, { count: number; total: number }> = {};
+        attRes.data.attendances.forEach(a => {
+          newMap[a.uuid_user] = { count: a.attendance_count, total: attRes.data.total_meetings };
+        });
+        setAttendanceMap(newMap);
+      }
     } catch (err) {
       console.error('Error fetching recap:', err);
     }
@@ -219,51 +221,20 @@ export default function TentorKelulusanPage() {
     fetchInitialData();
   }, []);
 
-  // Update attendance data when selected course changes
+  // Fetch recap and attendance when selected course changes
   useEffect(() => {
     if (selectedCourseId) {
-      const localMeetings = localStorage.getItem(`nalara_meetings_${selectedCourseId}`);
-      if (localMeetings) {
-        setGlobalTotalMeetings(parseInt(localMeetings) || 0);
-      } else {
-        setGlobalTotalMeetings(0);
-      }
-
-      const localAttendance = localStorage.getItem(`nalara_attendance_${selectedCourseId}`);
-      if (localAttendance) {
-        try {
-          setAttendanceMap(JSON.parse(localAttendance));
-        } catch { }
-      } else {
-        setAttendanceMap({});
-      }
       fetchRecap();
     }
   }, [selectedCourseId, fetchRecap]);
 
   // Merge students, recap grades and local verification metadata
-  // Menggunakan pembobotan di Frontend: Kehadiran 15%, Kuis 25%, Studi Kasus 60%
   const mergedStudents = students.map(student => {
     const recap = recapData.find(r => r.uuid_user === student.id);
-
-    // Ambil data kehadiran dari state lokal (localStorage)
-    const attData = attendanceMap[student.id];
-    const attendanceCountVal = attData?.count ?? 0;
-    const totalMeetingsVal = globalTotalMeetings > 0 ? globalTotalMeetings : 0;
-
-    // Nilai Kehadiran = (Hadir / Total) * 100
-    const attendanceScore = totalMeetingsVal > 0 ? (attendanceCountVal / totalMeetingsVal) * 100 : 0;
-
-    // Untuk pembobotan kuis (25%) dan studi kasus (60%), jika tidak ada nilai dari DB (recap), default ke 0.
-    // Karena recap dari BE adalah average score, mari kita proyeksikan bobot baru di FE:
-    // (Jika ada final_score di DB, kita asumsikan kuis & studi kasus sudah dikalkulasi. Untuk simulasi FE yang akurat:
-    // Kita gunakan final_score DB sebagai basis akademis (kuis + tugas), lalu kita bobot ulang dengan Kehadiran).
-    // Rumus: Nilai Akhir Baru = (Skor Akademis DB * 0.85) + (Skor Kehadiran * 0.15)
-    const academicScore = recap ? recap.final_score : 0;
-    const finalWeightedScore = Math.min(100, Math.round((academicScore * 0.85) + (attendanceScore * 0.15)));
+    const finalScore = recap ? recap.final_score : 0;
 
     const meta = verificationMeta[`${selectedCourseId}_${student.id}`] || {
-      status: finalWeightedScore >= 75 ? 'Lulus' : 'Tidak Lulus',
+      status: finalScore >= 75 ? 'Lulus' : 'Tidak Lulus',
       verifier_name: recap ? verifierName : '',
       verification_date: '',
       notes: ''
@@ -271,7 +242,7 @@ export default function TentorKelulusanPage() {
 
     return {
       ...student,
-      final_score: finalWeightedScore,
+      final_score: finalScore,
       verification_status: meta.status,
       verifier_name: meta.verifier_name,
       verification_date: meta.verification_date,
@@ -318,13 +289,21 @@ export default function TentorKelulusanPage() {
     setShowAttendanceModal(true);
   };
 
-  // Save total meetings globally for the class in localStorage
+  // Save total meetings globally for the class in backend
   const handleSaveTotalMeetings = async () => {
     if (!selectedCourseId || globalTotalMeetings <= 0) return;
     setSavingMeetings(true);
     try {
-      localStorage.setItem(`nalara_meetings_${selectedCourseId}`, String(globalTotalMeetings));
+      const auth = getAuthHeaders();
+      await apiPut(`/api/grades/meetings/${selectedCourseId}`, { total_meetings: globalTotalMeetings }, { token: auth.token, headers: auth.headers });
+      
       showToast(`Total pertemuan kelas berhasil diset ke ${globalTotalMeetings}.`, 'success');
+      // Perbarui map attendance
+      const updatedMap: Record<string, { count: number; total: number }> = {};
+      Object.keys(attendanceMap).forEach(uid => {
+        updatedMap[uid] = { count: attendanceMap[uid].count, total: globalTotalMeetings };
+      });
+      setAttendanceMap(updatedMap);
     } catch (err) {
       console.error('Failed to save total meetings:', err);
       showToast('Gagal menyimpan total pertemuan.', 'error');
@@ -333,17 +312,20 @@ export default function TentorKelulusanPage() {
     }
   };
 
-  // Save attendance via localStorage
+  // Save attendance via backend
   const handleSaveAttendance = async () => {
     if (!attendanceStudent || !selectedCourseId) return;
     setSavingAttendance(true);
     try {
+      const auth = getAuthHeaders();
+      await apiPut(`/api/grades/attendance/${selectedCourseId}/${attendanceStudent.id}`, { attendance_count: attendanceCount }, { token: auth.token, headers: auth.headers });
+      
       const updatedMap = {
         ...attendanceMap,
         [attendanceStudent.id]: { count: attendanceCount, total: globalTotalMeetings }
       };
       setAttendanceMap(updatedMap);
-      localStorage.setItem(`nalara_attendance_${selectedCourseId}`, JSON.stringify(updatedMap));
+      
       showToast(`Kehadiran ${attendanceStudent.full_name} berhasil disimpan.`, 'success');
       setShowAttendanceModal(false);
     } catch (err) {
