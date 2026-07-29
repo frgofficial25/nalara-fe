@@ -93,6 +93,8 @@ export default function TentorKelulusanPage() {
   const [studentQuizzes, setStudentQuizzes] = useState<any[]>([]);
   const [studentStudyCases, setStudentStudyCases] = useState<any[]>([]);
   const [studentFinalGrade, setStudentFinalGrade] = useState<any | null>(null);
+  const [totalCourseQuizzes, setTotalCourseQuizzes] = useState<number>(0);
+  const [totalCourseStudyCases, setTotalCourseStudyCases] = useState<number>(0);
 
   // Toast notifications
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
@@ -425,7 +427,7 @@ export default function TentorKelulusanPage() {
     }
   };
 
-  // Open Grade Detail Modal and fetch student's full grade details from ALL courses
+  // Open Grade Detail Modal and fetch student's grade details from SELECTED course only
   const handleOpenDetailModal = async (student: any) => {
     setDetailStudent(student);
     setShowDetailModal(true);
@@ -433,47 +435,25 @@ export default function TentorKelulusanPage() {
     setStudentQuizzes([]);
     setStudentStudyCases([]);
     setStudentFinalGrade(null);
+    setTotalCourseQuizzes(0);
+    setTotalCourseStudyCases(0);
 
     try {
       const auth = getAuthHeaders();
       
-      // Fetch assessment dari SEMUA kelas yang ada, karena student bisa mengerjakan
-      // di kelas yang berbeda dari yang sedang ditampilkan tentor
-      const allCourseIds = courses.map(c => c.uuid_pembelajaran).filter(Boolean);
-      
-      const allResults = await Promise.allSettled(
-        allCourseIds.map(courseId =>
-          apiGet<{ success: boolean; data: { quizzes: any[]; studyCases: any[]; finalGrade: any } }>(
-            `/api/grades/assessment/${courseId}/${student.id}`,
-            { token: auth.token, headers: auth.headers }
-          )
-        )
+      // Fetch hanya dari kelas yang dipilih agar totalCourseQuizzes akurat
+      const res = await apiGet<{ success: boolean; data: { quizzes: any[]; studyCases: any[]; finalGrade: any; totalCourseQuizzes: number; totalCourseStudyCases: number } }>(
+        `/api/grades/assessment/${selectedCourseId}/${student.id}`,
+        { token: auth.token, headers: auth.headers }
       );
 
-      // Gabungkan semua quiz dan studi kasus dari semua kelas
-      const allQuizzes: any[] = [];
-      const allStudyCases: any[] = [];
-      let latestFinalGrade: any = null;
-
-      allResults.forEach((result, idx) => {
-        if (result.status === 'fulfilled' && result.value?.success && result.value?.data) {
-          const data = result.value.data;
-          if (data.quizzes?.length) allQuizzes.push(...data.quizzes);
-          if (data.studyCases?.length) allStudyCases.push(...data.studyCases);
-          // Pakai finalGrade dari kelas yang dipilih tentor jika ada, atau ambil yang tersedia
-          if (data.finalGrade) {
-            if (allCourseIds[idx] === selectedCourseId) {
-              latestFinalGrade = data.finalGrade;
-            } else if (!latestFinalGrade) {
-              latestFinalGrade = data.finalGrade;
-            }
-          }
-        }
-      });
-
-      setStudentQuizzes(allQuizzes);
-      setStudentStudyCases(allStudyCases);
-      setStudentFinalGrade(latestFinalGrade);
+      if (res?.success && res.data) {
+        setStudentQuizzes(res.data.quizzes || []);
+        setStudentStudyCases(res.data.studyCases || []);
+        setStudentFinalGrade(res.data.finalGrade || null);
+        setTotalCourseQuizzes(res.data.totalCourseQuizzes || 0);
+        setTotalCourseStudyCases(res.data.totalCourseStudyCases || 0);
+      }
 
     } catch (err) {
       console.error('Failed to fetch student assessment details:', err);
@@ -1089,30 +1069,26 @@ export default function TentorKelulusanPage() {
                     const totalMeetings = globalTotalMeetings > 0 ? globalTotalMeetings : 0;
                     const attendanceScore = totalMeetings > 0 ? (hadirCount / totalMeetings) * 100 : 0;
 
-                    // Kuis score calculation (skor tertinggi per kuis unik)
-                    // Data dari grade-center/students: {uuid_attempt, quiz: {uuid_quiz, title}, score, ...}
+                    // Kuis score calculation: skor tertinggi per kuis unik, dibagi TOTAL quiz kelas (bukan yang dikerjakan)
                     const quizMaxMap: Record<string, number> = {};
                     for (const q of studentQuizzes) {
                       const qId = q.quiz?.uuid_quiz || q.uuid_quiz;
                       if (qId) quizMaxMap[qId] = Math.max(quizMaxMap[qId] ?? 0, q.score ?? 0);
                     }
-                    const quizScores = Object.values(quizMaxMap);
-                    const quizAvg = quizScores.length > 0
-                      ? quizScores.reduce((a, b) => a + b, 0) / quizScores.length
-                      : 0;
+                    const sumQuiz = Object.values(quizMaxMap).reduce((a, b) => a + b, 0);
+                    // Gunakan totalCourseQuizzes dari backend; quiz yang tidak dikerjakan otomatis 0
+                    const quizAvg = totalCourseQuizzes > 0 ? sumQuiz / totalCourseQuizzes : 0;
 
-                    // Studi kasus calculation (skor tertinggi per tugas unik)
-                    // Data dari review-queue: {uuid_tugas, tugas: {title, uuid_pembelajaran}, released_score, ai_score}
+                    // Studi kasus: skor tertinggi per tugas, dibagi TOTAL study case kelas
                     const scMaxMap: Record<string, number> = {};
                     for (const sc of studentStudyCases) {
                       const scId = sc.uuid_tugas;
                       const score = sc.released_score ?? sc.ai_score ?? 0;
                       scMaxMap[scId] = Math.max(scMaxMap[scId] ?? 0, score);
                     }
-                    const scScores = Object.values(scMaxMap);
-                    const scAvg = scScores.length > 0
-                      ? scScores.reduce((a, b) => a + b, 0) / scScores.length
-                      : 0;
+                    const sumSC = Object.values(scMaxMap).reduce((a, b) => a + b, 0);
+                    // Gunakan totalCourseStudyCases dari backend; tugas yang tidak dikumpul otomatis 0
+                    const scAvg = totalCourseStudyCases > 0 ? sumSC / totalCourseStudyCases : 0;
 
                     const weightedScore = Math.min(100, Math.round(
                       (attendanceScore * 0.15) +
@@ -1131,12 +1107,12 @@ export default function TentorKelulusanPage() {
                           <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 10, padding: 12, textAlign: 'center' }}>
                             <div style={{ fontSize: '0.65rem', color: 'var(--grey-blue)', marginBottom: 4 }}>KUIS (25%)</div>
                             <strong style={{ fontSize: '1.2rem', color: '#38bdf8' }}>{quizAvg.toFixed(1)}</strong>
-                            <div style={{ fontSize: '0.65rem', color: 'var(--grey)', marginTop: 2 }}>{quizScores.length} Kuis diikuti</div>
+                            <div style={{ fontSize: '0.65rem', color: 'var(--grey)', marginTop: 2 }}>{Object.keys(quizMaxMap).length}/{totalCourseQuizzes} Quiz dikerjakan</div>
                           </div>
                           <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 10, padding: 12, textAlign: 'center' }}>
                             <div style={{ fontSize: '0.65rem', color: 'var(--grey-blue)', marginBottom: 4 }}>STUDI KASUS (60%)</div>
                             <strong style={{ fontSize: '1.2rem', color: '#c084fc' }}>{scAvg.toFixed(1)}</strong>
-                            <div style={{ fontSize: '0.65rem', color: 'var(--grey)', marginTop: 2 }}>{scScores.length} Tugas dikumpulkan</div>
+                            <div style={{ fontSize: '0.65rem', color: 'var(--grey)', marginTop: 2 }}>{Object.keys(scMaxMap).length}/{totalCourseStudyCases} Tugas dikumpulkan</div>
                           </div>
                           <div style={{ background: weightedScore >= 75 ? 'rgba(0, 200, 83, 0.08)' : 'rgba(239, 68, 68, 0.08)', border: `1px solid ${weightedScore >= 75 ? 'rgba(0, 200, 83, 0.2)' : 'rgba(239, 68, 68, 0.2)'}`, borderRadius: 10, padding: 12, textAlign: 'center' }}>
                             <div style={{ fontSize: '0.65rem', color: weightedScore >= 75 ? '#00C853' : '#FF5252', fontWeight: 700, marginBottom: 4 }}>NILAI AKHIR</div>
