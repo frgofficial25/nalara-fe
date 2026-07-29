@@ -389,10 +389,19 @@ export default function StudentDashboard() {
                   (scAvg           * 0.60)
                 ));
 
+                // Gunakan final_score dari database (FinalGrade) agar konsisten dengan tampilan tentor.
+                // Kalkulasi weighted hanya sebagai fallback jika belum ada data di database.
+                const displayScore = finalGradeObj
+                  ? finalGradeObj.final_score
+                  : finalWeighted;
+                const displayPassed = finalGradeObj
+                  ? finalGradeObj.is_passed
+                  : finalWeighted >= 75;
+
                 if (finalGradeObj || quizScores.length > 0 || scScores.length > 0) {
                   statuses.push({
-                    final_score: finalGradeObj ? finalWeighted : finalWeighted,
-                    is_passed: finalWeighted >= 75,
+                    final_score: displayScore,
+                    is_passed: displayPassed,
                     title: course.nama_pembelajaran || course.title || 'Kelas',
                     created_at: finalGradeObj?.created_at || new Date().toISOString(),
                     courseId: pid,
