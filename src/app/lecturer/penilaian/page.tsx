@@ -350,7 +350,7 @@ export default function PenilaianPage() {
       const mapped = raw.map(s => {
         let parsedLink = s.link_url;
         let cleanNotes = s.student_notes;
-        
+
         if (s.student_notes) {
           const match = s.student_notes.match(/(?:\[Google Drive Link\]:?\s*|Google Drive Link:\s*)(\S+)/i);
           if (match && match[1]) {
@@ -569,7 +569,7 @@ export default function PenilaianPage() {
           </p>
         </div>
         <button
-          onClick={() => { 
+          onClick={() => {
             setRefreshing(true);
             // Clear cache for current tab so it re-fetches fresh data
             if (tab === 'quiz' || tab === 'recap') {
@@ -936,235 +936,235 @@ export default function PenilaianPage() {
           TAB: STUDY CASE GRADES RECAP (NILAI STUDI KASUS)
       ═══════════════════════════════════════════════ */}
       {tab === 'studycase_recap' && (
-            <>
-              {/* Info badge */}
-              <div style={{ marginBottom: 16, display: 'flex', alignItems: 'center', gap: 10, fontSize: '0.82rem', color: 'var(--azure)' }}>
-                <TrendingUp size={15} />
-                <span>Rekapitulasi nilai studi kasus mahasiswa yang telah dinilai/dirilis.</span>
+        <>
+          {/* Info badge */}
+          <div style={{ marginBottom: 16, display: 'flex', alignItems: 'center', gap: 10, fontSize: '0.82rem', color: 'var(--azure)' }}>
+            <TrendingUp size={15} />
+            <span>Rekapitulasi nilai studi kasus mahasiswa yang telah dinilai/dirilis.</span>
+          </div>
+
+          {/* Filters for Graded Submissions */}
+          <div className="glass-panel" style={s.filterRow}>
+            <div style={s.searchWrap}>
+              <Search size={15} color="var(--grey)" />
+              <input
+                type="text"
+                placeholder="Cari nama, email, atau judul studi kasus..."
+                value={gradedSearch}
+                onChange={e => setGradedSearch(e.target.value)}
+                style={s.searchInput}
+              />
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <BookOpen size={15} color="var(--grey-blue)" />
+                <select value={gradedSelectedCourse} onChange={e => setGradedSelectedCourse(e.target.value)} style={s.select}>
+                  <option value="all">Semua Kelas</option>
+                  {courses.map((c: any) => (
+                    <option key={c.uuid_pembelajaran || c.id} value={c.uuid_pembelajaran || c.id}>
+                      {c.title || c.nama_pembelajaran}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          </div>
+
+          {subError && <div style={s.errBanner}><AlertCircle size={16} /><span>{subError}</span></div>}
+
+          {subLoading ? (
+            <div style={s.centered}><Loader2 size={32} style={{ animation: 'spin 1s linear infinite' }} /><p>Memuat data nilai studi kasus...</p></div>
+          ) : filteredGradedSubmissions.length === 0 ? (
+            <div style={s.empty}>
+              <CheckCircle2 size={48} color="#00C853" />
+              <h3>Tidak Ada Data</h3>
+              <p>Tidak ada data penilaian studi kasus yang cocok dengan filter yang dipilih.</p>
+            </div>
+          ) : (
+            <div className="glass-panel" style={{ borderRadius: 12, overflow: 'hidden' }}>
+              <table style={s.table}>
+                <thead>
+                  <tr>
+                    {['Siswa', 'Studi Kasus', 'Nilai', 'Verifikasi Dosen', 'Verifikasi Tentor', ''].map(h => (
+                      <th key={h} style={{ ...s.th, ...(h === '' ? { textAlign: 'right' } : {}) }}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredGradedSubmissions.map((sub, i) => {
+                    const finalScore = sub.released_score ?? sub.ai_score ?? 0;
+                    return (
+                      <tr key={i} style={s.tr}>
+                        {/* 1. Student Info */}
+                        <td style={s.td}>
+                          <strong style={{ color: '#fff', fontSize: '0.9rem' }}>{sub.student.full_name}</strong>
+                          <span style={{ display: 'block', fontSize: '0.76rem', color: 'var(--grey-blue)' }}>{sub.student.email}</span>
+                        </td>
+
+                        {/* 2. Study Case Title & Class */}
+                        <td style={s.td}>
+                          <strong style={{ color: '#fff', fontSize: '0.85rem' }}>{sub.tugas.title}</strong>
+                          <span style={{ display: 'block', fontSize: '0.74rem', color: 'var(--grey-blue)' }}>
+                            {sub.pembelajaran?.title || 'Kelas'} {sub.modul?.title ? `• Modul: ${sub.modul.title}` : ''}
+                          </span>
+                          {sub.link_url && (
+                            <a
+                              href={sub.link_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              style={{ display: 'inline-flex', alignItems: 'center', gap: 4, marginTop: 4, fontSize: '0.75rem', color: 'var(--azure)', textDecoration: 'underline' }}
+                            >
+                              <LinkIcon size={11} />
+                              <span>link</span>
+                            </a>
+                          )}
+                        </td>
+
+                        {/* 3. Score */}
+                        <td style={s.td}>
+                          <strong style={{ fontSize: '1rem', color: 'var(--azure)' }}>{finalScore}/100</strong>
+                        </td>
+
+                        {/* 4. Dosen Verifier */}
+                        <td style={s.td}>
+                          {sub.lecture_status === 'Verified' ? (
+                            <span style={s.pillGreen}>
+                              Selesai {sub.lecture_verifier?.full_name ? `(${sub.lecture_verifier.full_name})` : ''}
+                            </span>
+                          ) : (
+                            <span style={s.pillGrey}>Belum</span>
+                          )}
+                        </td>
+
+                        {/* 5. Tentor Verifier */}
+                        <td style={s.td}>
+                          {sub.mentor_status === 'Verified' ? (
+                            <span style={s.pillGreen}>
+                              Selesai {sub.mentor_verifier?.full_name ? `(${sub.mentor_verifier.full_name})` : ''}
+                            </span>
+                          ) : (
+                            <span style={s.pillGrey}>Belum</span>
+                          )}
+                        </td>
+
+                        {/* 6. Action Button */}
+                        <td style={{ ...s.td, textAlign: 'right' }}>
+                          <button
+                            onClick={() => openModal(sub)}
+                            style={s.btnView}
+                          >
+                            <span>Detail & Ubah Nilai</span><ChevronRight size={14} />
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </>
+      )}
+
+      {/* Verify Modal */}
+      {modal && (
+        <Portal>
+          <div style={s.overlay} onClick={() => setModal(null)}>
+            <div style={s.modal} className="glass-panel" onClick={e => e.stopPropagation()}>
+              <div style={s.modalHead}>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '1.25rem', color: '#fff', fontWeight: 700 }}>Verifikasi Studi Kasus</h3>
+                  <span style={{ fontSize: '0.8rem', color: 'var(--azure)' }}>
+                    {modal.student.full_name} — {modal.tugas.title}
+                  </span>
+                </div>
+                <button onClick={() => setModal(null)} style={s.closeBtn}><X size={18} /></button>
               </div>
 
-              {/* Filters for Graded Submissions */}
-              <div className="glass-panel" style={s.filterRow}>
-                <div style={s.searchWrap}>
-                  <Search size={15} color="var(--grey)" />
-                  <input
-                    type="text"
-                    placeholder="Cari nama, email, atau judul studi kasus..."
-                    value={gradedSearch}
-                    onChange={e => setGradedSearch(e.target.value)}
-                    style={s.searchInput}
+              <div style={{ padding: '18px 24px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+                <div style={{ fontSize: '0.8rem', color: 'var(--grey-blue)', background: 'rgba(255,255,255,0.03)', padding: 10, borderRadius: 6 }}>
+                  Role Anda: <strong style={{ color: '#fff' }}>{userRole}</strong>.
+                  Nilai AI bawaan: <strong style={{ color: 'var(--lemon)' }}>{modal.ai_score ?? '-'}</strong>.
+                  Jika Anda memasukkan nilai baru, nilai tersebut akan dipasang sebagai <em>released_score</em> untuk siswa.
+                </div>
+
+                {/* Submission Attachment Links inside Modal */}
+                {modal.link_url ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6, background: 'rgba(255,255,255,0.02)', padding: 10, borderRadius: 6 }}>
+                    <span style={{ fontSize: '0.78rem', color: 'var(--grey-blue)', fontWeight: 600 }}>Tugas Terlampir:</span>
+                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 2 }}>
+                      <a href={modal.link_url} target="_blank" rel="noopener noreferrer" style={s.fileLink}>
+                        <LinkIcon size={12} /><span>Link Google Drive</span>
+                      </a>
+                    </div>
+                  </div>
+                ) : (
+                  (modal.ipynb_url || modal.pdf_url) && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6, background: 'rgba(255,255,255,0.02)', padding: 10, borderRadius: 6 }}>
+                      <span style={{ fontSize: '0.78rem', color: 'var(--grey-blue)', fontWeight: 600 }}>Tugas Terlampir:</span>
+                      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 2 }}>
+                        {modal.ipynb_url && (
+                          <a href={modal.ipynb_url} target="_blank" rel="noopener noreferrer" style={s.fileLink}>
+                            <FileText size={12} /><span>Notebook (.ipynb)</span>
+                          </a>
+                        )}
+                        {modal.pdf_url && (
+                          <a href={modal.pdf_url} target="_blank" rel="noopener noreferrer" style={s.fileLink}>
+                            <FileText size={12} /><span>Laporan (.pdf)</span>
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                  )
+                )}
+
+                <div>
+                  <label style={s.label}>Catatan Verifikasi ({userRole})</label>
+                  <textarea
+                    placeholder="Masukkan umpan balik atau catatan tambahan..."
+                    value={modalNotes}
+                    onChange={e => setModalNotes(e.target.value)}
+                    style={s.textarea}
                   />
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <BookOpen size={15} color="var(--grey-blue)" />
-                    <select value={gradedSelectedCourse} onChange={e => setGradedSelectedCourse(e.target.value)} style={s.select}>
-                      <option value="all">Semua Kelas</option>
-                      {courses.map((c: any) => (
-                        <option key={c.uuid_pembelajaran || c.id} value={c.uuid_pembelajaran || c.id}>
-                          {c.title || c.nama_pembelajaran}
-                        </option>
-                      ))}
-                    </select>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 10 }}>
+                  <div>
+                    <label style={s.label}>Override Nilai (Opsional)</label>
+                    <input
+                      type="number"
+                      min={0}
+                      max={100}
+                      placeholder={String(modal.ai_score ?? 80)}
+                      value={modalScore}
+                      onChange={e => setModalScore(e.target.value)}
+                      style={s.input}
+                    />
                   </div>
+                  <div>
+                    <label style={s.label}>Alasan Override Nilai</label>
+                    <input
+                      type="text"
+                      placeholder="Contoh: Kualitas kode baik tetapi penulisan laporan kurang rapi"
+                      value={modalReason}
+                      onChange={e => setModalReason(e.target.value)}
+                      style={s.input}
+                    />
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 10 }}>
+                  <button onClick={() => setModal(null)} style={s.btnGhost}>Batal</button>
+                  <button onClick={handleVerify} disabled={verifying} style={s.btnPrimary}>
+                    {verifying ? <Loader2 size={15} style={{ animation: 'spin 1s linear infinite' }} /> : <CheckCircle2 size={15} />}
+                    <span>Simpan Verifikasi</span>
+                  </button>
                 </div>
               </div>
-
-              {subError && <div style={s.errBanner}><AlertCircle size={16} /><span>{subError}</span></div>}
-
-              {subLoading ? (
-                <div style={s.centered}><Loader2 size={32} style={{ animation: 'spin 1s linear infinite' }} /><p>Memuat data nilai studi kasus...</p></div>
-              ) : filteredGradedSubmissions.length === 0 ? (
-                <div style={s.empty}>
-                  <CheckCircle2 size={48} color="#00C853" />
-                  <h3>Tidak Ada Data</h3>
-                  <p>Tidak ada data penilaian studi kasus yang cocok dengan filter yang dipilih.</p>
-                </div>
-              ) : (
-                <div className="glass-panel" style={{ borderRadius: 12, overflow: 'hidden' }}>
-                  <table style={s.table}>
-                    <thead>
-                      <tr>
-                        {['Siswa', 'Studi Kasus', 'Nilai', 'Verifikasi Dosen', 'Verifikasi Tentor', ''].map(h => (
-                          <th key={h} style={{ ...s.th, ...(h === '' ? { textAlign: 'right' } : {}) }}>{h}</th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {filteredGradedSubmissions.map((sub, i) => {
-                        const finalScore = sub.released_score ?? sub.ai_score ?? 0;
-                        return (
-                          <tr key={i} style={s.tr}>
-                            {/* 1. Student Info */}
-                            <td style={s.td}>
-                              <strong style={{ color: '#fff', fontSize: '0.9rem' }}>{sub.student.full_name}</strong>
-                              <span style={{ display: 'block', fontSize: '0.76rem', color: 'var(--grey-blue)' }}>{sub.student.email}</span>
-                            </td>
-
-                            {/* 2. Study Case Title & Class */}
-                            <td style={s.td}>
-                              <strong style={{ color: '#fff', fontSize: '0.85rem' }}>{sub.tugas.title}</strong>
-                              <span style={{ display: 'block', fontSize: '0.74rem', color: 'var(--grey-blue)' }}>
-                                {sub.pembelajaran?.title || 'Kelas'} {sub.modul?.title ? `• Modul: ${sub.modul.title}` : ''}
-                              </span>
-                              {sub.link_url && (
-                                <a 
-                                  href={sub.link_url} 
-                                  target="_blank" 
-                                  rel="noopener noreferrer" 
-                                  style={{ display: 'inline-flex', alignItems: 'center', gap: 4, marginTop: 4, fontSize: '0.75rem', color: 'var(--azure)', textDecoration: 'underline' }}
-                                >
-                                  <LinkIcon size={11} />
-                                  <span>link</span>
-                                </a>
-                              )}
-                            </td>
-
-                            {/* 3. Score */}
-                            <td style={s.td}>
-                              <strong style={{ fontSize: '1rem', color: 'var(--azure)' }}>{finalScore}/100</strong>
-                            </td>
-
-                            {/* 4. Dosen Verifier */}
-                            <td style={s.td}>
-                              {sub.lecture_status === 'Verified' ? (
-                                <span style={s.pillGreen}>
-                                  Selesai {sub.lecture_verifier?.full_name ? `(${sub.lecture_verifier.full_name})` : ''}
-                                </span>
-                              ) : (
-                                <span style={s.pillGrey}>Belum</span>
-                              )}
-                            </td>
-
-                            {/* 5. Tentor Verifier */}
-                            <td style={s.td}>
-                              {sub.mentor_status === 'Verified' ? (
-                                <span style={s.pillGreen}>
-                                  Selesai {sub.mentor_verifier?.full_name ? `(${sub.mentor_verifier.full_name})` : ''}
-                                </span>
-                              ) : (
-                                <span style={s.pillGrey}>Belum</span>
-                              )}
-                            </td>
-
-                            {/* 6. Action Button */}
-                            <td style={{ ...s.td, textAlign: 'right' }}>
-                              <button
-                                onClick={() => openModal(sub)}
-                                style={s.btnView}
-                              >
-                                <span>Detail & Ubah Nilai</span><ChevronRight size={14} />
-                              </button>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </>
-          )}
-
-          {/* Verify Modal */}
-          {modal && (
-            <Portal>
-              <div style={s.overlay} onClick={() => setModal(null)}>
-                <div style={s.modal} className="glass-panel" onClick={e => e.stopPropagation()}>
-                  <div style={s.modalHead}>
-                    <div>
-                      <h3 style={{ margin: 0, fontSize: '1.25rem', color: '#fff', fontWeight: 700 }}>Verifikasi Studi Kasus</h3>
-                      <span style={{ fontSize: '0.8rem', color: 'var(--azure)' }}>
-                        {modal.student.full_name} — {modal.tugas.title}
-                      </span>
-                    </div>
-                    <button onClick={() => setModal(null)} style={s.closeBtn}><X size={18} /></button>
-                  </div>
-
-                  <div style={{ padding: '18px 24px', display: 'flex', flexDirection: 'column', gap: 14 }}>
-                    <div style={{ fontSize: '0.8rem', color: 'var(--grey-blue)', background: 'rgba(255,255,255,0.03)', padding: 10, borderRadius: 6 }}>
-                      Role Anda: <strong style={{ color: '#fff' }}>{userRole}</strong>.
-                      Nilai AI bawaan: <strong style={{ color: 'var(--lemon)' }}>{modal.ai_score ?? '-'}</strong>.
-                      Jika Anda memasukkan nilai baru, nilai tersebut akan dipasang sebagai <em>released_score</em> untuk siswa.
-                    </div>
-
-                    {/* Submission Attachment Links inside Modal */}
-                    {modal.link_url ? (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 6, background: 'rgba(255,255,255,0.02)', padding: 10, borderRadius: 6 }}>
-                        <span style={{ fontSize: '0.78rem', color: 'var(--grey-blue)', fontWeight: 600 }}>Tugas Terlampir:</span>
-                        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 2 }}>
-                          <a href={modal.link_url} target="_blank" rel="noopener noreferrer" style={s.fileLink}>
-                            <LinkIcon size={12} /><span>Link Google Drive</span>
-                          </a>
-                        </div>
-                      </div>
-                    ) : (
-                      (modal.ipynb_url || modal.pdf_url) && (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 6, background: 'rgba(255,255,255,0.02)', padding: 10, borderRadius: 6 }}>
-                          <span style={{ fontSize: '0.78rem', color: 'var(--grey-blue)', fontWeight: 600 }}>Tugas Terlampir:</span>
-                          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 2 }}>
-                            {modal.ipynb_url && (
-                              <a href={modal.ipynb_url} target="_blank" rel="noopener noreferrer" style={s.fileLink}>
-                                <FileText size={12} /><span>Notebook (.ipynb)</span>
-                              </a>
-                            )}
-                            {modal.pdf_url && (
-                              <a href={modal.pdf_url} target="_blank" rel="noopener noreferrer" style={s.fileLink}>
-                                <FileText size={12} /><span>Laporan (.pdf)</span>
-                              </a>
-                            )}
-                          </div>
-                        </div>
-                      )
-                    )}
-
-                    <div>
-                      <label style={s.label}>Catatan Verifikasi ({userRole})</label>
-                      <textarea
-                        placeholder="Masukkan umpan balik atau catatan tambahan..."
-                        value={modalNotes}
-                        onChange={e => setModalNotes(e.target.value)}
-                        style={s.textarea}
-                      />
-                    </div>
-
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 10 }}>
-                      <div>
-                        <label style={s.label}>Override Nilai (Opsional)</label>
-                        <input
-                          type="number"
-                          min={0}
-                          max={100}
-                          placeholder={String(modal.ai_score ?? 80)}
-                          value={modalScore}
-                          onChange={e => setModalScore(e.target.value)}
-                          style={s.input}
-                        />
-                      </div>
-                      <div>
-                        <label style={s.label}>Alasan Override Nilai</label>
-                        <input
-                          type="text"
-                          placeholder="Contoh: Kualitas kode baik tetapi penulisan laporan kurang rapi"
-                          value={modalReason}
-                          onChange={e => setModalReason(e.target.value)}
-                          style={s.input}
-                        />
-                      </div>
-                    </div>
-
-                    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 10 }}>
-                      <button onClick={() => setModal(null)} style={s.btnGhost}>Batal</button>
-                      <button onClick={handleVerify} disabled={verifying} style={s.btnPrimary}>
-                        {verifying ? <Loader2 size={15} style={{ animation: 'spin 1s linear infinite' }} /> : <CheckCircle2 size={15} />}
-                        <span>Simpan Verifikasi</span>
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </Portal>
-          )}
+            </div>
+          </div>
+        </Portal>
+      )}
 
       {/* ═══════════════════════════════════════════════
           TAB 3: REKAP NILAI KELAS

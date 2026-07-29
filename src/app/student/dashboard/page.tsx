@@ -3,7 +3,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import {
   GraduationCap, BookOpen, Clock, Flame,
-  RefreshCw, ShieldAlert, ChevronRight, Play
+  RefreshCw, ShieldAlert, ChevronRight, Play, Award, XCircle
 } from 'lucide-react';
 import AgendaSection from '@/components/dashboard/AgendaSection';
 import { apiGet } from '@/lib/api';
@@ -64,6 +64,13 @@ interface StudentDashboardResponse {
   longest_streak?: number;
   tugas_mendesak?: StudentTaskRaw[];
   upcoming_tasks?: StudentTaskRaw[];
+}
+
+interface GraduationStatus {
+  final_score: number;
+  is_passed: boolean;
+  title: string;
+  created_at: string;
 }
 
 type StudentDashboardApiResponse = StudentDashboardResponse | { success: boolean; data: StudentDashboardResponse };
@@ -173,6 +180,7 @@ export default function StudentDashboard() {
   const [error, setError] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [userName, setUserName] = useState("Student");
+  const [graduationStatuses, setGraduationStatuses] = useState<GraduationStatus[]>([]);
 
   const fetchData = useCallback(async () => {
     try {
@@ -303,6 +311,46 @@ export default function StudentDashboard() {
         longest_streak: rawData.longest_streak || 0,
         upcoming_tasks: [...upcoming_tasks, ...pendingQuizzes],
       });
+
+      // Fetch graduation status from all enrolled classes
+      try {
+        const localUser = localStorage.getItem('nalara_user_info') || sessionStorage.getItem('nalara_user_info');
+        const userId = localUser ? (JSON.parse(localUser).uuid_user || JSON.parse(localUser).id) : null;
+
+        const coursesRes = await apiGet<any>('/api/pembelajaran', { token: token || undefined, headers });
+        const allCourses: any[] = Array.isArray(coursesRes) ? coursesRes : (coursesRes?.data || []);
+
+        if (userId && allCourses.length > 0) {
+          const statuses: GraduationStatus[] = [];
+          await Promise.all(
+            allCourses.map(async (course: any) => {
+              const pid = course.uuid_pembelajaran || course.id;
+              if (!pid) return;
+              try {
+                const statusRes = await apiGet<{ success: boolean; data: any }>(
+                  `/api/grades/assessment/${pid}/${userId}`,
+                  { token: token || undefined, headers }
+                );
+                
+                const finalGradeObj = statusRes?.data?.finalGrade;
+                if (finalGradeObj) {
+                  statuses.push({
+                    final_score: finalGradeObj.final_score,
+                    is_passed: finalGradeObj.is_passed,
+                    title: course.nama_pembelajaran || course.title || 'Kelas',
+                    created_at: finalGradeObj.created_at
+                  });
+                }
+              } catch {
+                // Status belum tersedia untuk kelas ini, skip
+              }
+            })
+          );
+          setGraduationStatuses(statuses);
+        }
+      } catch (gradErr) {
+        console.warn('Could not fetch graduation statuses:', gradErr);
+      }
     } catch (err) {
       console.error(err);
       setError(err instanceof Error ? err.message : 'Gagal memuat data dashboard student');
@@ -419,6 +467,79 @@ export default function StudentDashboard() {
             <span style={s.errorMsg}>{error}</span>
           </div>
           <button style={s.retryBtn} onClick={handleRefresh}>Coba Lagi</button>
+        </div>
+      )}
+
+      {/* Kartu Status Kelulusan */}
+      {graduationStatuses.length > 0 && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {graduationStatuses.map((status, idx) => {
+            const isPassed = status.is_passed;
+            return (
+              <div
+                key={idx}
+                className="glass-panel"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 16,
+                  padding: '16px 20px',
+                  borderRadius: 14,
+                  background: isPassed
+                    ? 'linear-gradient(135deg, rgba(0,200,83,0.08) 0%, rgba(0,230,100,0.04) 100%)'
+                    : 'linear-gradient(135deg, rgba(255,82,82,0.08) 0%, rgba(200,0,0,0.04) 100%)',
+                  border: `1px solid ${isPassed ? 'rgba(0, 200, 83, 0.22)' : 'rgba(255, 82, 82, 0.22)'}`,
+                }}
+              >
+                <div style={{
+                  width: 44,
+                  height: 44,
+                  borderRadius: 12,
+                  flexShrink: 0,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  background: isPassed ? 'rgba(0, 200, 83, 0.15)' : 'rgba(255, 82, 82, 0.15)'
+                }}>
+                  {isPassed
+                    ? <Award size={22} color="#00C853" />
+                    : <XCircle size={22} color="#FF5252" />
+                  }
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 2 }}>
+                    <span style={{
+                      fontSize: '0.7rem',
+                      fontWeight: 700,
+                      letterSpacing: '0.06em',
+                      textTransform: 'uppercase',
+                      color: isPassed ? '#00C853' : '#FF5252',
+                      background: isPassed ? 'rgba(0,200,83,0.12)' : 'rgba(255,82,82,0.12)',
+                      padding: '2px 8px',
+                      borderRadius: 5,
+                      border: `1px solid ${isPassed ? 'rgba(0,200,83,0.25)' : 'rgba(255,82,82,0.25)'}`
+                    }}>
+                      {isPassed ? '✓ LULUS' : '✗ BELUM LULUS'}
+                    </span>
+                  </div>
+                  <p style={{ margin: 0, fontSize: '0.88rem', fontWeight: 600, color: '#fff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {status.title}
+                  </p>
+                  {!isPassed && (
+                    <p style={{ margin: '2px 0 0', fontSize: '0.76rem', color: 'var(--grey-blue)' }}>
+                      Terus tingkatkan nilai kuis, studi kasus, dan kehadiran kamu!
+                    </p>
+                  )}
+                </div>
+                <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                  <div style={{ fontSize: '1.5rem', fontWeight: 800, color: isPassed ? '#00C853' : '#FF5252', lineHeight: 1 }}>
+                    {status.final_score.toFixed(1)}
+                  </div>
+                  <div style={{ fontSize: '0.7rem', color: 'var(--grey-blue)', marginTop: 2 }}>Nilai Akhir</div>
+                </div>
+              </div>
+            );
+          })}
         </div>
       )}
 

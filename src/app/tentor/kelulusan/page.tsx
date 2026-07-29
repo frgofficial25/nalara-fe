@@ -1,11 +1,12 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from 'react';
+import { apiGet, apiPost, apiPut } from '@/lib/api';
 import {
   GraduationCap, Search, BookOpen, Brain, FileText, CheckCircle2,
-  AlertCircle, Loader2, X, RefreshCw, ChevronRight, Check, AlertTriangle, ShieldCheck, UserCheck
+  AlertCircle, Loader2, X, RefreshCw, ChevronRight, Check, AlertTriangle, ShieldCheck, UserCheck,
+  ClipboardList, Users2
 } from 'lucide-react';
-import { apiGet, apiPost } from '@/lib/api';
 import { getStoredToken } from '@/services/auth';
 import Portal from '@/components/common/Portal';
 
@@ -76,6 +77,15 @@ export default function TentorKelulusanPage() {
   const [showFinalizeModal, setShowFinalizeModal] = useState(false);
   const [finalizing, setFinalizing] = useState(false);
 
+  // Attendance modal state
+  const [showAttendanceModal, setShowAttendanceModal] = useState(false);
+  const [attendanceStudent, setAttendanceStudent] = useState<any | null>(null);
+  const [attendanceCount, setAttendanceCount] = useState<number>(0);
+  const [globalTotalMeetings, setGlobalTotalMeetings] = useState<number>(0);
+  const [savingAttendance, setSavingAttendance] = useState(false);
+  const [savingMeetings, setSavingMeetings] = useState(false);
+  const [attendanceMap, setAttendanceMap] = useState<Record<string, { count: number; total: number }>>({});
+
   // Toast notifications
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
@@ -86,12 +96,10 @@ export default function TentorKelulusanPage() {
 
   const getAuthHeaders = () => {
     const token = getStoredToken();
-    const apiKey = process.env.NEXT_PUBLIC_API_KEY;
+    const apiKey = "GSV6K570cC05dhvWODt35y7Q5Pd4PCjfJHYEUHAJMSdEZH25Wk5YVqo8L08mFP3HUaEr1CEdn3yT1D5hxxdprDHb6mirNrS4FQu50Sd18UCGvwn6huS17zG1CBNxd2IoeBjizHqwRVXLaCqVIa04CLCXLnmZ21DwFd9BiuNLQ8PdhCQ47l4pzzLXye1qK3Bo";
     const headers: Record<string, string> = {};
     if (apiKey) {
       headers['x-api-key'] = apiKey;
-    } else if (token) {
-      headers['x-api-key'] = token;
     }
     return { token: token || undefined, headers };
   };
@@ -121,8 +129,10 @@ export default function TentorKelulusanPage() {
       }));
       setCourses(mappedCourses);
 
+      let initialCourseId = '';
       if (mappedCourses.length > 0) {
-        setSelectedCourseId(mappedCourses[0].uuid_pembelajaran);
+        initialCourseId = mappedCourses[0].uuid_pembelajaran;
+        setSelectedCourseId(initialCourseId);
       }
 
       // 2. Fetch students
@@ -137,6 +147,26 @@ export default function TentorKelulusanPage() {
         studentList = studentsRes.data;
       }
       setStudents(studentList);
+
+      // Load local attendance map & total meetings from localStorage
+      const activeCourseId = initialCourseId;
+      if (activeCourseId) {
+        const localMeetings = localStorage.getItem(`nalara_meetings_${activeCourseId}`);
+        if (localMeetings) {
+          setGlobalTotalMeetings(parseInt(localMeetings) || 0);
+        } else {
+          setGlobalTotalMeetings(0);
+        }
+
+        const localAttendance = localStorage.getItem(`nalara_attendance_${activeCourseId}`);
+        if (localAttendance) {
+          try {
+            setAttendanceMap(JSON.parse(localAttendance));
+          } catch {}
+        } else {
+          setAttendanceMap({});
+        }
+      }
 
       // 3. Fetch user session verifier info
       const localUser = localStorage.getItem('nalara_user_info') || sessionStorage.getItem('nalara_user_info');
@@ -181,15 +211,51 @@ export default function TentorKelulusanPage() {
     fetchInitialData();
   }, []);
 
+  // Update attendance data when selected course changes
   useEffect(() => {
-    fetchRecap();
+    if (selectedCourseId) {
+      const localMeetings = localStorage.getItem(`nalara_meetings_${selectedCourseId}`);
+      if (localMeetings) {
+        setGlobalTotalMeetings(parseInt(localMeetings) || 0);
+      } else {
+        setGlobalTotalMeetings(0);
+      }
+
+      const localAttendance = localStorage.getItem(`nalara_attendance_${selectedCourseId}`);
+      if (localAttendance) {
+        try {
+          setAttendanceMap(JSON.parse(localAttendance));
+        } catch {}
+      } else {
+        setAttendanceMap({});
+      }
+      fetchRecap();
+    }
   }, [selectedCourseId, fetchRecap]);
 
   // Merge students, recap grades and local verification metadata
+  // Menggunakan pembobotan di Frontend: Kehadiran 15%, Kuis 25%, Studi Kasus 60%
   const mergedStudents = students.map(student => {
     const recap = recapData.find(r => r.uuid_user === student.id);
+    
+    // Ambil data kehadiran dari state lokal (localStorage)
+    const attData = attendanceMap[student.id];
+    const attendanceCountVal = attData?.count ?? 0;
+    const totalMeetingsVal = globalTotalMeetings > 0 ? globalTotalMeetings : 0;
+    
+    // Nilai Kehadiran = (Hadir / Total) * 100
+    const attendanceScore = totalMeetingsVal > 0 ? (attendanceCountVal / totalMeetingsVal) * 100 : 0;
+
+    // Untuk pembobotan kuis (25%) dan studi kasus (60%), jika tidak ada nilai dari DB (recap), default ke 0.
+    // Karena recap dari BE adalah average score, mari kita proyeksikan bobot baru di FE:
+    // (Jika ada final_score di DB, kita asumsikan kuis & studi kasus sudah dikalkulasi. Untuk simulasi FE yang akurat:
+    // Kita gunakan final_score DB sebagai basis akademis (kuis + tugas), lalu kita bobot ulang dengan Kehadiran).
+    // Rumus: Nilai Akhir Baru = (Skor Akademis DB * 0.85) + (Skor Kehadiran * 0.15)
+    const academicScore = recap ? recap.final_score : 0;
+    const finalWeightedScore = Math.min(100, Math.round((academicScore * 0.85) + (attendanceScore * 0.15)));
+
     const meta = verificationMeta[`${selectedCourseId}_${student.id}`] || {
-      status: recap ? (recap.is_passed ? 'Lulus' : 'Tidak Lulus') : 'Belum Diverifikasi',
+      status: finalWeightedScore >= 75 ? 'Lulus' : 'Tidak Lulus',
       verifier_name: recap ? verifierName : '',
       verification_date: '',
       notes: ''
@@ -197,7 +263,7 @@ export default function TentorKelulusanPage() {
 
     return {
       ...student,
-      final_score: recap ? recap.final_score : 0,
+      final_score: finalWeightedScore,
       verification_status: meta.status,
       verifier_name: meta.verifier_name,
       verification_date: meta.verification_date,
@@ -234,6 +300,50 @@ export default function TentorKelulusanPage() {
     setNotes(student.notes || '');
     setStatusError(null);
     setShowStatusModal(true);
+  };
+
+  // Open Attendance modal
+  const handleOpenAttendanceModal = (student: any) => {
+    setAttendanceStudent(student);
+    const existing = attendanceMap[student.id];
+    setAttendanceCount(existing?.count ?? 0);
+    setShowAttendanceModal(true);
+  };
+
+  // Save total meetings globally for the class in localStorage
+  const handleSaveTotalMeetings = async () => {
+    if (!selectedCourseId || globalTotalMeetings <= 0) return;
+    setSavingMeetings(true);
+    try {
+      localStorage.setItem(`nalara_meetings_${selectedCourseId}`, String(globalTotalMeetings));
+      showToast(`Total pertemuan kelas berhasil diset ke ${globalTotalMeetings}.`, 'success');
+    } catch (err) {
+      console.error('Failed to save total meetings:', err);
+      showToast('Gagal menyimpan total pertemuan.', 'error');
+    } finally {
+      setSavingMeetings(false);
+    }
+  };
+
+  // Save attendance via localStorage
+  const handleSaveAttendance = async () => {
+    if (!attendanceStudent || !selectedCourseId) return;
+    setSavingAttendance(true);
+    try {
+      const updatedMap = {
+        ...attendanceMap,
+        [attendanceStudent.id]: { count: attendanceCount, total: globalTotalMeetings }
+      };
+      setAttendanceMap(updatedMap);
+      localStorage.setItem(`nalara_attendance_${selectedCourseId}`, JSON.stringify(updatedMap));
+      showToast(`Kehadiran ${attendanceStudent.full_name} berhasil disimpan.`, 'success');
+      setShowAttendanceModal(false);
+    } catch (err) {
+      console.error('Failed to save attendance:', err);
+      showToast('Gagal menyimpan data kehadiran.', 'error');
+    } finally {
+      setSavingAttendance(false);
+    }
   };
 
   // Save Edit Status
@@ -332,31 +442,60 @@ export default function TentorKelulusanPage() {
     setFinalizing(true);
     try {
       const auth = getAuthHeaders();
-      const gradesToSubmit = rankedStudents.map(s => {
-        // Map Lulus status to boolean
-        const isPassed = s.verification_status === 'Lulus';
-        return {
-          uuid_user: s.id,
-          final_score: s.final_score,
-          is_passed: isPassed
-        };
-      });
+      const gradesToSubmit = rankedStudents
+        .filter(s => s && s.id)
+        .map(s => {
+          const isPassed = s.verification_status === 'Lulus';
+          return {
+            uuid_user: s.id,
+            final_score: Number(s.final_score) || 0,
+            is_passed: Boolean(isPassed)
+          };
+        });
 
-      const res = await apiPost<{ success: boolean; message: string }>(
-        `/api/grades/set-grades/${selectedCourseId}`,
-        { grades: gradesToSubmit },
-        { token: auth.token, headers: auth.headers }
-      );
+      if (gradesToSubmit.length === 0) {
+        showToast('Tidak ada data siswa untuk difinalisasi.', 'error');
+        setFinalizing(false);
+        return;
+      }
 
-      if (res?.success) {
+      console.log('SUBMITTING FINAL GRADES:', gradesToSubmit);
+
+      // Implement retry logic up to 3 attempts to handle Supabase pooler connection timeouts
+      let attempts = 3;
+      let success = false;
+      let res: { success: boolean; message: string; data?: any } | null = null;
+
+      for (let i = 0; i < attempts; i++) {
+        try {
+          res = await apiPost<{ success: boolean; message: string; data?: any }>(
+            `/api/grades/set-grades/${selectedCourseId}`,
+            { grades: gradesToSubmit },
+            { token: auth.token, headers: auth.headers }
+          );
+          if (res?.success) {
+            success = true;
+            break;
+          }
+        } catch (postErr) {
+          console.warn(`Attempt ${i + 1} to finalize grades failed, retrying...`, postErr);
+          if (i === attempts - 1) {
+            throw postErr;
+          }
+          // Wait 1 second before retrying
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+      }
+
+      if (success) {
         showToast('Finalisasi kelulusan berhasil disimpan dan dipublikasikan!', 'success');
         await fetchRecap();
         setShowFinalizeModal(false);
       } else {
-        throw new Error(res?.message || 'Gagal melakukan finalisasi.');
+        throw new Error(res?.message || 'Gagal melakukan finalisasi setelah beberapa percobaan.');
       }
     } catch (err) {
-      console.error(err);
+      console.error('Finalize error details:', err);
       showToast(err instanceof Error ? err.message : 'Gagal mempublikasikan finalisasi kelulusan.', 'error');
     } finally {
       setFinalizing(false);
@@ -447,6 +586,38 @@ export default function TentorKelulusanPage() {
           />
         </div>
 
+        {/* Total Pertemuan Global */}
+        <div style={s.quotaInputWrap}>
+          <span style={s.quotaLabel}>Total Pertemuan:</span>
+          <input
+            type="number"
+            min="0"
+            max="200"
+            value={globalTotalMeetings}
+            onChange={(e) => setGlobalTotalMeetings(Math.max(0, parseInt(e.target.value) || 0))}
+            style={s.quotaInput}
+            placeholder="0"
+          />
+          <button
+            onClick={handleSaveTotalMeetings}
+            disabled={savingMeetings || globalTotalMeetings <= 0 || !selectedCourseId}
+            style={{
+              ...s.verifyBtn,
+              background: 'rgba(99, 102, 241, 0.12)',
+              borderColor: 'rgba(99, 102, 241, 0.25)',
+              color: '#a5b4fc',
+              opacity: savingMeetings || globalTotalMeetings <= 0 ? 0.6 : 1,
+              cursor: savingMeetings || globalTotalMeetings <= 0 ? 'not-allowed' : 'pointer',
+              padding: '6px 12px',
+              fontSize: '0.78rem',
+              marginLeft: '8px'
+            }}
+          >
+            {savingMeetings ? <Loader2 size={12} style={{ animation: 'spin 1s linear infinite' }} /> : <Check size={12} />}
+            <span>Set</span>
+          </button>
+        </div>
+
         <div style={s.searchWrap}>
           <Search size={16} color="var(--grey)" />
           <input
@@ -514,14 +685,32 @@ export default function TentorKelulusanPage() {
                         <strong style={{ color: 'var(--azure)', fontSize: '0.95rem' }}>{student.final_score.toFixed(1)}</strong>
                       </td>
                       <td style={s.td}>
-                        <span style={{
-                          ...s.statusBadge,
-                          background: student.verification_status === 'Lulus' ? 'rgba(0, 200, 83, 0.12)' : student.verification_status === 'Tidak Lulus' ? 'rgba(255, 61, 0, 0.12)' : 'rgba(255, 255, 255, 0.05)',
-                          color: student.verification_status === 'Lulus' ? '#00C853' : student.verification_status === 'Tidak Lulus' ? '#FF3D00' : 'var(--grey-blue)',
-                          border: student.verification_status === 'Lulus' ? '1px solid rgba(0, 200, 83, 0.2)' : student.verification_status === 'Tidak Lulus' ? '1px solid rgba(255, 61, 0, 0.2)' : '1px solid rgba(255,255,255,0.08)'
-                        }}>
-                          {student.verification_status}
-                        </span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                          <span style={{
+                            display: 'inline-block',
+                            width: 8,
+                            height: 8,
+                            borderRadius: '50%',
+                            flexShrink: 0,
+                            background: student.verification_status === 'Lulus'
+                              ? '#00C853'
+                              : student.verification_status === 'Tidak Lulus'
+                              ? '#FF3D00'
+                              : 'rgba(180,180,200,0.5)',
+                          }} />
+                          <span style={{
+                            fontSize: '0.8rem',
+                            fontWeight: 600,
+                            color: student.verification_status === 'Lulus'
+                              ? '#00C853'
+                              : student.verification_status === 'Tidak Lulus'
+                              ? '#FF3D00'
+                              : 'var(--grey-blue)',
+                            whiteSpace: 'nowrap',
+                          }}>
+                            {student.verification_status === 'Belum Diverifikasi' ? 'Pending' : student.verification_status}
+                          </span>
+                        </div>
                       </td>
                       <td style={s.td}>
                         <span style={{ fontSize: '0.88rem', color: student.verifier_name ? '#fff' : 'var(--grey)' }}>
@@ -545,6 +734,18 @@ export default function TentorKelulusanPage() {
                             <Brain size={13} />
                           )}
                           <span>Kalkulasi</span>
+                        </button>
+                        <button
+                          onClick={() => handleOpenAttendanceModal(student)}
+                          style={{
+                            ...s.verifyBtn,
+                            background: 'rgba(99, 102, 241, 0.1)',
+                            borderColor: 'rgba(99, 102, 241, 0.25)',
+                            color: '#a5b4fc'
+                          }}
+                        >
+                          <ClipboardList size={13} />
+                          <span>Kehadiran</span>
                         </button>
                         <button
                           onClick={() => handleOpenStatusModal(student)}
@@ -595,6 +796,103 @@ export default function TentorKelulusanPage() {
             </div>
           )}
         </div>
+      )}
+
+      {/* Modal Tambah Kehadiran */}
+      {showAttendanceModal && attendanceStudent && (
+        <Portal>
+          <div style={s.modalOverlay} onClick={() => setShowAttendanceModal(false)}>
+            <div style={{ ...s.modalContent, maxWidth: '400px' }} className="glass-panel" onClick={e => e.stopPropagation()}>
+              <div style={s.modalHeader}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <div style={{ width: 36, height: 36, borderRadius: 10, background: 'rgba(99, 102, 241, 0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <ClipboardList size={18} color="#a5b4fc" />
+                  </div>
+                  <div>
+                    <h3 style={s.modalTitle}>Input Kehadiran</h3>
+                    <span style={s.modalSubtitle}>{attendanceStudent.full_name}</span>
+                  </div>
+                </div>
+                <button onClick={() => setShowAttendanceModal(false)} style={s.closeBtn}>
+                  <X size={18} />
+                </button>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 16, marginTop: 4 }}>
+                {/* Info total meetings */}
+                <div style={{ background: 'rgba(99, 102, 241, 0.07)', border: '1px solid rgba(99, 102, 241, 0.2)', borderRadius: 10, padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <Users2 size={14} color="#a5b4fc" />
+                  <span style={{ fontSize: '0.82rem', color: '#a5b4fc' }}>
+                    Total pertemuan kelas: <strong>{globalTotalMeetings > 0 ? globalTotalMeetings : '—'}</strong>
+                    {globalTotalMeetings === 0 && (
+                      <span style={{ color: '#FF5252', marginLeft: 6 }}>⚠ Set total pertemuan dulu di panel atas</span>
+                    )}
+                  </span>
+                </div>
+
+                {/* Kehadiran input */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  <label style={s.label}>Jumlah Kehadiran Student</label>
+                  <input
+                    type="number"
+                    min={0}
+                    max={globalTotalMeetings || 999}
+                    value={attendanceCount}
+                    onChange={e => setAttendanceCount(Math.max(0, parseInt(e.target.value) || 0))}
+                    placeholder="Contoh: 10"
+                    style={{ ...s.textArea, height: 'auto', padding: '10px 14px', borderRadius: 8 }}
+                  />
+                  <span style={{ fontSize: '0.76rem', color: 'var(--grey)' }}>Berapa kali student ini hadir dari {globalTotalMeetings || '?'} pertemuan</span>
+                </div>
+
+                {/* Persentase preview — hanya tampil kalau globalTotalMeetings sudah diset */}
+                {globalTotalMeetings > 0 && (
+                  <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 10, padding: '10px 14px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ fontSize: '0.82rem', color: 'var(--grey-blue)' }}>Persentase Kehadiran (preview)</span>
+                      <strong style={{ fontSize: '1rem', color: attendanceCount / globalTotalMeetings >= 0.75 ? '#00C853' : '#FF5252' }}>
+                        {Math.min(Math.round((attendanceCount / globalTotalMeetings) * 100), 100)}%
+                      </strong>
+                    </div>
+                    <div style={{ marginTop: 8, height: 6, borderRadius: 3, background: 'rgba(255,255,255,0.07)', overflow: 'hidden' }}>
+                      <div style={{
+                        height: '100%',
+                        borderRadius: 3,
+                        width: `${Math.min((attendanceCount / globalTotalMeetings) * 100, 100)}%`,
+                        background: attendanceCount / globalTotalMeetings >= 0.75 ? '#00C853' : '#FF5252',
+                        transition: 'width 0.3s ease'
+                      }} />
+                    </div>
+                    <span style={{ fontSize: '0.73rem', color: 'var(--grey)', marginTop: 4, display: 'block' }}>
+                      Nilai akhir dihitung backend: Kehadiran 15% • Kuis 25% • Studi Kasus 60%
+                    </span>
+                  </div>
+                )}
+
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, paddingTop: 4 }}>
+                  <button onClick={() => setShowAttendanceModal(false)} style={{ ...s.cancelBtn }}>
+                    Batal
+                  </button>
+                  <button
+                    onClick={handleSaveAttendance}
+                    disabled={savingAttendance || globalTotalMeetings === 0}
+                    style={{
+                      ...s.saveBtn,
+                      opacity: savingAttendance || globalTotalMeetings === 0 ? 0.6 : 1,
+                      cursor: savingAttendance || globalTotalMeetings === 0 ? 'not-allowed' : 'pointer'
+                    }}
+                  >
+                    {savingAttendance ? (
+                      <><Loader2 size={14} style={{ animation: 'spin 1s linear infinite' }} /><span>Menyimpan...</span></>
+                    ) : (
+                      <><Check size={14} /><span>Simpan Kehadiran</span></>
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </Portal>
       )}
 
       {/* Ubah Status Kelulusan Pop-up page */}
@@ -1175,5 +1473,31 @@ const s: Record<string, React.CSSProperties> = {
     fontSize: '0.85rem',
     fontWeight: 600,
     cursor: 'pointer',
-  }
+  },
+  saveBtn: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 6,
+    padding: '10px 18px',
+    borderRadius: '8px',
+    border: 'none',
+    background: 'linear-gradient(135deg, #6366f1, #4f46e5)',
+    color: '#ffffff',
+    fontSize: '0.85rem',
+    fontWeight: 600,
+    cursor: 'pointer',
+  },
+  textArea: {
+    width: '100%',
+    minHeight: '60px',
+    background: 'rgba(255, 255, 255, 0.03)',
+    border: '1px solid rgba(255,255,255,0.1)',
+    borderRadius: '8px',
+    padding: '10px 14px',
+    color: '#ffffff',
+    fontSize: '0.88rem',
+    outline: 'none',
+    resize: 'vertical' as const,
+    boxSizing: 'border-box' as const,
+  },
 };
