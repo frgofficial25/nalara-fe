@@ -629,41 +629,7 @@ export default function StudentDashboard() {
                   </div>
                 </div>
 
-                {/* Score Breakdown — sama dengan halaman kelulusan */}
-                {status.scoreBreakdown && (
-                  <div style={{ padding: '0 16px 14px 16px', display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
-                    {/* Kehadiran */}
-                    <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 8, padding: '8px 10px', textAlign: 'center' }}>
-                      <div style={{ fontSize: '0.58rem', color: 'var(--grey-blue)', marginBottom: 2, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Hadir (15%)</div>
-                      <div style={{ fontSize: '0.95rem', fontWeight: 700, color: '#60a5fa' }}>
-                        {(status.scoreBreakdown.kehadiran * 0.15).toFixed(1)}
-                      </div>
-                      <div style={{ fontSize: '0.58rem', color: 'var(--grey)', marginTop: 1 }}>
-                        {status.scoreBreakdown.hadir}/{status.scoreBreakdown.total_pertemuan}x
-                      </div>
-                    </div>
-                    {/* Quiz */}
-                    <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 8, padding: '8px 10px', textAlign: 'center' }}>
-                      <div style={{ fontSize: '0.58rem', color: 'var(--grey-blue)', marginBottom: 2, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Quiz (25%)</div>
-                      <div style={{ fontSize: '0.95rem', fontWeight: 700, color: '#a78bfa' }}>
-                        {(status.scoreBreakdown.kuis * 0.25).toFixed(1)}
-                      </div>
-                      <div style={{ fontSize: '0.58rem', color: 'var(--grey)', marginTop: 1 }}>
-                        Avg {status.scoreBreakdown.kuis.toFixed(1)}
-                      </div>
-                    </div>
-                    {/* Studi Kasus */}
-                    <div style={{ background: 'rgba(255,255,255,0.03)', borderRadius: 8, padding: '8px 10px', textAlign: 'center' }}>
-                      <div style={{ fontSize: '0.58rem', color: 'var(--grey-blue)', marginBottom: 2, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Studi Kasus (60%)</div>
-                      <div style={{ fontSize: '0.95rem', fontWeight: 700, color: '#c084fc' }}>
-                        {(status.scoreBreakdown.studi_kasus * 0.60).toFixed(1)}
-                      </div>
-                      <div style={{ fontSize: '0.58rem', color: 'var(--grey)', marginTop: 1 }}>
-                        Avg {status.scoreBreakdown.studi_kasus.toFixed(1)}
-                      </div>
-                    </div>
-                  </div>
-                )}
+
               </div>
             );
           })}
