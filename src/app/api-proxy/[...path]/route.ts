@@ -17,7 +17,27 @@ async function handler(request: NextRequest, { params }: { params: Promise<{ pat
   const backendPath = '/api/' + pathSegments.join('/');
   const backendUrl = new URL(backendPath + request.nextUrl.search, backendBaseUrl);
 
-  const requestHeaders = new Headers(request.headers);
+  const requestHeaders = new Headers();
+  
+  // Forward only specific headers, or copy all except connection/host/content-length for non-body methods
+  const headersToSkip = [
+    'host',
+    'connection',
+    'keep-alive',
+    'proxy-authenticate',
+    'proxy-authorization',
+    'te',
+    'trailers',
+    'transfer-encoding',
+    'upgrade',
+    'accept-encoding', // Let server respond without compression so we don't have to compress/decompress
+  ];
+
+  request.headers.forEach((value, key) => {
+    if (!headersToSkip.includes(key.toLowerCase())) {
+      requestHeaders.set(key, value);
+    }
+  });
 
   // Inject server-side API key
   const secretApiKey = process.env.SECRET_API_KEY;
@@ -25,11 +45,12 @@ async function handler(request: NextRequest, { params }: { params: Promise<{ pat
     requestHeaders.set('x-api-key', secretApiKey);
   }
 
-  // Remove host header to avoid proxy issues
-  requestHeaders.delete('host');
-
   try {
     const isBodyMethod = ['POST', 'PUT', 'PATCH'].includes(request.method);
+    if (!isBodyMethod) {
+      requestHeaders.delete('content-length');
+      requestHeaders.delete('content-type');
+    }
 
     const fetchOptions: RequestInit = {
       method: request.method,
@@ -54,6 +75,9 @@ async function handler(request: NextRequest, { params }: { params: Promise<{ pat
     });
   } catch (err: any) {
     console.error(`[api-proxy] Error proxying ${request.method} ${backendUrl}:`, err?.message || err);
+    if (err?.cause) {
+      console.error(`[api-proxy] Cause:`, err.cause);
+    }
     return new NextResponse(
       JSON.stringify({ success: false, message: 'Proxy error: ' + (err?.message || 'Unknown error') }),
       { status: 502, headers: { 'Content-Type': 'application/json' } }
