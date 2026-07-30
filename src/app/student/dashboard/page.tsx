@@ -362,59 +362,16 @@ export default function StudentDashboard() {
                 if (finalGradeObj || localStatus !== null) {
                   const assessData = assessRes?.data;
 
-                  // 1. Quiz avg — sama dengan kelulusan (quiz tidak dikerjakan = 0, pembagi = total quiz kelas)
-                  const totalCourseQuizzes: number = assessData?.totalCourseQuizzes || 0;
-                  const totalCourseStudyCases: number = assessData?.totalCourseStudyCases || 0;
-
-                  const quizMaxMap: Record<string, number> = {};
-                  (assessData?.quizzes || []).forEach((q: any) => {
-                    const qid = q.uuid_quiz || q.quiz?.uuid_quiz;
-                    if (!qid) return;
-                    const existing = quizMaxMap[qid] || 0;
-                    if (q.score > existing) quizMaxMap[qid] = q.score;
-                  });
-                  const sumQuiz = Object.values(quizMaxMap).reduce((a: number, b: number) => a + b, 0);
-                  const quizAvg = totalCourseQuizzes > 0 ? sumQuiz / totalCourseQuizzes : 0;
-
-                  // 2. Study case avg — sama dengan kelulusan
-                  const scMaxMap: Record<string, number> = {};
-                  (assessData?.studyCases || []).forEach((sc: any) => {
-                    const tid = sc.uuid_tugas;
-                    if (!tid) return;
-                    const score = sc.released_score ?? sc.ai_score ?? 0;
-                    const existing = scMaxMap[tid] || 0;
-                    if (score > existing) scMaxMap[tid] = score;
-                  });
-                  const sumSC = Object.values(scMaxMap).reduce((a: number, b: number) => a + b, 0);
-                  const scAvg = totalCourseStudyCases > 0 ? sumSC / totalCourseStudyCases : 0;
-
-                  // 3. Kehadiran — fetch dari endpoint attendance
-                  let attendancePct = 0;
-                  let hadirCount = 0;
-                  let totalMeetings = 0;
-                  try {
-                    const attRes = await apiGet<{ success: boolean; data: { total_meetings: number; attendances: any[] } }>(
-                      `/api/grades/attendance/${pid}`,
-                      { token: token || undefined, headers }
-                    );
-                    totalMeetings = attRes?.data?.total_meetings || 0;
-                    const myAttendance = (attRes?.data?.attendances || []).find((a: any) => a.uuid_user === userId);
-                    hadirCount = myAttendance?.attendance_count || 0;
-                    attendancePct = totalMeetings > 0 ? Math.min((hadirCount / totalMeetings) * 100, 100) : 0;
-                  } catch { /* skip jika belum ada data attendance */ }
-
-                  // 4. Weighted final score — rumus sama dengan backend dan halaman kelulusan
-                  const computedFinalScore = parseFloat(((attendancePct * 0.15) + (quizAvg * 0.25) + (scAvg * 0.60)).toFixed(1));
                   const finalScore = finalGradeObj && finalGradeObj.final_score !== undefined && finalGradeObj.final_score !== null
                     ? parseFloat(finalGradeObj.final_score)
-                    : computedFinalScore;
+                    : 0;
 
                   // Mengambil status kelulusan (is_passed) langsung dari status kelulusan yang di-set/difinalisasi oleh tentor atau localStorage
                   const isPassed = localStatus !== null
                     ? (localStatus === 'Lulus')
                     : (finalGradeObj && finalGradeObj.is_passed !== undefined && finalGradeObj.is_passed !== null
                       ? !!finalGradeObj.is_passed
-                      : (finalScore >= 75));
+                      : false);
 
                   statuses.push({
                     final_score: finalScore,
@@ -423,11 +380,11 @@ export default function StudentDashboard() {
                     created_at: (finalGradeObj && finalGradeObj.created_at) || new Date().toISOString(),
                     courseId: pid,
                     scoreBreakdown: {
-                      kehadiran: attendancePct,
-                      kuis: quizAvg,
-                      studi_kasus: scAvg,
-                      hadir: hadirCount,
-                      total_pertemuan: totalMeetings,
+                      kehadiran: 0,
+                      kuis: 0,
+                      studi_kasus: 0,
+                      hadir: 0,
+                      total_pertemuan: 0,
                     }
                   });
                 }

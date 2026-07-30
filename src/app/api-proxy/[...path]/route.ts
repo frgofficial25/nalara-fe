@@ -144,7 +144,9 @@ async function handler(request: NextRequest, { params }: { params: Promise<{ pat
       }
     });
 
-    return new NextResponse(new Uint8Array(proxyRes.body), {
+    const responseBody = [204, 205, 304].includes(proxyRes.status) ? null : new Uint8Array(proxyRes.body);
+
+    return new NextResponse(responseBody, {
       status: proxyRes.status,
       headers: responseHeaders,
     });
