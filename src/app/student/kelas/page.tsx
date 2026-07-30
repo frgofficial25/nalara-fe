@@ -365,7 +365,7 @@ function StudentKelasPageInner() {
                     <h3 style={{ ...s.cardTitle, color: isLocked ? 'var(--grey-blue)' : undefined }}>{course.title}</h3>
                     {isLocked ? (
                       <p style={{ ...s.cardDesc, color: '#FF5252', fontSize: '0.8rem' }}>
-                        ⚠️ Selesaikan dan lulus <strong>{course.prerequisite_name || 'kelas sebelumnya'}</strong> terlebih dahulu untuk membuka kelas ini.
+                        {/* ⚠️ Selesaikan dan lulus <strong>{course.prerequisite_name || 'kelas sebelumnya'}</strong> terlebih dahulu untuk membuka kelas ini. */}
                       </p>
                     ) : (
                       <p style={s.cardDesc}>{course.description || 'Klik untuk melihat modul dan materi.'}</p>

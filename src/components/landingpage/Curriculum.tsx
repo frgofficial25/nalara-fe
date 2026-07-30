@@ -24,11 +24,11 @@ export default function Curriculum() {
       duration: '32 Jam Instruksional',
       dates: '30, 31 Juli, 1, 2 Agustus',
       schedule: [
-        { day: 'Kamis, 30 Juli 2026', topic: 'Review Evaluasi Level Dasar', desc: 'Analisis hasil ujian level dasar, pembahasan feedback coding portofolio, dan sinkronisasi tools model menengah.' },
-        { day: 'Jumat, 31 Juli 2026', topic: 'Modul 6: Fundamental Deep Learning & CNN', desc: 'Arsitektur Neural Network (neuron, weight, activation function ReLU/Sigmoid/Softmax), forward pass & backpropagation secara konseptual, optimizer (Adam), dataset Fashion MNIST, "The Big 4 Layers" CNN (Convolutional, Pooling, Flatten, Dense), regularisasi (Dropout, Early Stopping, Data Augmentation), serta visualisasi training curve.' },
-        { day: 'Sabtu, 1 Agustus 2026', topic: 'Modul 7: Image Classification & Transfer Learning', desc: 'Penggunaan Pre-Trained Models (VGG, ResNet, MobileNet, EfficientNet) yang dilatih di ImageNet, teknik Feature Extraction (membekukan base model), teknik Fine-Tuning (membuka kunci & melatih layer teratas dengan learning rate rendah), evaluasi model, interpretability dengan Grad-CAM & Saliency Map, serta uji signifikansi (McNemar, bootstrap).' },
-        { day: 'Minggu, 2 Agustus 2026', topic: 'Modul 8: Object Detection', desc: 'Deteksi multi-objek menggunakan arsitektur YOLO, anatomi bounding box, IoU, live inference YOLOv8n, grid-based approach vs sliding window, metrik evaluasi mAP & confidence threshold, ekstraksi data ke JSON, class imbalance level objek (focal loss), penanganan objek kecil, custom object detection training, format anotasi (COCO, Pascal VOC, YOLO), dan video tracking (Kalman Filter, Hungarian Algorithm).' },
-        { day: 'Senin, 3 Agustus 2026', topic: 'Modul 9: Image Segmentation & Ujian Menengah', desc: 'Semantic vs instance segmentation, arsitektur U-Net (encoder-decoder, skip connection), inference YOLOv8n-seg, metrik evaluasi (IoU, Dice Coefficient), konversi mask ke metrik bisnis (luas area kerusakan), Segment Anything Model (SAM) untuk zero-shot & promptable segmentation, serta evaluasi akhir tingkat menengah & visualisasi Virtual Background.' }
+        // { day: 'Kamis, 30 Juli 2026', topic: 'Review Evaluasi Level Dasar', desc: 'Analisis hasil ujian level dasar, pembahasan feedback coding portofolio, dan sinkronisasi tools model menengah.' },
+        { day: 'Kamis, 30 Juli 2026', topic: 'Modul 6: Fundamental Deep Learning & CNN', desc: 'Arsitektur Neural Network (neuron, weight, activation function ReLU/Sigmoid/Softmax), forward pass & backpropagation secara konseptual, optimizer (Adam), dataset Fashion MNIST, "The Big 4 Layers" CNN (Convolutional, Pooling, Flatten, Dense), regularisasi (Dropout, Early Stopping, Data Augmentation), serta visualisasi training curve.' },
+        { day: 'Jumat, 31 Juli 2026', topic: 'Modul 7: Image Classification & Transfer Learning', desc: 'Penggunaan Pre-Trained Models (VGG, ResNet, MobileNet, EfficientNet) yang dilatih di ImageNet, teknik Feature Extraction (membekukan base model), teknik Fine-Tuning (membuka kunci & melatih layer teratas dengan learning rate rendah), evaluasi model, interpretability dengan Grad-CAM & Saliency Map, serta uji signifikansi (McNemar, bootstrap).' },
+        { day: 'Sabtu, 1 Agustus 2026', topic: 'Modul 8: Object Detection', desc: 'Deteksi multi-objek menggunakan arsitektur YOLO, anatomi bounding box, IoU, live inference YOLOv8n, grid-based approach vs sliding window, metrik evaluasi mAP & confidence threshold, ekstraksi data ke JSON, class imbalance level objek (focal loss), penanganan objek kecil, custom object detection training, format anotasi (COCO, Pascal VOC, YOLO), dan video tracking (Kalman Filter, Hungarian Algorithm).' },
+        { day: 'Minggu, 2 Agustus 2026', topic: 'Modul 9: Image Segmentation & Ujian Menengah', desc: 'Semantic vs instance segmentation, arsitektur U-Net (encoder-decoder, skip connection), inference YOLOv8n-seg, metrik evaluasi (IoU, Dice Coefficient), konversi mask ke metrik bisnis (luas area kerusakan), Segment Anything Model (SAM) untuk zero-shot & promptable segmentation, serta evaluasi akhir tingkat menengah & visualisasi Virtual Background.' }
       ]
     },
     advanced: {
@@ -105,26 +105,26 @@ export default function Curriculum() {
         <div style={styles.levelMetaCard}>
           <div style={styles.metaTextGroup}>
             <h3 style={styles.levelTitle}>{currentLevel.title}</h3>
-            <span style={styles.levelDates}>📅 {currentLevel.dates} | ⏱️ {currentLevel.duration}</span>
+            <span style={styles.levelDates}>{currentLevel.dates} |  {currentLevel.duration}</span>
           </div>
           
           <div style={styles.componentsRow}>
             <div style={styles.compItem}>
-              <span style={styles.compIcon}>📄</span>
+              <span style={styles.compIcon}></span>
               <div>
                 <strong style={styles.compTitle}>Materi Utama</strong>
                 <span style={styles.compSub}>Slides & Handouts (.docx/.pptx)</span>
               </div>
             </div>
             <div style={styles.compItem}>
-              <span style={styles.compIcon}>💻</span>
+              <span style={styles.compIcon}></span>
               <div>
                 <strong style={styles.compTitle}>Modul Praktikum</strong>
                 <span style={styles.compSub}>Code Repository & Notebooks</span>
               </div>
             </div>
             <div style={styles.compItem}>
-              <span style={styles.compIcon}>✍️</span>
+              <span style={styles.compIcon}></span>
               <div>
                 <strong style={styles.compTitle}>Modul Ujian</strong>
                 <span style={styles.compSub}>Studi Kasus & Penilaian Riil</span>
