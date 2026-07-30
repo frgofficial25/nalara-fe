@@ -1,9 +1,61 @@
 import { NextRequest, NextResponse } from 'next/server';
+import https from 'https';
+import http from 'http';
 
 export const runtime = 'nodejs';
 export const maxDuration = 30;
 
-const ALLOWED_METHODS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'];
+function performProxyRequest(
+  url: string,
+  method: string,
+  headers: Record<string, string>,
+  bodyBuffer?: Buffer
+): Promise<{ status: number; headers: Record<string, string>; body: Buffer }> {
+  return new Promise((resolve, reject) => {
+    const parsedUrl = new URL(url);
+    const options: https.RequestOptions = {
+      method: method,
+      hostname: parsedUrl.hostname,
+      port: parsedUrl.port || (parsedUrl.protocol === 'https:' ? 443 : 80),
+      path: parsedUrl.pathname + parsedUrl.search,
+      headers: headers,
+      // bypass TLS socket issues / secure connection verification issues
+      rejectUnauthorized: false,
+      agent: new https.Agent({
+        keepAlive: true,
+        rejectUnauthorized: false
+      })
+    };
+
+    const client = parsedUrl.protocol === 'https:' ? https : http;
+    const req = client.request(options, (res) => {
+      const chunks: Buffer[] = [];
+      res.on('data', (chunk) => chunks.push(chunk));
+      res.on('end', () => {
+        const resHeaders: Record<string, string> = {};
+        Object.entries(res.headers).forEach(([key, val]) => {
+          if (val !== undefined) {
+            resHeaders[key] = Array.isArray(val) ? val.join(', ') : val;
+          }
+        });
+        resolve({
+          status: res.statusCode || 200,
+          headers: resHeaders,
+          body: Buffer.concat(chunks)
+        });
+      });
+    });
+
+    req.on('error', (err) => {
+      reject(err);
+    });
+
+    if (bodyBuffer) {
+      req.write(bodyBuffer);
+    }
+    req.end();
+  });
+}
 
 async function handler(request: NextRequest, { params }: { params: Promise<{ path: string[] }> }) {
   const resolvedParams = await params;
@@ -52,25 +104,34 @@ async function handler(request: NextRequest, { params }: { params: Promise<{ pat
       requestHeaders.delete('content-type');
     }
 
-    const fetchOptions: RequestInit = {
-      method: request.method,
-      headers: requestHeaders,
-      ...(isBodyMethod && {
-        body: request.body,
-        // @ts-ignore duplex half required for streaming body
-        duplex: 'half',
-      }),
-    };
+    let bodyBuffer: Buffer | undefined = undefined;
+    if (isBodyMethod) {
+      const arrayBuffer = await request.arrayBuffer();
+      bodyBuffer = Buffer.from(arrayBuffer);
+    }
 
-    const fetchResponse = await fetch(backendUrl.toString(), fetchOptions);
+    const requestHeadersObj: Record<string, string> = {};
+    requestHeaders.forEach((value, key) => {
+      requestHeadersObj[key] = value;
+    });
 
-    const responseHeaders = new Headers(fetchResponse.headers);
-    // Remove encoding headers that Next.js will re-add
-    responseHeaders.delete('content-encoding');
-    responseHeaders.delete('transfer-encoding');
+    const proxyRes = await performProxyRequest(
+      backendUrl.toString(),
+      request.method,
+      requestHeadersObj,
+      bodyBuffer
+    );
 
-    return new NextResponse(fetchResponse.body, {
-      status: fetchResponse.status,
+    const responseHeaders = new Headers();
+    Object.entries(proxyRes.headers).forEach(([key, val]) => {
+      // Skip chunked transfer encoding headers and compression headers to avoid browser decompression issues
+      if (key.toLowerCase() !== 'transfer-encoding' && key.toLowerCase() !== 'content-encoding') {
+        responseHeaders.set(key, val);
+      }
+    });
+
+    return new NextResponse(new Uint8Array(proxyRes.body), {
+      status: proxyRes.status,
       headers: responseHeaders,
     });
   } catch (err: any) {
