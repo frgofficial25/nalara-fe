@@ -68,6 +68,7 @@ async function handler(request: NextRequest, { params }: { params: Promise<{ pat
 
   const backendPath = '/api/' + pathSegments.join('/');
   const backendUrl = new URL(backendPath + request.nextUrl.search, backendBaseUrl);
+  console.log(`[api-proxy-debug] Proxying ${request.method} to: ${backendUrl.toString()}`);
 
   const requestHeaders = new Headers();
   
