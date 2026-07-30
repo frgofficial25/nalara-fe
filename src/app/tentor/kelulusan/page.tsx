@@ -229,7 +229,9 @@ export default function TentorKelulusanPage() {
     const finalScore = recap ? recap.final_score : 0;
 
     const meta = verificationMeta[`${selectedCourseId}_${student.id}`] || {
-      status: finalScore >= 75 ? 'Lulus' : 'Tidak Lulus',
+      status: recap && recap.is_passed !== undefined && recap.is_passed !== null
+        ? (recap.is_passed ? 'Lulus' : 'Tidak Lulus')
+        : (finalScore >= 75 ? 'Lulus' : 'Tidak Lulus'),
       verifier_name: recap ? verifierName : '',
       verification_date: '',
       notes: ''
@@ -495,26 +497,19 @@ export default function TentorKelulusanPage() {
 
       for (let i = 0; i < attempts; i++) {
         try {
-          // Send request directly to backend port 1000 to bypass proxy/middleware overhead entirely
-          const response = await fetch(`http://localhost:1000/api/grades/set-grades/${selectedCourseId}`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'x-api-key': auth.headers['x-api-key'] || ''
-            },
-            body: JSON.stringify({ grades: gradesToSubmit })
-          });
+          // Ganti fetch manual ke localhost dengan apiPost agar mengarah ke API yang benar (misal: staging/production/proxy)
+          const response = await apiPost<{ success: boolean; message: string; data?: any }>(
+            `/api/grades/set-grades/${selectedCourseId}`,
+            { grades: gradesToSubmit },
+            { token: auth.token, headers: auth.headers }
+          );
 
-          if (response.ok) {
-            const data = await response.json();
-            if (data?.success) {
-              res = data;
-              success = true;
-              break;
-            }
+          if (response && response.success) {
+            res = response;
+            success = true;
+            break;
           } else {
-            const errData = await response.json().catch(() => ({}));
-            throw new Error(errData?.message || `HTTP ${response.status}`);
+            throw new Error(response?.message || 'Gagal mempublikasikan nilai.');
           }
         } catch (postErr) {
           console.warn(`Attempt ${i + 1} to finalize grades failed, retrying...`, postErr);
@@ -1096,6 +1091,12 @@ export default function TentorKelulusanPage() {
                       (scAvg * 0.60)
                     ));
 
+                    const isPassed = detailStudent.verification_status === 'Lulus'
+                      ? true
+                      : detailStudent.verification_status === 'Tidak Lulus'
+                        ? false
+                        : (weightedScore >= 75);
+
                     return (
                       <>
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 10 }}>
@@ -1114,11 +1115,11 @@ export default function TentorKelulusanPage() {
                             <strong style={{ fontSize: '1.2rem', color: '#c084fc' }}>{scAvg.toFixed(1)}</strong>
                             <div style={{ fontSize: '0.65rem', color: 'var(--grey)', marginTop: 2 }}>{Object.keys(scMaxMap).length}/{totalCourseStudyCases} Tugas dikumpulkan</div>
                           </div>
-                          <div style={{ background: weightedScore >= 75 ? 'rgba(0, 200, 83, 0.08)' : 'rgba(239, 68, 68, 0.08)', border: `1px solid ${weightedScore >= 75 ? 'rgba(0, 200, 83, 0.2)' : 'rgba(239, 68, 68, 0.2)'}`, borderRadius: 10, padding: 12, textAlign: 'center' }}>
-                            <div style={{ fontSize: '0.65rem', color: weightedScore >= 75 ? '#00C853' : '#FF5252', fontWeight: 700, marginBottom: 4 }}>NILAI AKHIR</div>
-                            <strong style={{ fontSize: '1.4rem', color: weightedScore >= 75 ? '#00C853' : '#FF5252' }}>{weightedScore}</strong>
-                            <div style={{ fontSize: '0.65rem', color: weightedScore >= 75 ? '#00C853' : '#FF5252', fontWeight: 600, marginTop: 2 }}>
-                              {weightedScore >= 75 ? '✓ Lulus' : '✗ Belum Lulus'}
+                          <div style={{ background: isPassed ? 'rgba(0, 200, 83, 0.08)' : 'rgba(239, 68, 68, 0.08)', border: `1px solid ${isPassed ? 'rgba(0, 200, 83, 0.2)' : 'rgba(239, 68, 68, 0.2)'}`, borderRadius: 10, padding: 12, textAlign: 'center' }}>
+                            <div style={{ fontSize: '0.65rem', color: isPassed ? '#00C853' : '#FF5252', fontWeight: 700, marginBottom: 4 }}>NILAI AKHIR</div>
+                            <strong style={{ fontSize: '1.4rem', color: isPassed ? '#00C853' : '#FF5252' }}>{weightedScore}</strong>
+                            <div style={{ fontSize: '0.65rem', color: isPassed ? '#00C853' : '#FF5252', fontWeight: 600, marginTop: 2 }}>
+                              {isPassed ? '✓ Lulus' : '✗ Belum Lulus'}
                             </div>
                           </div>
                         </div>

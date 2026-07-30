@@ -343,8 +343,23 @@ export default function StudentDashboard() {
 
                 const finalGradeObj = assessRes?.data?.finalGrade;
 
-                // Hanya tampilkan pengumuman jika Nilai Akhir sudah ada di database (sudah dikalkulasi/finalisasi tentor)
-                if (finalGradeObj) {
+                // Cek status kelulusan lokal dari localStorage jika sedang testing di browser yang sama
+                let localStatus: 'Lulus' | 'Tidak Lulus' | null = null;
+                try {
+                  const localMetaStr = localStorage.getItem('nalara_kelulusan_meta');
+                  if (localMetaStr) {
+                    const localMeta = JSON.parse(localMetaStr);
+                    const metaKey = `${pid}_${userId}`;
+                    if (localMeta[metaKey] && localMeta[metaKey].status) {
+                      localStatus = localMeta[metaKey].status;
+                    }
+                  }
+                } catch (e) {
+                  console.warn('Failed to read local graduation meta:', e);
+                }
+
+                // Tampilkan pengumuman jika Nilai Akhir sudah ada di database atau ada status lokal dari tentor
+                if (finalGradeObj || localStatus !== null) {
                   const assessData = assessRes?.data;
 
                   // 1. Quiz avg — sama dengan kelulusan (quiz tidak dikerjakan = 0, pembagi = total quiz kelas)
@@ -390,13 +405,22 @@ export default function StudentDashboard() {
 
                   // 4. Weighted final score — rumus sama dengan backend dan halaman kelulusan
                   const computedFinalScore = parseFloat(((attendancePct * 0.15) + (quizAvg * 0.25) + (scAvg * 0.60)).toFixed(1));
-                  const computedIsPassed = computedFinalScore >= 75;
+                  const finalScore = finalGradeObj && finalGradeObj.final_score !== undefined && finalGradeObj.final_score !== null
+                    ? parseFloat(finalGradeObj.final_score)
+                    : computedFinalScore;
+
+                  // Mengambil status kelulusan (is_passed) langsung dari status kelulusan yang di-set/difinalisasi oleh tentor atau localStorage
+                  const isPassed = localStatus !== null
+                    ? (localStatus === 'Lulus')
+                    : (finalGradeObj && finalGradeObj.is_passed !== undefined && finalGradeObj.is_passed !== null
+                      ? !!finalGradeObj.is_passed
+                      : (finalScore >= 75));
 
                   statuses.push({
-                    final_score: computedFinalScore,
-                    is_passed: computedIsPassed,
+                    final_score: finalScore,
+                    is_passed: isPassed,
                     title: course.nama_pembelajaran || course.title || 'Kelas',
-                    created_at: finalGradeObj.created_at || new Date().toISOString(),
+                    created_at: (finalGradeObj && finalGradeObj.created_at) || new Date().toISOString(),
                     courseId: pid,
                     scoreBreakdown: {
                       kehadiran: attendancePct,

@@ -151,7 +151,24 @@ export default function CourseDetailClient() {
         try {
           const assessRes = await apiGet<any>(`/api/grades/assessment/${courseId}/${userId}`, opts);
           if (assessRes?.success && assessRes.data?.finalGrade) {
-            setFinalGrade(assessRes.data.finalGrade);
+            const fg = assessRes.data.finalGrade;
+            // Cek status kelulusan lokal dari localStorage jika sedang testing di browser yang sama
+            let localStatus: 'Lulus' | 'Tidak Lulus' | null = null;
+            try {
+              const localMetaStr = localStorage.getItem('nalara_kelulusan_meta');
+              if (localMetaStr) {
+                const localMeta = JSON.parse(localMetaStr);
+                const metaKey = `${courseId}_${userId}`;
+                if (localMeta[metaKey] && localMeta[metaKey].status) {
+                  localStatus = localMeta[metaKey].status;
+                }
+              }
+            } catch {}
+
+            if (localStatus !== null) {
+              fg.is_passed = (localStatus === 'Lulus');
+            }
+            setFinalGrade(fg);
           }
         } catch (e) {
           console.warn('Failed to fetch student final grade assessment:', e);
