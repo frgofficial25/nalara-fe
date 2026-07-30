@@ -13,21 +13,24 @@ function performProxyRequest(
 ): Promise<{ status: number; headers: Record<string, string>; body: Buffer }> {
   return new Promise((resolve, reject) => {
     const parsedUrl = new URL(url);
-    const options: https.RequestOptions = {
+    const isHttps = parsedUrl.protocol === 'https:';
+    const agent = isHttps
+      ? new https.Agent({ keepAlive: true, rejectUnauthorized: false })
+      : new http.Agent({ keepAlive: true });
+
+    const options: any = {
       method: method,
       hostname: parsedUrl.hostname,
-      port: parsedUrl.port || (parsedUrl.protocol === 'https:' ? 443 : 80),
+      port: parsedUrl.port || (isHttps ? 443 : 80),
       path: parsedUrl.pathname + parsedUrl.search,
       headers: headers,
-      // bypass TLS socket issues / secure connection verification issues
-      rejectUnauthorized: false,
-      agent: new https.Agent({
-        keepAlive: true,
-        rejectUnauthorized: false
-      })
+      agent: agent
     };
+    if (isHttps) {
+      options.rejectUnauthorized = false;
+    }
 
-    const client = parsedUrl.protocol === 'https:' ? https : http;
+    const client = isHttps ? https : http;
     const req = client.request(options, (res) => {
       const chunks: Buffer[] = [];
       res.on('data', (chunk) => chunks.push(chunk));
@@ -68,7 +71,17 @@ async function handler(request: NextRequest, { params }: { params: Promise<{ pat
 
   const backendPath = '/api/' + pathSegments.join('/');
   const backendUrl = new URL(backendPath + request.nextUrl.search, backendBaseUrl);
-  console.log(`[api-proxy-debug] Proxying ${request.method} to: ${backendUrl.toString()}`);
+  
+  let targetUrl = backendUrl.toString();
+  // Map external domains to local ports when running server-side to avoid loopback and TLS issues
+  if (targetUrl.includes('api.nalara.academy')) {
+    targetUrl = targetUrl.replace('https://api.nalara.academy', 'http://127.0.0.1:1000');
+  } else if (targetUrl.includes('staging.nalara.academy')) {
+    targetUrl = targetUrl.replace('https://staging.nalara.academy', 'http://127.0.0.1:1001')
+                         .replace('http://staging.nalara.academy', 'http://127.0.0.1:1001');
+  }
+  
+  console.log(`[api-proxy-debug] Proxying ${request.method} to: ${targetUrl} (original: ${backendUrl.toString()})`);
 
   const requestHeaders = new Headers();
   
@@ -117,7 +130,7 @@ async function handler(request: NextRequest, { params }: { params: Promise<{ pat
     });
 
     const proxyRes = await performProxyRequest(
-      backendUrl.toString(),
+      targetUrl,
       request.method,
       requestHeadersObj,
       bodyBuffer
@@ -136,7 +149,7 @@ async function handler(request: NextRequest, { params }: { params: Promise<{ pat
       headers: responseHeaders,
     });
   } catch (err: any) {
-    console.error(`[api-proxy] Error proxying ${request.method} ${backendUrl}:`, err?.message || err);
+    console.error(`[api-proxy] Error proxying ${request.method} ${targetUrl}:`, err?.message || err);
     if (err?.cause) {
       console.error(`[api-proxy] Cause:`, err.cause);
     }
