@@ -89,6 +89,36 @@ function StudentKelasPageInner() {
   // Reading modal
   const [readingModal, setReadingModal] = useState<Materi | null>(null);
 
+  // ── Helpers ──────────────────────────────────────────────────────────────────
+  const getUserId = () => {
+    const raw = typeof window !== 'undefined' ? (localStorage.getItem('nalara_user_info') || sessionStorage.getItem('nalara_user_info') || '') : '';
+    try {
+      const p = JSON.parse(raw);
+      return p.id || p.uuid_user || '';
+    } catch {
+      return '';
+    }
+  };
+
+  const getLocalPrerequisiteStatus = (prereqUuid: string | null | undefined): boolean | null => {
+    if (!prereqUuid) return null;
+    const userId = getUserId();
+    if (!userId) return null;
+    try {
+      const localMetaStr = localStorage.getItem('nalara_kelulusan_meta');
+      if (localMetaStr) {
+        const localMeta = JSON.parse(localMetaStr);
+        const metaKey = `${prereqUuid}_${userId}`;
+        if (localMeta[metaKey] && localMeta[metaKey].status) {
+          return localMeta[metaKey].status === 'Lulus';
+        }
+      }
+    } catch (e) {
+      console.warn('Failed to read local graduation meta in Kelas page:', e);
+    }
+    return null;
+  };
+
   // ── Fetch courses ──────────────────────────────────────────────────────────
   const fetchCourses = async () => {
     try {
@@ -96,16 +126,24 @@ function StudentKelasPageInner() {
       const auth = getAuthHeaders();
       const res = await apiGet<any>('/api/pembelajaran', { token: auth.token, headers: auth.headers });
       const list = Array.isArray(res) ? res : (res?.data || []);
-      setCourses(list.map((c: any) => ({
-        id: c.uuid_pembelajaran || c.id,
-        title: c.nama_pembelajaran || c.title || 'Untitled',
-        description: c.deskripsi || c.description || '',
-        slug: c.slug,
-        modulesCount: c.modulesCount || 0,
-        prerequisite_uuid: c.prerequisite_uuid ?? null,
-        prerequisite_name: c.prerequisite_name ?? null,
-        prerequisite_passed: c.prerequisite_passed ?? null,
-      })));
+      setCourses(list.map((c: any) => {
+        const prereqUuid = c.prerequisite_uuid ?? null;
+        let prereqPassed = c.prerequisite_passed ?? null;
+        const localPassed = getLocalPrerequisiteStatus(prereqUuid);
+        if (localPassed !== null) {
+          prereqPassed = localPassed;
+        }
+        return {
+          id: c.uuid_pembelajaran || c.id,
+          title: c.nama_pembelajaran || c.title || 'Untitled',
+          description: c.deskripsi || c.description || '',
+          slug: c.slug,
+          modulesCount: c.modulesCount || 0,
+          prerequisite_uuid: prereqUuid,
+          prerequisite_name: c.prerequisite_name ?? null,
+          prerequisite_passed: prereqPassed,
+        };
+      }));
     } catch (e: any) { setError(e.message || 'Gagal memuat kelas.'); }
     finally { setLoading(false); }
   };
@@ -174,16 +212,24 @@ function StudentKelasPageInner() {
         // 1. Fetch courses list
         const coursesRes = await apiGet<any>('/api/pembelajaran', { token: auth.token, headers: auth.headers });
         const coursesList = Array.isArray(coursesRes) ? coursesRes : (coursesRes?.data || []);
-        const mappedCourses = coursesList.map((c: any) => ({
-          id: c.uuid_pembelajaran || c.id,
-          title: c.nama_pembelajaran || c.title || 'Untitled',
-          description: c.deskripsi || c.description || '',
-          slug: c.slug,
-          modulesCount: c.modulesCount || 0,
-          prerequisite_uuid: c.prerequisite_uuid ?? null,
-          prerequisite_name: c.prerequisite_name ?? null,
-          prerequisite_passed: c.prerequisite_passed ?? null,
-        }));
+        const mappedCourses = coursesList.map((c: any) => {
+          const prereqUuid = c.prerequisite_uuid ?? null;
+          let prereqPassed = c.prerequisite_passed ?? null;
+          const localPassed = getLocalPrerequisiteStatus(prereqUuid);
+          if (localPassed !== null) {
+            prereqPassed = localPassed;
+          }
+          return {
+            id: c.uuid_pembelajaran || c.id,
+            title: c.nama_pembelajaran || c.title || 'Untitled',
+            description: c.deskripsi || c.description || '',
+            slug: c.slug,
+            modulesCount: c.modulesCount || 0,
+            prerequisite_uuid: prereqUuid,
+            prerequisite_name: c.prerequisite_name ?? null,
+            prerequisite_passed: prereqPassed,
+          };
+        });
         setCourses(mappedCourses);
 
         const paramCourseId = searchParams.get('courseId');
