@@ -16,6 +16,7 @@ interface User {
   full_name: string;
   role: 'SuperAdmin' | 'User' | 'Lecturer' | 'Mentor';
   status: 'Pending' | 'Active' | 'Inactive';
+  is_vip: boolean;
   created_at: string;
   last_login_at?: string;
 }
@@ -48,6 +49,7 @@ export default function SuperadminUsers() {
   const [formFullName, setFormFullName] = useState('');
   const [formRole, setFormRole] = useState<'SuperAdmin' | 'User' | 'Lecturer' | 'Mentor'>('User');
   const [formStatus, setFormStatus] = useState<'Pending' | 'Active' | 'Inactive'>('Active');
+  const [formIsVip, setFormIsVip] = useState<boolean>(false);
   const [formLoading, setFormLoading] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
@@ -131,6 +133,7 @@ export default function SuperadminUsers() {
     setFormEmail('');
     setFormFullName('');
     setFormRole('User');
+    setFormIsVip(false);
     setFormError(null);
     setIsAddModalOpen(true);
   };
@@ -160,7 +163,8 @@ export default function SuperadminUsers() {
         username: formUsername,
         email: formEmail,
         full_name: formFullName,
-        role: formRole
+        role: formRole,
+        is_vip: formIsVip
       };
 
       const response = await apiPost<any>(
@@ -200,6 +204,7 @@ export default function SuperadminUsers() {
     setFormFullName(user.full_name);
     setFormRole(user.role);
     setFormStatus(user.status);
+    setFormIsVip(user.is_vip || false);
     setFormError(null);
     setIsEditModalOpen(true);
   };
@@ -227,7 +232,8 @@ export default function SuperadminUsers() {
         email: formEmail,
         full_name: formFullName,
         role: formRole,
-        status: formStatus
+        status: formStatus,
+        is_vip: formIsVip
       };
 
       const response = await apiPut<any>(
@@ -502,6 +508,17 @@ export default function SuperadminUsers() {
                       }}>
                         {user.role}
                       </span>
+                      {user.is_vip && (
+                        <span style={{
+                          ...s.roleBadge,
+                          marginLeft: '6px',
+                          backgroundColor: '#FFD70015',
+                          border: '1px solid #FFD70030',
+                          color: '#FFD700'
+                        }}>
+                          VIP
+                        </span>
+                      )}
                     </td>
                     <td style={s.td}>
                       <span style={{
@@ -606,6 +623,18 @@ export default function SuperadminUsers() {
                     <option value="SuperAdmin">SuperAdmin</option>
                   </select>
                 </div>
+                {formRole === 'User' && (
+                  <div style={{ ...s.formGroup, flexDirection: 'row', alignItems: 'center', gap: '8px' }}>
+                    <input 
+                      type="checkbox" 
+                      id="isVipAdd"
+                      checked={formIsVip}
+                      onChange={(e) => setFormIsVip(e.target.checked)}
+                      style={{ cursor: 'pointer' }}
+                    />
+                    <label htmlFor="isVipAdd" style={{ ...s.label, marginBottom: 0, cursor: 'pointer' }}>Status VIP (Akses Semua Kelas)</label>
+                  </div>
+                )}
                 <div style={s.modalFooter}>
                   <button 
                     type="button" 
@@ -702,6 +731,18 @@ export default function SuperadminUsers() {
                     <option value="Inactive">Inactive</option>
                   </select>
                 </div>
+                {formRole === 'User' && (
+                  <div style={{ ...s.formGroup, flexDirection: 'row', alignItems: 'center', gap: '8px' }}>
+                    <input 
+                      type="checkbox" 
+                      id="isVipEdit"
+                      checked={formIsVip}
+                      onChange={(e) => setFormIsVip(e.target.checked)}
+                      style={{ cursor: 'pointer' }}
+                    />
+                    <label htmlFor="isVipEdit" style={{ ...s.label, marginBottom: 0, cursor: 'pointer' }}>Status VIP (Akses Semua Kelas)</label>
+                  </div>
+                )}
                 <div style={s.modalFooter}>
                   <button 
                     type="button" 
