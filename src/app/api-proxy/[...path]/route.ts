@@ -74,11 +74,13 @@ async function handler(request: NextRequest, { params }: { params: Promise<{ pat
   
   let targetUrl = backendUrl.toString();
   // Map external domains to local ports when running server-side to avoid loopback and TLS issues
-  if (targetUrl.includes('api.nalara.academy')) {
-    targetUrl = targetUrl.replace('https://api.nalara.academy', 'http://127.0.0.1:1000');
-  } else if (targetUrl.includes('staging.nalara.academy')) {
-    targetUrl = targetUrl.replace('https://staging.nalara.academy', 'http://127.0.0.1:1001')
-                         .replace('http://staging.nalara.academy', 'http://127.0.0.1:1001');
+  if (process.env.NODE_ENV !== 'development') {
+    if (targetUrl.includes('api.nalara.academy')) {
+      targetUrl = targetUrl.replace('https://api.nalara.academy', 'http://127.0.0.1:1000');
+    } else if (targetUrl.includes('staging.nalara.academy')) {
+      targetUrl = targetUrl.replace('https://staging.nalara.academy', 'http://127.0.0.1:1001')
+                           .replace('http://staging.nalara.academy', 'http://127.0.0.1:1001');
+    }
   }
   
   console.log(`[api-proxy-debug] Proxying ${request.method} to: ${targetUrl} (original: ${backendUrl.toString()})`);

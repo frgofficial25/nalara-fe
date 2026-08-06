@@ -334,6 +334,12 @@ export default function StudentDashboard() {
             allCourses.map(async (course: any) => {
               const pid = course.uuid_pembelajaran || course.id;
               if (!pid) return;
+              
+              const title = course.nama_pembelajaran || course.title || '';
+              if (title.toLowerCase().includes('dasar')) {
+                return; // Kelas dasar gausah dikasih pengumuman
+              }
+
               try {
                 // Fetch dari endpoint assessment student
                 const assessRes = await apiGet<{ success: boolean; data: any }>(
@@ -565,8 +571,13 @@ export default function StudentDashboard() {
                     </p>
                     {isPassed ? (
                       <div style={{ marginTop: 8 }}>
+                        {status.title?.toLowerCase().includes('menengah') && (
+                          <p style={{ margin: '0 0 8px 0', fontSize: '0.78rem', color: 'rgba(255, 255, 255, 0.8)', lineHeight: 1.4 }}>
+                            Selamat! Anda lulus Kelas Menengah dan dapat melanjutkan ke Kelas Advance. Silakan bergabung ke grup WhatsApp kelas lanjutan di bawah ini:
+                          </p>
+                        )}
                         <a
-                          href="https://s.id/Top100NalariansOnly"
+                          href={status.title?.toLowerCase().includes('menengah') ? "https://chat.whatsapp.com/G9uRPKLNp7eCkyQ0ZaI3UY" : "https://s.id/Top100NalariansOnly"}
                           target="_blank"
                           rel="noopener noreferrer"
                           style={{
