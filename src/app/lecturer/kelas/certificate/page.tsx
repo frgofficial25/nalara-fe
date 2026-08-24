@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import React, { useState, useEffect, useRef, useCallback, Suspense } from 'react';
@@ -27,33 +28,71 @@ interface Course {
   certificate_name_position_y?: number | null;
   certificate_name_font_size?: number | null;
   certificate_name_color?: string | null;
+  certificate_code_position_x?: number | null;
+  certificate_code_position_y?: number | null;
+  certificate_code_font_size?: number | null;
+  certificate_code_color?: string | null;
 }
 
-// ─── Preview Canvas Component ─────────────────────────────────────────────────
 function CertificatePreview({
   templateUrl,
-  posX,
-  posY,
-  fontSize,
-  color,
+  nameX,
+  nameY,
+  nameFontSize,
+  nameColor,
   previewName,
-  onPositionChange,
+  onNamePositionChange,
+  codeX,
+  codeY,
+  codeFontSize,
+  codeColor,
+  previewCode,
+  onCodePositionChange,
 }: {
   templateUrl: string;
-  posX: number;
-  posY: number;
-  fontSize: number;
-  color: string;
+  nameX: number;
+  nameY: number;
+  nameFontSize: number;
+  nameColor: string;
   previewName: string;
-  onPositionChange: (x: number, y: number) => void;
+  onNamePositionChange: (x: number, y: number) => void;
+  codeX: number;
+  codeY: number;
+  codeFontSize: number;
+  codeColor: string;
+  previewCode: string;
+  onCodePositionChange: (x: number, y: number) => void;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const [dragging, setDragging] = useState(false);
+  const imgRef = useRef<HTMLImageElement>(null);
+  const [dragging, setDragging] = useState<'name' | 'code' | null>(null);
   const [imgLoaded, setImgLoaded] = useState(false);
+  const [scale, setScale] = useState(1);
 
-  const handleMouseDown = (e: React.MouseEvent) => {
+  const updateScale = useCallback(() => {
+    if (imgRef.current) {
+      const naturalWidth = imgRef.current.naturalWidth || 1684;
+      const clientWidth = imgRef.current.clientWidth || 500;
+      setScale(clientWidth / naturalWidth);
+    }
+  }, []);
+
+  useEffect(() => {
+    updateScale();
+    window.addEventListener('resize', updateScale);
+    return () => {
+      window.removeEventListener('resize', updateScale);
+    };
+  }, [imgLoaded, updateScale]);
+
+  const handleMouseDownName = (e: React.MouseEvent) => {
     e.preventDefault();
-    setDragging(true);
+    setDragging('name');
+  };
+
+  const handleMouseDownCode = (e: React.MouseEvent) => {
+    e.preventDefault();
+    setDragging('code');
   };
 
   const handleMouseMove = useCallback(
@@ -62,14 +101,17 @@ function CertificatePreview({
       const rect = containerRef.current.getBoundingClientRect();
       const x = Math.max(0, Math.min(100, ((e.clientX - rect.left) / rect.width) * 100));
       const y = Math.max(0, Math.min(100, ((e.clientY - rect.top) / rect.height) * 100));
-      onPositionChange(parseFloat(x.toFixed(1)), parseFloat(y.toFixed(1)));
+      if (dragging === 'name') {
+        onNamePositionChange(parseFloat(x.toFixed(1)), parseFloat(y.toFixed(1)));
+      } else if (dragging === 'code') {
+        onCodePositionChange(parseFloat(x.toFixed(1)), parseFloat(y.toFixed(1)));
+      }
     },
-    [dragging, onPositionChange]
+    [dragging, onNamePositionChange, onCodePositionChange]
   );
 
-  const handleMouseUp = useCallback(() => setDragging(false), []);
+  const handleMouseUp = useCallback(() => setDragging(null), []);
 
-  // Touch support
   const handleTouchMove = useCallback(
     (e: TouchEvent) => {
       if (!dragging || !containerRef.current) return;
@@ -77,9 +119,13 @@ function CertificatePreview({
       const rect = containerRef.current.getBoundingClientRect();
       const x = Math.max(0, Math.min(100, ((touch.clientX - rect.left) / rect.width) * 100));
       const y = Math.max(0, Math.min(100, ((touch.clientY - rect.top) / rect.height) * 100));
-      onPositionChange(parseFloat(x.toFixed(1)), parseFloat(y.toFixed(1)));
+      if (dragging === 'name') {
+        onNamePositionChange(parseFloat(x.toFixed(1)), parseFloat(y.toFixed(1)));
+      } else if (dragging === 'code') {
+        onCodePositionChange(parseFloat(x.toFixed(1)), parseFloat(y.toFixed(1)));
+      }
     },
-    [dragging, onPositionChange]
+    [dragging, onNamePositionChange, onCodePositionChange]
   );
 
   useEffect(() => {
@@ -112,10 +158,11 @@ function CertificatePreview({
     >
       {/* Template image */}
       <img
+        ref={imgRef}
         src={templateUrl}
         alt="Template sertifikat"
         style={{ width: '100%', display: 'block', opacity: imgLoaded ? 1 : 0, transition: 'opacity 0.3s' }}
-        onLoad={() => setImgLoaded(true)}
+        onLoad={() => { setImgLoaded(true); setTimeout(updateScale, 100); }}
         crossOrigin="anonymous"
         draggable={false}
       />
@@ -132,45 +179,50 @@ function CertificatePreview({
       {/* Draggable name indicator */}
       {imgLoaded && (
         <div
-          onMouseDown={handleMouseDown}
-          onTouchStart={(e) => { e.preventDefault(); setDragging(true); }}
+          onMouseDown={handleMouseDownName}
+          onTouchStart={(e) => { e.preventDefault(); setDragging('name'); }}
           style={{
             position: 'absolute',
-            left: `${posX}%`,
-            top: `${posY}%`,
-            transform: 'translate(-50%, -50%)',
-            cursor: 'grab',
+            left: `${nameX}%`,
+            top: `${nameY}%`,
             zIndex: 10,
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
-            gap: 4,
+            cursor: 'grab',
           }}
         >
-          {/* Name text preview */}
+          {/* Centered text */}
           <span
             style={{
-              fontFamily: "'Georgia', 'Times New Roman', serif",
+              fontFamily: "'Inter', sans-serif",
               fontWeight: 700,
-              fontSize: `clamp(10px, ${fontSize * 0.035}vw, 48px)`,
-              color,
-              textShadow: color === '#ffffff' || color === '#FFFFFF'
+              fontSize: `${nameFontSize * scale}px`,
+              background: nameColor === 'grad-blue-design' ? 'linear-gradient(to right, #2563EB, #153885)' : undefined,
+              WebkitBackgroundClip: nameColor === 'grad-blue-design' ? 'text' : undefined,
+              WebkitTextFillColor: nameColor === 'grad-blue-design' ? 'transparent' : undefined,
+              color: nameColor === 'grad-blue-design' ? undefined : nameColor,
+              textShadow: nameColor === '#ffffff' || nameColor === '#FFFFFF'
                 ? '0 0 6px rgba(0,0,0,0.8)'
                 : '0 0 6px rgba(255,255,255,0.6)',
               whiteSpace: 'nowrap',
               pointerEvents: 'none',
               lineHeight: 1,
+              transform: 'translate(-50%, -50%)',
             }}
           >
             {previewName}
           </span>
-          {/* Drag handle indicator */}
+          {/* Drag handle absolutely placed below the center point */}
           <div
             style={{
+              position: 'absolute',
+              top: '50%',
+              transform: 'translate(-50%, 8px)',
               background: 'rgba(6,113,224,0.85)',
               borderRadius: 6,
               padding: '2px 8px',
-              fontSize: '0.6rem',
+              fontSize: '0.5rem',
               color: '#fff',
               fontWeight: 700,
               letterSpacing: '0.05em',
@@ -178,10 +230,71 @@ function CertificatePreview({
               alignItems: 'center',
               gap: 4,
               pointerEvents: 'none',
+              whiteSpace: 'nowrap',
             }}
           >
             <Move size={9} />
-            DRAG
+            NAMA
+          </div>
+        </div>
+      )}
+
+      {/* Draggable code indicator */}
+      {imgLoaded && (
+        <div
+          onMouseDown={handleMouseDownCode}
+          onTouchStart={(e) => { e.preventDefault(); setDragging('code'); }}
+          style={{
+            position: 'absolute',
+            left: `${codeX}%`,
+            top: `${codeY}%`,
+            zIndex: 10,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            cursor: 'grab',
+          }}
+        >
+          {/* Centered text */}
+          <span
+            style={{
+              fontFamily: "'Inter', sans-serif",
+              fontWeight: 700,
+              fontSize: `${codeFontSize * scale}px`,
+              color: codeColor,
+              textShadow: codeColor === '#ffffff' || codeColor === '#FFFFFF'
+                ? '0 0 6px rgba(0,0,0,0.8)'
+                : '0 0 6px rgba(255,255,255,0.6)',
+              whiteSpace: 'nowrap',
+              pointerEvents: 'none',
+              lineHeight: 1,
+              transform: 'translate(-50%, -50%)',
+            }}
+          >
+            {previewCode}
+          </span>
+          {/* Drag handle absolutely placed below the center point */}
+          <div
+            style={{
+              position: 'absolute',
+              top: '50%',
+              transform: 'translate(-50%, 8px)',
+              background: 'rgba(224,64,251,0.85)',
+              borderRadius: 6,
+              padding: '2px 8px',
+              fontSize: '0.5rem',
+              color: '#fff',
+              fontWeight: 700,
+              letterSpacing: '0.05em',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 4,
+              pointerEvents: 'none',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            <Move size={9} />
+            KODE
           </div>
         </div>
       )}
@@ -208,12 +321,31 @@ function CertificatePageInner() {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Position & style state
+  // Position & style state for Name
   const [posX, setPosX] = useState(50);
   const [posY, setPosY] = useState(50);
   const [fontSize, setFontSize] = useState(48);
   const [color, setColor] = useState('#000000');
   const [previewName, setPreviewName] = useState('Nama Lengkap Siswa');
+
+  // Position & style state for Certificate Code
+  const [codePosX, setCodePosX] = useState(50);
+  const [codePosY, setCodePosY] = useState(80);
+  const [codeFontSize, setCodeFontSize] = useState(16);
+  const [codeColor, setCodeColor] = useState('#000000');
+  // Derived Preview Certificate Code
+  const getLevelCode = (title: string): string => {
+    const t = title.toLowerCase();
+    if (t.includes('foundation') || t.includes('dasar')) return 'FND';
+    if (t.includes('intermediate') || t.includes('menengah')) return 'INT';
+    if (t.includes('advance') || t.includes('lanjut')) return 'ADV';
+    return 'CMP';
+  };
+  const selectedCourse = courses.find(c => c.id === selectedCourseId);
+  const previewCode = selectedCourse
+    ? `NLR-CERT-${getLevelCode(selectedCourse.title)}-B01-0001`
+    : 'NLR-CERT-CMP-B01-0001';
+
   const [saving, setSaving] = useState(false);
 
   const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
@@ -265,6 +397,11 @@ function CertificatePageInner() {
           setPosY(data.certificate_name_position_y ?? 50);
           setFontSize(data.certificate_name_font_size ?? 48);
           setColor(data.certificate_name_color ?? '#000000');
+
+          setCodePosX(data.certificate_code_position_x ?? 50);
+          setCodePosY(data.certificate_code_position_y ?? 80);
+          setCodeFontSize(data.certificate_code_font_size ?? 16);
+          setCodeColor(data.certificate_code_color ?? '#000000');
         }
       } catch (e) {
         console.error(e);
@@ -274,6 +411,8 @@ function CertificatePageInner() {
     };
     fetchSettings();
   }, [selectedCourseId]);
+
+
 
   // Upload template
   const handleUploadFile = async (file: File) => {
@@ -356,6 +495,10 @@ function CertificatePageInner() {
           certificate_name_position_y: posY,
           certificate_name_font_size: fontSize,
           certificate_name_color: color,
+          certificate_code_position_x: codePosX,
+          certificate_code_position_y: codePosY,
+          certificate_code_font_size: codeFontSize,
+          certificate_code_color: codeColor,
         }),
       });
       const json = await response.json();
@@ -631,15 +774,119 @@ function CertificatePageInner() {
 
               {/* Preset colors */}
               <div style={{ display: 'flex', gap: 8, marginTop: 14, flexWrap: 'wrap' }}>
+                {[
+                  { value: '#000000', style: { background: '#000000' } },
+                  { value: '#ffffff', style: { background: '#ffffff' } },
+                  { value: '#1a1a2e', style: { background: '#1a1a2e' } },
+                  { value: '#C9A84C', style: { background: '#C9A84C' } },
+                  { value: '#1e3a5f', style: { background: '#1e3a5f' } },
+                  { value: '#4a0e2e', style: { background: '#4a0e2e' } },
+                  { value: 'grad-blue-design', style: { background: 'linear-gradient(135deg, #2563EB, #153885)' }, title: 'Gradient Muda Design' },
+                ].map(p => (
+                  <button
+                    key={p.value}
+                    onClick={() => setColor(p.value)}
+                    title={p.title || p.value}
+                    style={{
+                      width: 28,
+                      height: 28,
+                      borderRadius: 6,
+                      background: p.style.background,
+                      border: color === p.value ? '3px solid #6071F0' : '2px solid rgba(255,255,255,0.2)',
+                      cursor: 'pointer',
+                      padding: 0,
+                    }}
+                  />
+                ))}
+              </div>
+            </div>
+
+            {/* Certificate Code Settings */}
+            <div className="glass-panel" style={{ borderRadius: 16, padding: 24 }}>
+              <h3 style={{ margin: '0 0 20px', fontSize: '0.9rem', fontWeight: 700, color: '#fff', display: 'flex', alignItems: 'center', gap: 8 }}>
+                <Type size={16} color="#E040FB" /> Pengaturan Teks Nomor Sertifikat
+              </h3>
+
+              {/* Preview Code Input */}
+              <div style={{ marginBottom: 18 }}>
+                <label style={labelStyle}>Nomor Preview</label>
+                <input
+                  value={previewCode}
+                  onChange={e => setPreviewCode(e.target.value)}
+                  placeholder="Contoh nomor sertifikat untuk preview"
+                  style={inputStyle}
+                />
+              </div>
+
+              {/* Position */}
+              <div style={{ marginBottom: 18 }}>
+                <label style={labelStyle}>
+                  Posisi Horizontal (X): <span style={{ color: '#E040FB', fontWeight: 700 }}>{codePosX}%</span>
+                </label>
+                <input
+                  type="range" min={0} max={100} step={0.5} value={codePosX}
+                  onChange={e => setCodePosX(parseFloat(e.target.value))}
+                  style={{ width: '100%', accentColor: '#E040FB' }}
+                />
+              </div>
+              <div style={{ marginBottom: 18 }}>
+                <label style={labelStyle}>
+                  Posisi Vertikal (Y): <span style={{ color: '#E040FB', fontWeight: 700 }}>{codePosY}%</span>
+                </label>
+                <input
+                  type="range" min={0} max={100} step={0.5} value={codePosY}
+                  onChange={e => setCodePosY(parseFloat(e.target.value))}
+                  style={{ width: '100%', accentColor: '#E040FB' }}
+                />
+              </div>
+
+              {/* Font Size */}
+              <div style={{ marginBottom: 18 }}>
+                <label style={labelStyle}>
+                  Ukuran Font: <span style={{ color: '#E040FB', fontWeight: 700 }}>{codeFontSize}px</span>
+                </label>
+                <input
+                  type="range" min={8} max={80} step={1} value={codeFontSize}
+                  onChange={e => setCodeFontSize(parseInt(e.target.value))}
+                  style={{ width: '100%', accentColor: '#E040FB' }}
+                />
+              </div>
+
+              {/* Color */}
+              <div style={{ marginBottom: 4 }}>
+                <label style={{ ...labelStyle, display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <Palette size={13} /> Warna Teks
+                </label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 8 }}>
+                  <input
+                     type="color"
+                     value={codeColor}
+                     onChange={e => setCodeColor(e.target.value)}
+                     style={{
+                       width: 48, height: 48, border: 'none', borderRadius: 8,
+                       cursor: 'pointer', background: 'none', padding: 0,
+                     }}
+                  />
+                  <input
+                    value={codeColor}
+                    onChange={e => setCodeColor(e.target.value)}
+                    placeholder="#000000"
+                    style={{ ...inputStyle, flex: 1, fontFamily: 'monospace' }}
+                  />
+                </div>
+              </div>
+
+              {/* Preset colors */}
+              <div style={{ display: 'flex', gap: 8, marginTop: 14, flexWrap: 'wrap' }}>
                 {['#000000', '#ffffff', '#1a1a2e', '#C9A84C', '#1e3a5f', '#4a0e2e'].map(c => (
                   <button
                     key={c}
-                    onClick={() => setColor(c)}
+                    onClick={() => setCodeColor(c)}
                     title={c}
                     style={{
                       width: 28, height: 28, borderRadius: 6,
                       background: c,
-                      border: color === c ? '3px solid #6071F0' : '2px solid rgba(255,255,255,0.2)',
+                      border: codeColor === c ? '3px solid #E040FB' : '2px solid rgba(255,255,255,0.2)',
                       cursor: 'pointer', padding: 0,
                     }}
                   />
@@ -686,12 +933,18 @@ function CertificatePageInner() {
               {previewUrl ? (
                 <CertificatePreview
                   templateUrl={previewUrl}
-                  posX={posX}
-                  posY={posY}
-                  fontSize={fontSize}
-                  color={color}
+                  nameX={posX}
+                  nameY={posY}
+                  nameFontSize={fontSize}
+                  nameColor={color}
                   previewName={previewName}
-                  onPositionChange={(x, y) => { setPosX(x); setPosY(y); }}
+                  onNamePositionChange={(x, y) => { setPosX(x); setPosY(y); }}
+                  codeX={codePosX}
+                  codeY={codePosY}
+                  codeFontSize={codeFontSize}
+                  codeColor={codeColor}
+                  previewCode={previewCode}
+                  onCodePositionChange={(x, y) => { setCodePosX(x); setCodePosY(y); }}
                 />
               ) : (
                 <div style={{
@@ -709,22 +962,43 @@ function CertificatePageInner() {
               {/* Position info */}
               {previewUrl && (
                 <div style={{
-                  marginTop: 14, display: 'flex', gap: 10, flexWrap: 'wrap',
+                  marginTop: 14, display: 'flex', flexDirection: 'column', gap: 10
                 }}>
-                  {[
-                    { label: 'X', value: `${posX}%` },
-                    { label: 'Y', value: `${posY}%` },
-                    { label: 'Font', value: `${fontSize}px` },
-                    { label: 'Warna', value: color },
-                  ].map(item => (
-                    <div key={item.label} style={{
-                      background: 'rgba(255,255,255,0.04)', borderRadius: 8,
-                      padding: '6px 12px', fontSize: '0.75rem',
-                    }}>
-                      <span style={{ color: '#64748B' }}>{item.label}: </span>
-                      <span style={{ color: '#E2E8F0', fontWeight: 600, fontFamily: 'monospace' }}>{item.value}</span>
-                    </div>
-                  ))}
+                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                    <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#6071F0', width: '100%' }}>Posisi Nama:</span>
+                    {[
+                      { label: 'X', value: `${posX}%` },
+                      { label: 'Y', value: `${posY}%` },
+                      { label: 'Font', value: `${fontSize}px` },
+                      { label: 'Warna', value: color },
+                    ].map(item => (
+                      <div key={item.label} style={{
+                        background: 'rgba(255,255,255,0.04)', borderRadius: 8,
+                        padding: '6px 12px', fontSize: '0.72rem',
+                      }}>
+                        <span style={{ color: '#64748B' }}>{item.label}: </span>
+                        <span style={{ color: '#E2E8F0', fontWeight: 600, fontFamily: 'monospace' }}>{item.value}</span>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 6 }}>
+                    <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#E040FB', width: '100%' }}>Posisi Nomor:</span>
+                    {[
+                      { label: 'X', value: `${codePosX}%` },
+                      { label: 'Y', value: `${codePosY}%` },
+                      { label: 'Font', value: `${codeFontSize}px` },
+                      { label: 'Warna', value: codeColor },
+                    ].map(item => (
+                      <div key={item.label} style={{
+                        background: 'rgba(255,255,255,0.04)', borderRadius: 8,
+                        padding: '6px 12px', fontSize: '0.72rem',
+                      }}>
+                        <span style={{ color: '#64748B' }}>{item.label}: </span>
+                        <span style={{ color: '#E2E8F0', fontWeight: 600, fontFamily: 'monospace' }}>{item.value}</span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
             </div>

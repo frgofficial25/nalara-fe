@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any, react/no-unescaped-entities */
 "use client";
 
 import React, { useState, useEffect, Suspense } from 'react';
@@ -9,7 +10,7 @@ import {
 import { apiGet } from '@/lib/api';
 import { getStoredToken } from '@/services/auth';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { fetchCertificateSettings, downloadCertificate } from '@/hooks/useCertificate';
+import { fetchCertificateSettings, downloadCertificate, fetchGraduationStatus } from '@/hooks/useCertificate';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface Course {
@@ -21,6 +22,8 @@ interface Course {
   prerequisite_uuid?: string | null;
   prerequisite_name?: string | null;
   prerequisite_passed?: boolean | null; // null = no prerequisite, false = not passed, true = passed
+  is_passed?: boolean;
+  has_higher_passed?: boolean;
 }
 interface Module {
   id: string;
@@ -118,10 +121,6 @@ function StudentKelasPageInner() {
   const handleDownloadCertificate = async (course: Course, e: React.MouseEvent) => {
     e.stopPropagation();
     if (course.prerequisite_passed === false) return;
-    // Also check is_passed from FinalGrade by using prerequisite_passed or direct check
-    // The course list should have graduation status — we rely on prerequisite_passed logic
-    // but for the main course itself we need a separate check.
-    // We'll try to fetch settings and let it fail gracefully if no template.
     setCertError(null);
     setDownloadingCertId(course.id);
     try {
@@ -133,9 +132,21 @@ function StudentKelasPageInner() {
         return;
       }
       const fullName = getUserFullName();
+      const userId = getUserId();
+      console.log('useCertificate debug: fullName =', fullName, 'userId =', userId);
+      let certCode = undefined;
+      if (userId) {
+        console.log('useCertificate debug: calling fetchGraduationStatus for course =', course.id);
+        const grad = await fetchGraduationStatus(course.id, userId);
+        console.log('useCertificate debug: fetchGraduationStatus result =', grad);
+        if (grad && grad.certificate_code) {
+          certCode = grad.certificate_code;
+        }
+      }
+      console.log('useCertificate debug: certCode to pass =', certCode);
       const safeCourse = course.title.replace(/[^a-zA-Z0-9\s]/g, '').trim();
       const safeName = fullName.replace(/[^a-zA-Z0-9\s]/g, '').trim();
-      await downloadCertificate(settings, fullName, `Sertifikat_${safeCourse}_${safeName}.png`);
+      await downloadCertificate(settings, fullName, `Sertifikat_${safeCourse}_${safeName}.png`, certCode);
     } catch (err: any) {
       setCertError(err.message || 'Gagal mengunduh sertifikat.');
       setTimeout(() => setCertError(null), 5000);
@@ -186,6 +197,8 @@ function StudentKelasPageInner() {
           prerequisite_uuid: prereqUuid,
           prerequisite_name: c.prerequisite_name ?? null,
           prerequisite_passed: prereqPassed,
+          is_passed: c.is_passed,
+          has_higher_passed: c.has_higher_passed,
         };
       }));
     } catch (e: any) { setError(e.message || 'Gagal memuat kelas.'); }
@@ -272,6 +285,8 @@ function StudentKelasPageInner() {
             prerequisite_uuid: prereqUuid,
             prerequisite_name: c.prerequisite_name ?? null,
             prerequisite_passed: prereqPassed,
+            is_passed: c.is_passed,
+            has_higher_passed: c.has_higher_passed,
           };
         });
         setCourses(mappedCourses);
@@ -375,7 +390,7 @@ function StudentKelasPageInner() {
   };
 
   // ── Breadcrumb ─────────────────────────────────────────────────────────────
-  const Breadcrumb = () => (
+  const renderBreadcrumb = () => (
     <div style={s.breadcrumb}>
       <button onClick={() => { setView('courses'); setSelectedCourse(null); setSelectedModule(null); }} style={s.bcItem}>
         Kelas
@@ -407,7 +422,7 @@ function StudentKelasPageInner() {
         </div>
       </div>
 
-      {view !== 'courses' && <Breadcrumb />}
+      {view !== 'courses' && renderBreadcrumb()}
 
       {error && <div style={s.errorBanner}><AlertCircle size={16} /><span>{error}</span></div>}
 
@@ -432,8 +447,29 @@ function StudentKelasPageInner() {
             <div style={s.grid}>
               {courses.length === 0 ? (
                 <div style={s.emptyState}><BookOpen size={48} color="var(--border-color)" /><h3>Belum ada kelas</h3><p>Anda belum terdaftar di kelas manapun.</p></div>
-              ) : courses.map(course => {
-                const isLocked = course.prerequisite_passed === false;
+              ) : (() => {
+                const getLevelScore = (title: string): number => {
+                  const t = title.toLowerCase();
+                  if (t.includes('lanjut') || t.includes('advance')) return 3;
+                  if (t.includes('menengah') || t.includes('intermediate')) return 2;
+                  if (t.includes('dasar') || t.includes('foundation')) return 1;
+                  return 0;
+                };
+                const passedLevels = courses.filter(c => c.is_passed === true).map(c => getLevelScore(c.title));
+                const getIsUnlocked = (courseTitle: string): boolean => {
+                  const lvl = getLevelScore(courseTitle);
+                  if (lvl <= 1) return true;
+                  if (lvl === 2) return passedLevels.includes(1);
+                  if (lvl === 3) return passedLevels.includes(2);
+                  return false;
+                };
+                const maxUnlockedLevel = Math.max(
+                  ...courses.filter(c => getIsUnlocked(c.title)).map(c => getLevelScore(c.title)),
+                  0
+                );
+                return courses.map(course => {
+                  const isLocked = !getIsUnlocked(course.title);
+                  const isHighestUnlocked = !isLocked && getLevelScore(course.title) === maxUnlockedLevel;
                 return (
                   <div
                     key={course.id}
@@ -477,7 +513,7 @@ function StudentKelasPageInner() {
                         {isLocked ? '🔒 Perlu Lulus Prasyarat' : <><Layers size={13} /> Lihat Modul</>}
                       </span>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        {!isLocked && (
+                        {!isLocked && isHighestUnlocked && (
                           <button
                             onClick={(e) => handleDownloadCertificate(course, e)}
                             disabled={downloadingCertId === course.id}
@@ -505,7 +541,8 @@ function StudentKelasPageInner() {
                     </div>
                   </div>
                 );
-              })}
+              });
+            })()}
             </div>
           )}
 

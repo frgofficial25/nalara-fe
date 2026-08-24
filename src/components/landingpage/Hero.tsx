@@ -8,14 +8,6 @@ interface HeroProps {
 export default function Hero({ onRegisterClick, onSyllabusClick }: HeroProps) {
   return (
     <section style={styles.heroSection} id="hero" className="animate-fade-in-up">
-      <div style={styles.badgeContainer}>
-        <span className="badge-tech" style={styles.badgeItem}>
-          📅 Total 12 Hari Belajar Instruksional
-        </span>
-        <span className="badge-tech" style={styles.badgeItem}>
-          🌐 Official Domain: nalara.academy
-        </span>
-      </div>
 
       <h1 style={styles.mainTitle}>
         National AI & Deep Learning<br />

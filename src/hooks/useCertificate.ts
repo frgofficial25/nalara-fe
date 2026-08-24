@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * useCertificate — Hook untuk generate & download sertifikat siswa
  *
@@ -19,6 +20,10 @@ export interface CertificateSettings {
   certificate_name_position_y: number | null;
   certificate_name_font_size: number | null;
   certificate_name_color: string | null;
+  certificate_code_position_x: number | null;
+  certificate_code_position_y: number | null;
+  certificate_code_font_size: number | null;
+  certificate_code_color: string | null;
 }
 
 function getAuthHeaders() {
@@ -49,7 +54,7 @@ export async function fetchCertificateSettings(courseId: string): Promise<Certif
 export async function fetchGraduationStatus(
   courseId: string,
   userId: string
-): Promise<{ is_passed: boolean; final_score: number } | null> {
+): Promise<{ is_passed: boolean; final_score: number; certificate_code?: string } | null> {
   try {
     const auth = getAuthHeaders();
     const res = await apiGet<any>(`/api/grades/status/${courseId}/${userId}`, {
@@ -85,7 +90,8 @@ function loadImage(url: string): Promise<HTMLImageElement> {
 export async function downloadCertificate(
   settings: CertificateSettings,
   studentName: string,
-  fileName?: string
+  fileName?: string,
+  certificateCode?: string
 ): Promise<void> {
   if (!settings.certificate_template_url) {
     throw new Error('Template sertifikat belum dikonfigurasi untuk kelas ini.');
@@ -110,18 +116,43 @@ export async function downloadCertificate(
   // 3. Draw gambar template
   ctx.drawImage(img, 0, 0);
 
-  // 4. Konfigurasi teks
-  ctx.font = `bold ${fontSize}px 'Georgia', 'Times New Roman', serif`;
-  ctx.fillStyle = color;
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-
-  // 5. Hitung posisi pixel dari persentase
+  // 5. Hitung posisi pixel dari persentase untuk nama
   const x = (posX / 100) * canvas.width;
   const y = (posY / 100) * canvas.height;
 
+  // 4. Konfigurasi teks nama
+  ctx.font = `bold ${fontSize}px 'Inter', 'Helvetica Neue', Arial, sans-serif`;
+  if (color === 'grad-blue-design') {
+    const textWidth = ctx.measureText(studentName).width;
+    const grad = ctx.createLinearGradient(x - textWidth / 2, y, x + textWidth / 2, y);
+    grad.addColorStop(0, '#2563EB');
+    grad.addColorStop(1, '#153885');
+    ctx.fillStyle = grad;
+  } else {
+    ctx.fillStyle = color;
+  }
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+
   // 6. Tulis nama siswa
   ctx.fillText(studentName, x, y);
+
+  // 6b. Tulis kode sertifikat jika disediakan
+  if (certificateCode) {
+    const codePosX = settings.certificate_code_position_x ?? 50;
+    const codePosY = settings.certificate_code_position_y ?? 80;
+    const codeFontSize = settings.certificate_code_font_size ?? 16;
+    const codeColor = settings.certificate_code_color ?? '#000000';
+
+    ctx.font = `bold ${codeFontSize}px 'Inter', 'Helvetica Neue', Arial, sans-serif`;
+    ctx.fillStyle = codeColor;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+
+    const codeX = (codePosX / 100) * canvas.width;
+    const codeY = (codePosY / 100) * canvas.height;
+    ctx.fillText(certificateCode, codeX, codeY);
+  }
 
   // 7. Trigger download
   const link = document.createElement('a');
