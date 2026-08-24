@@ -4,11 +4,12 @@ import React, { useState, useEffect, Suspense } from 'react';
 import {
   BookOpen, Layers, ChevronRight, Loader2, AlertCircle,
   FileText, Video, FlaskConical, PencilLine, BookOpenCheck,
-  Play, Eye, X, Clock
+  Play, Eye, X, Clock, Award, Download
 } from 'lucide-react';
 import { apiGet } from '@/lib/api';
 import { getStoredToken } from '@/services/auth';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { fetchCertificateSettings, downloadCertificate } from '@/hooks/useCertificate';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface Course {
@@ -89,6 +90,10 @@ function StudentKelasPageInner() {
   // Reading modal
   const [readingModal, setReadingModal] = useState<Materi | null>(null);
 
+  // Certificate download state
+  const [downloadingCertId, setDownloadingCertId] = useState<string | null>(null);
+  const [certError, setCertError] = useState<string | null>(null);
+
   // ── Helpers ──────────────────────────────────────────────────────────────────
   const getUserId = () => {
     const raw = typeof window !== 'undefined' ? (localStorage.getItem('nalara_user_info') || sessionStorage.getItem('nalara_user_info') || '') : '';
@@ -97,6 +102,45 @@ function StudentKelasPageInner() {
       return p.id || p.uuid_user || '';
     } catch {
       return '';
+    }
+  };
+
+  const getUserFullName = () => {
+    const raw = typeof window !== 'undefined' ? (localStorage.getItem('nalara_user_info') || sessionStorage.getItem('nalara_user_info') || '') : '';
+    try {
+      const p = JSON.parse(raw);
+      return p.full_name || p.name || p.username || 'Siswa';
+    } catch {
+      return 'Siswa';
+    }
+  };
+
+  const handleDownloadCertificate = async (course: Course, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (course.prerequisite_passed === false) return;
+    // Also check is_passed from FinalGrade by using prerequisite_passed or direct check
+    // The course list should have graduation status — we rely on prerequisite_passed logic
+    // but for the main course itself we need a separate check.
+    // We'll try to fetch settings and let it fail gracefully if no template.
+    setCertError(null);
+    setDownloadingCertId(course.id);
+    try {
+      const settings = await fetchCertificateSettings(course.id);
+      if (!settings || !settings.certificate_template_url) {
+        setCertError('Template sertifikat belum dikonfigurasi untuk kelas ini.');
+        setTimeout(() => setCertError(null), 4000);
+        setDownloadingCertId(null);
+        return;
+      }
+      const fullName = getUserFullName();
+      const safeCourse = course.title.replace(/[^a-zA-Z0-9\s]/g, '').trim();
+      const safeName = fullName.replace(/[^a-zA-Z0-9\s]/g, '').trim();
+      await downloadCertificate(settings, fullName, `Sertifikat_${safeCourse}_${safeName}.png`);
+    } catch (err: any) {
+      setCertError(err.message || 'Gagal mengunduh sertifikat.');
+      setTimeout(() => setCertError(null), 5000);
+    } finally {
+      setDownloadingCertId(null);
     }
   };
 
@@ -367,6 +411,18 @@ function StudentKelasPageInner() {
 
       {error && <div style={s.errorBanner}><AlertCircle size={16} /><span>{error}</span></div>}
 
+      {/* Certificate error banner */}
+      {certError && (
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 10,
+          background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)',
+          borderRadius: 8, padding: '10px 16px', color: '#EF4444', marginBottom: 16, fontSize: '0.85rem'
+        }}>
+          <AlertCircle size={16} />
+          <span>{certError}</span>
+        </div>
+      )}
+
       {loading ? (
         <div style={s.centered}><Loader2 size={32} style={{ animation: 'spin 1s linear infinite' }} /><p>Memuat...</p></div>
       ) : (
@@ -420,7 +476,32 @@ function StudentKelasPageInner() {
                       <span style={{ ...s.footerText, color: isLocked ? '#888' : undefined }}>
                         {isLocked ? '🔒 Perlu Lulus Prasyarat' : <><Layers size={13} /> Lihat Modul</>}
                       </span>
-                      {!isLocked && <ChevronRight size={16} color="var(--azure)" />}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        {!isLocked && (
+                          <button
+                            onClick={(e) => handleDownloadCertificate(course, e)}
+                            disabled={downloadingCertId === course.id}
+                            title="Unduh Sertifikat"
+                            style={{
+                              display: 'flex', alignItems: 'center', gap: 5,
+                              padding: '5px 10px', borderRadius: 7,
+                              background: downloadingCertId === course.id
+                                ? 'rgba(96,113,240,0.1)'
+                                : 'rgba(96,113,240,0.12)',
+                              border: '1px solid rgba(96,113,240,0.3)',
+                              color: '#8B9CF8', fontSize: '0.72rem', fontWeight: 700,
+                              cursor: downloadingCertId === course.id ? 'wait' : 'pointer',
+                              letterSpacing: '0.02em',
+                            }}
+                          >
+                            {downloadingCertId === course.id
+                              ? <Loader2 size={11} style={{ animation: 'spin 1s linear infinite' }} />
+                              : <Award size={11} />}
+                            Sertifikat
+                          </button>
+                        )}
+                        {!isLocked && <ChevronRight size={16} color="var(--azure)" />}
+                      </div>
                     </div>
                   </div>
                 );

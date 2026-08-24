@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { 
   BookOpen, Plus, Trash2, Edit2, Sparkles, X, 
   Loader2, Globe, AlertCircle, CheckCircle2, ChevronRight, Eye, EyeOff, Archive, Users, Search,
-  Calendar, Layers
+  Calendar, Layers, Award
 } from 'lucide-react';
 import { useRouter, usePathname } from 'next/navigation';
 import { apiGet, apiPost, apiPut } from '@/lib/api';
@@ -647,6 +647,20 @@ export default function CourseManagement() {
                     style={s.detailBtn}
                   >
                     Detail Kelas
+                  </button>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); router.push(`${basePath}/kelas/certificate?courseId=${course.id}`); }}
+                    className="action-btn-cert"
+                    title="Pengaturan Sertifikat"
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 6,
+                      padding: '7px 12px', borderRadius: 8, border: '1px solid rgba(96,113,240,0.3)',
+                      background: 'rgba(96,113,240,0.08)', color: '#8B9CF8',
+                      fontSize: '0.78rem', fontWeight: 600, cursor: 'pointer',
+                      transition: 'all 0.15s',
+                    }}
+                  >
+                    <Award size={12} /> Sertifikat
                   </button>
                 </div>
                 <div style={{ display: 'flex', gap: 8 }}>
