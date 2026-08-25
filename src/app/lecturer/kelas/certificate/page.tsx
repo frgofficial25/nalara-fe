@@ -302,6 +302,14 @@ function CertificatePreview({
   );
 }
 
+const getLevelCode = (title: string): string => {
+  const t = title.toLowerCase();
+  if (t.includes('foundation') || t.includes('dasar')) return 'FND';
+  if (t.includes('intermediate') || t.includes('menengah')) return 'INT';
+  if (t.includes('advance') || t.includes('lanjut')) return 'ADV';
+  return 'CMP';
+};
+
 // ─── Main Page ────────────────────────────────────────────────────────────────
 function CertificatePageInner() {
   const router = useRouter();
@@ -333,18 +341,17 @@ function CertificatePageInner() {
   const [codePosY, setCodePosY] = useState(80);
   const [codeFontSize, setCodeFontSize] = useState(16);
   const [codeColor, setCodeColor] = useState('#000000');
-  // Derived Preview Certificate Code
-  const getLevelCode = (title: string): string => {
-    const t = title.toLowerCase();
-    if (t.includes('foundation') || t.includes('dasar')) return 'FND';
-    if (t.includes('intermediate') || t.includes('menengah')) return 'INT';
-    if (t.includes('advance') || t.includes('lanjut')) return 'ADV';
-    return 'CMP';
-  };
-  const selectedCourse = courses.find(c => c.id === selectedCourseId);
-  const previewCode = selectedCourse
-    ? `NLR-CERT-${getLevelCode(selectedCourse.title)}-B01-0001`
-    : 'NLR-CERT-CMP-B01-0001';
+  const [previewCode, setPreviewCode] = useState('NLR-CERT-CMP-B01-0001');
+
+  // Update preview code when course changes
+  useEffect(() => {
+    if (selectedCourseId && courses.length > 0) {
+      const selectedCourse = courses.find(c => c.id === selectedCourseId);
+      if (selectedCourse) {
+        setPreviewCode(`NLR-CERT-${getLevelCode(selectedCourse.title)}-B01-0001`);
+      }
+    }
+  }, [selectedCourseId, courses]);
 
   const [saving, setSaving] = useState(false);
 
